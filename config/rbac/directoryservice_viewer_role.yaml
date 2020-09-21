@@ -1,0 +1,20 @@
+# permissions for end users to view directoryservices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: directoryservice-viewer-role
+rules:
+- apiGroups:
+  - directory.forgerock.com
+  resources:
+  - directoryservices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - directory.forgerock.com
+  resources:
+  - directoryservices/status
+  verbs:
+  - get

@@ -1,0 +1,7 @@
+domain: forgerock.com
+repo: github.com/ForgeRock/ds-operator
+resources:
+- group: directory
+  kind: DirectoryService
+  version: v1alpha1
+version: "2"

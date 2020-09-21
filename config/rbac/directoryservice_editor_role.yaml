@@ -1,0 +1,24 @@
+# permissions for end users to edit directoryservices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: directoryservice-editor-role
+rules:
+- apiGroups:
+  - directory.forgerock.com
+  resources:
+  - directoryservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - directory.forgerock.com
+  resources:
+  - directoryservices/status
+  verbs:
+  - get
