@@ -111,16 +111,21 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		// ModifyStatefulSet(ds,&sts)
 		log.Info("CreateorUpdate statefulset", "sts", sts)
 
+		var err error
 		// does the sts not exist yet? Is this the right check?
 		if sts.CreationTimestamp.IsZero() {
-			_ = createDSStatefulSet(&ds, &sts)
+			err = createDSStatefulSet(&ds, &sts)
 			log.Info("Created New sts from template", "sts", sts)
 		} else {
 			// If the sts exists already - we want to update any fields to bring its state into
 			// alignment with the Custom Resource
-			log.Info("Todo: STS exists - update if needed to match the CR")
+			err = updateDSStatefulSet(&ds, &sts)
 		}
-		err := controllerutil.SetControllerReference(&ds, &sts, r.Scheme)
+
+		log.Info("**** Setting owner ref", "sts", sts.Name)
+		err = controllerutil.SetControllerReference(&ds, &sts, r.Scheme)
+
+		log.Info("sts after update/create", "sts", sts)
 		return err
 
 	})
@@ -128,12 +133,36 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
 	}
 
-	// todo: Just log for now!!
+	// now create or update the service
+	var svc v1.Service
+	svc.Name = ds.Name
+	svc.Namespace = ds.Namespace
 
-	log.Info("Created statefulset", "sts", &sts)
+	_, err = ctrl.CreateOrUpdate(ctx, r, &svc, func() error {
+		log.Info("CreateorUpdate service", "svc", svc)
 
-	// todo: what is the correct way to add owner refs..
-	// addOwnerRefToObject(sts, asOwner(ds))
+		var err error
+		// does the sts not exist yet? Is this the right check?
+		if svc.CreationTimestamp.IsZero() {
+			err = createService(&ds, &svc)
+			log.Info("Created New sts from template", "sts", sts)
+		} else {
+			// If the sts exists already - we want to update any fields to bring its state into
+			// alignment with the Custom Resource
+			//err = updateService(&ds, &sts)
+			log.Info("TODO: Handle update of ds service")
+		}
+
+		log.Info("Setting ownerref for service", "svc", svc.Name)
+		err = controllerutil.SetControllerReference(&ds, &svc, r.Scheme)
+
+		log.Info("svc after update/create", "svc", svc)
+		return err
+	})
+
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Service")
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -284,6 +313,53 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 	stemplate.DeepCopyInto(sts)
+	return nil
+}
+
+// Create the service for ds
+func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
+	svcTemplate := v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			Name:        ds.Name,
+			Namespace:   ds.Namespace,
+		},
+		Spec: v1.ServiceSpec{
+			ClusterIP: "None", // headless service
+			Selector: map[string]string{
+				"app": ds.Name,
+			},
+			Ports: []v1.ServicePort{
+				{
+					Name: "admin",
+					Port: 4444,
+				},
+				{
+					Name: "ldap",
+					Port: 1389,
+				},
+				{
+					Name: "ldaps",
+					Port: 1636,
+				},
+				{
+					Name: "http",
+					Port: 8080,
+				},
+			},
+		},
+	}
+
+	svcTemplate.DeepCopyInto(svc)
+	return nil
+}
+
+// This function updates an existing statefulset to match settings in the custom resource
+// TODO: What kinds of things should we update?
+func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
+
+	sts.Spec.Replicas = ds.Spec.Replicas
 	return nil
 }
 
