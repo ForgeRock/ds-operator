@@ -115,15 +115,13 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		// does the sts not exist yet? Is this the right check?
 		if sts.CreationTimestamp.IsZero() {
 			err = createDSStatefulSet(&ds, &sts)
+			_ = controllerutil.SetControllerReference(&ds, &sts, r.Scheme)
 			log.Info("Created New sts from template", "sts", sts)
 		} else {
 			// If the sts exists already - we want to update any fields to bring its state into
 			// alignment with the Custom Resource
 			err = updateDSStatefulSet(&ds, &sts)
 		}
-
-		log.Info("**** Setting owner ref", "sts", sts.Name)
-		err = controllerutil.SetControllerReference(&ds, &sts, r.Scheme)
 
 		log.Info("sts after update/create", "sts", sts)
 		return err
@@ -133,7 +131,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
 	}
 
-	// now create or update the service
+	// create or update the service
 	var svc v1.Service
 	svc.Name = ds.Name
 	svc.Namespace = ds.Namespace
@@ -142,9 +140,11 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		log.Info("CreateorUpdate service", "svc", svc)
 
 		var err error
-		// does the sts not exist yet? Is this the right check?
+		// does the service not exist yet?
 		if svc.CreationTimestamp.IsZero() {
 			err = createService(&ds, &svc)
+			log.Info("Setting ownerref for service", "svc", svc.Name)
+			_ = controllerutil.SetControllerReference(&ds, &svc, r.Scheme)
 			log.Info("Created New sts from template", "sts", sts)
 		} else {
 			// If the sts exists already - we want to update any fields to bring its state into
@@ -152,9 +152,6 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			//err = updateService(&ds, &sts)
 			log.Info("TODO: Handle update of ds service")
 		}
-
-		log.Info("Setting ownerref for service", "svc", svc.Name)
-		err = controllerutil.SetControllerReference(&ds, &svc, r.Scheme)
 
 		log.Info("svc after update/create", "svc", svc)
 		return err
