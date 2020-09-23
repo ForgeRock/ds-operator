@@ -30,7 +30,7 @@ type DirectoryServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of DirectoryService. Edit DirectoryService_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Foo string `json:"image,omitempty"`
 	// Replicas is the number of directory server instances to create
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Type of ds instance. Allowed - cts or idrepo

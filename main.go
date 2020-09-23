@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	directoryforgerockcomv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/ForgeRock/ds-operator/controllers"
 	// +kubebuilder:scaffold:imports
@@ -40,6 +41,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = directoryv1alpha1.AddToScheme(scheme)
+	_ = directoryforgerockcomv1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -73,6 +75,12 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DirectoryService")
 		os.Exit(1)
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&directoryforgerockcomv1alpha1.DirectoryService{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "DirectoryService")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 

@@ -34,7 +34,10 @@ spec:
         spec:
           description: DirectoryServiceSpec defines the desired state of DirectoryService
           properties:
-            foo:
+            dsType:
+              description: Type of ds instance. Allowed - cts or idrepo
+              type: string
+            image:
               description: Foo is an example field of DirectoryService. Edit DirectoryService_types.go
                 to remove/update
               type: string

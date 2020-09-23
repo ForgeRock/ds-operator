@@ -1,0 +1,7 @@
+apiVersion: directory.forgerock.com/v1alpha1
+kind: DirectoryService
+metadata:
+  name: ds
+spec:
+  # Add fields here
+  Replicas: 1
