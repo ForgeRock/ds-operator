@@ -36,3 +36,24 @@ kubectl delete -f hack/ds.yaml
   * spec.Replicas should increase the number of sts replicas
   * spec.Image should update the base image and do a rolling update
   * Changes to spec.LoadBalancer?
+
+## Optional Features
+
+Are these valuable?
+
+* The ability to specify a number of service accounts and assoicated secretRef. The idea is to have the operator
+  set the password for the service account. The account should already exist as it is beyond the scope of the operator
+  to manage service accounts, create ACIs, etc.
+
+This would be helpful for [CLOUD-2178](https://bugster.forgerock.org/jira/browse/CLOUD-2178)
+
+Example:
+
+```yaml
+serviceAccounts:
+- name idm-admin
+  dn:  uid=am-repo-user,in,ou=Admins,dc=am-config
+  secretRef:  idrepo-password
+```
+
+In the case above, the operator can watch the secret, and rotate the password in DS if it changes

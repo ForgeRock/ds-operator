@@ -4,4 +4,4 @@ metadata:
   name: ds
 spec:
   # Add fields here
-  Replicas: 1
+  replicas: 1

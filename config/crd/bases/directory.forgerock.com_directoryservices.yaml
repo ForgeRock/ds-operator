@@ -34,18 +34,24 @@ spec:
         spec:
           description: DirectoryServiceSpec defines the desired state of DirectoryService
           properties:
-            dsType:
-              description: Type of ds instance. Allowed - cts or idrepo
-              type: string
             image:
-              description: Foo is an example field of DirectoryService. Edit DirectoryService_types.go
-                to remove/update
+              description: Docker Image for the directory server. Defaults if not
+                provided?
               type: string
             replicas:
               description: Replicas is the number of directory server instances to
                 create
               format: int32
               type: integer
+            secretReference:
+              type: string
+            secretReferencePasswords:
+              description: 'Name of secret that contains the ds passwords. Defaults
+                to $Name-passwords. Must have keys: dirmanage.pw, monitor.pw TODO:
+                This should be generated if the secret is not found.'
+              type: string
+          required:
+          - replicas
           type: object
         status:
           description: DirectoryServiceStatus defines the observed state of DirectoryService

@@ -26,15 +26,19 @@ import (
 
 // DirectoryServiceSpec defines the desired state of DirectoryService
 type DirectoryServiceSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of DirectoryService. Edit DirectoryService_types.go to remove/update
-	Foo string `json:"image,omitempty"`
+	// Docker Image for the directory server. Defaults if not provided?
+	Image string `json:"image,omitempty"`
 	// Replicas is the number of directory server instances to create
-	Replicas *int32 `json:"replicas,omitempty"`
-	// Type of ds instance. Allowed - cts or idrepo
-	DSType string `json:"dsType,omitempty"`
+	Replicas *int32 `json:"replicas,required"`
+	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
+	// DSType string `json:"dsType,omitempty"`
+
+	// Name of secret that contains the ds passwords. Defaults to $Name-passwords. Must have keys: dirmanage.pw, monitor.pw
+	// TODO: This should be generated if the secret is not found.
+	SecretReferencePasswords string `json:"secretReferencePasswords,omitempty"`
+	SecretReference          string `json:"secretReference,omitempty"`
 }
 
 // DirectoryServiceStatus defines the observed state of DirectoryService
