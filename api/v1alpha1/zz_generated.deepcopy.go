@@ -110,8 +110,10 @@ func (in *DirectoryServiceSpec) DeepCopyInto(out *DirectoryServiceSpec) {
 	in.Resources.DeepCopyInto(&out.Resources)
 	if in.AccountSecrets != nil {
 		in, out := &in.AccountSecrets, &out.AccountSecrets
-		*out = make([]DirectoryAccountSecrets, len(*in))
-		copy(*out, *in)
+		*out = make(map[string]DirectoryAccountSecrets, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 

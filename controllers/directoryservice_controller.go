@@ -89,16 +89,47 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: THe webhook can set Defaults, but for testing do we also want to set defaults here...
-	// Defaults the name of the secret that contains the DS passwords.
-	// need to set default password before the sts and secrets are created
-	if len(ds.Spec.SecretReferencePasswords) == 0 {
-		ds.Spec.SecretReferencePasswords = ds.Name + "-passwords-test"
-	}
-
 	// From https://engineering.pivotal.io/post/gp4k-kubebuilder-lessons/
 	// In your mutate callback, you should surgically modify individual fields of the object. Don’t overwrite
 	// large chunks of the object, or the whole object, as we tried to do initially.
+
+	//// SECRETS ////
+
+	for _, secret := range createSecretTemplates(&ds) {
+		// var secret v1.Secret
+		// secret.Name = sec.Name
+		// secret.Namespace = sec.Namespace
+		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
+			if secret.CreationTimestamp.IsZero() {
+				log.Info("Created Secret", "secret", secret)
+				//secret.Data = sec.DeepCopy().Data
+				_ = controllerutil.SetControllerReference(&ds, &secret, r.Scheme)
+			} else {
+				log.Info("TODO: Update secret", "secret", secret)
+			}
+			return nil
+		})
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Service")
+		}
+	}
+
+	// var adminSecret v1.Secret
+	// adminSecret.Name = ds.Spec.SecretReferencePasswords
+	// adminSecret.Namespace = ds.Namespace
+
+	// _, err = ctrl.CreateOrUpdate(ctx, r, &adminSecret, func() error {
+	// 	if adminSecret.CreationTimestamp.IsZero() {
+	// 		createAdminSecret(&ds, &adminSecret)
+	// 		_ = controllerutil.SetControllerReference(&ds, &adminSecret, r.Scheme)
+
+	// 	} else {
+	// 		// todo: Do we allow changing the secret in any way?
+	// 		log.Info("TODO- update admin secret")
+	// 	}
+	// 	log.Info("Updated admin secret", "adminSecret", adminSecret)
+	// 	return nil
+	// })
 
 	// This creates a stub sts with only the name/namespace set.
 	// The CreateOrUpdate Method will then take this and fill it in the actual values (if the sts exists already)
@@ -156,31 +187,6 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 		log.Info("svc after update/create", "svc", svc)
 		return err
-	})
-
-	// Create secrets or references to secrets for passwords
-	if len(ds.Spec.SecretReferencePasswords) > 0 {
-		log.Info("Looking for secret reference", "secretReferencePasswords", ds.Spec.SecretReferencePasswords)
-
-	}
-
-	//// SECRETS ////
-
-	var adminSecret v1.Secret
-	adminSecret.Name = ds.Spec.SecretReferencePasswords
-	adminSecret.Namespace = ds.Namespace
-
-	_, err = ctrl.CreateOrUpdate(ctx, r, &adminSecret, func() error {
-		if adminSecret.CreationTimestamp.IsZero() {
-			createAdminSecret(&ds, &adminSecret)
-			_ = controllerutil.SetControllerReference(&ds, &adminSecret, r.Scheme)
-
-		} else {
-			// todo: Do we allow changing the secret in any way?
-			log.Info("TODO- update admin secret")
-		}
-		log.Info("Updated admin secret", "adminSecret", adminSecret)
-		return nil
 	})
 
 	if err != nil {

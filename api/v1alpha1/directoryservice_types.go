@@ -34,26 +34,20 @@ type DirectoryServiceSpec struct {
 	Replicas *int32 `json:"replicas,required"`
 	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
 	// DSType string `json:"dsType,omitempty"`
-
-	// Name of secret that contains the ds passwords. Defaults to $Name-passwords. Must have keys: dirmanage.pw, monitor.pw
-	// TODO: This should be generated if the secret is not found.
-	SecretReferencePasswords string                      `json:"secretReferencePasswords,omitempty"`
-	SecretReference          string                      `json:"secretReference,omitempty"`
-	Resources                corev1.ResourceRequirements `json:"resources,omitempty"`
-	AccountSecrets           []DirectoryAccountSecrets   `json:"accountSecrets"`
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// The account secrets. The key is the DN of the secret (example, uid=admin)
+	AccountSecrets map[string]DirectoryAccountSecrets `json:"accountSecrets"`
 }
 
 // DirectoryAccountSecrets is a reference to an account secret.
 // The operator can set the passwords for accounts such as the uid=admin, uid=monitor and service accounts such as uid=idm-admin,ou=admins
 type DirectoryAccountSecrets struct {
-	// The ldap DN of the account
-	Dn string `json:"dn"`
 	// The name of a secret
 	SecretName string `json:"secretName"`
 	// The key within the secret
 	Key string `json:"key"`
-	// Create a random secret if no existing secret is supplied
-	CreateIfMissing bool `json:"createIfMissing,omitempty"`
+	// Create a random secret. Assumes no external secret manager is creating
+	Create bool `json:"create,omitempty"`
 }
 
 // DirectoryServiceStatus defines the observed state of DirectoryService
@@ -88,4 +82,14 @@ type DirectoryServiceList struct {
 
 func init() {
 	SchemeBuilder.Register(&DirectoryService{}, &DirectoryServiceList{})
+}
+
+// SecretNameForDN looks up the secret name for the given dn (example, uid=admin)
+// If the secret is one we generate, we prefix the name with metadata.name
+func (ds *DirectoryService) SecretNameForDN(pathRef string) string {
+	sec := ds.Spec.AccountSecrets[pathRef]
+	if sec.Create {
+		return ds.Name + "-" + sec.SecretName
+	}
+	return sec.SecretName
 }

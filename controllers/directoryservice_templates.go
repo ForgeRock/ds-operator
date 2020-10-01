@@ -5,9 +5,6 @@
 package controllers
 
 import (
-	"math/rand"
-	"time"
-
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -132,7 +129,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
 									// todo
-									SecretName: ds.Spec.SecretReferencePasswords,
+									//SecretName: ds.Spec.SecretReferencePasswords,
+									SecretName: "ds-passwords",
 								},
 							},
 						},
@@ -205,34 +203,20 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 
 // Generate a new secret for the admin passwords
 // Sets the passwords to random strings
-func createAdminSecret(ds *directoryv1alpha1.DirectoryService, secret *v1.Secret) error {
-	secretTemplate := v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
-			Name:        ds.Spec.SecretReferencePasswords,
-			Namespace:   ds.Namespace,
-		},
-		Data: map[string][]byte{
-			"dirmanager.pw": []byte(randPassword(24)),
-			"monitor.pw":    []byte(randPassword(15)),
-		},
-	}
-	secretTemplate.DeepCopyInto(secret)
+// func createAdminSecret(ds *directoryv1alpha1.DirectoryService, secret *v1.Secret) error {
+// 	secretTemplate := v1.Secret{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Labels:      make(map[string]string),
+// 			Annotations: make(map[string]string),
+// 			Name:        ds.Spec.SecretReferencePasswords,
+// 			Namespace:   ds.Namespace,
+// 		},
+// 		Data: map[string][]byte{
+// 			"dirmanager.pw": []byte(randPassword(24)),
+// 			"monitor.pw":    []byte(randPassword(15)),
+// 		},
+// 	}
+// 	secretTemplate.DeepCopyInto(secret)
 
-	return nil
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!$^#()-+<>")
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-func randPassword(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+// 	return nil
+// }
