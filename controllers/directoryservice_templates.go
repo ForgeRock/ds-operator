@@ -64,14 +64,19 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									Name:      "secrets",
 									MountPath: "/opt/opendj/secrets",
 								},
-								// TODO: Why does our kustomize sample mount the same secrets in two locations
-								// {
-								// 	Name:      "secrets",
-								// 	MountPath: "/var/run/secrets/opendj",
-								// },
 								{
 									Name:      "passwords",
 									MountPath: "/var/run/secrets/opendj-passwords",
+								},
+							},
+							// TODO: Do we just hard code resource requirements for the init container? Or copy the main container
+							Resources: v1.ResourceRequirements{
+								Limits: v1.ResourceList{
+									"memory": resource.MustParse("1024Mi"),
+								},
+								Requests: v1.ResourceList{
+									"cpu":    resource.MustParse("250m"),
+									"memory": resource.MustParse("1024Mi"),
 								},
 							},
 							Env: []v1.EnvVar{
@@ -106,6 +111,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									MountPath: "/opt/opendj/secrets",
 								},
 							},
+							Resources: ds.DeepCopy().Spec.Resources,
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
@@ -125,6 +131,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name: "passwords",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
+									// todo
 									SecretName: ds.Spec.SecretReferencePasswords,
 								},
 							},

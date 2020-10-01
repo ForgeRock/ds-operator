@@ -89,6 +89,13 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, nil
 	}
 
+	// TODO: THe webhook can set Defaults, but for testing do we also want to set defaults here...
+	// Defaults the name of the secret that contains the DS passwords.
+	// need to set default password before the sts and secrets are created
+	if len(ds.Spec.SecretReferencePasswords) == 0 {
+		ds.Spec.SecretReferencePasswords = ds.Name + "-passwords-test"
+	}
+
 	// From https://engineering.pivotal.io/post/gp4k-kubebuilder-lessons/
 	// In your mutate callback, you should surgically modify individual fields of the object. Don’t overwrite
 	// large chunks of the object, or the whole object, as we tried to do initially.
@@ -159,11 +166,6 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	//// SECRETS ////
 
-	// TODO: THe webhook can set Defaults, but for testing do we also want to set defaults here...
-	// Defaults the name of the secret that contains the DS passwords.
-	if len(ds.Spec.SecretReferencePasswords) == 0 {
-		ds.Spec.SecretReferencePasswords = ds.Name + "-passwords-test"
-	}
 	var adminSecret v1.Secret
 	adminSecret.Name = ds.Spec.SecretReferencePasswords
 	adminSecret.Namespace = ds.Namespace

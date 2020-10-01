@@ -37,8 +37,23 @@ type DirectoryServiceSpec struct {
 
 	// Name of secret that contains the ds passwords. Defaults to $Name-passwords. Must have keys: dirmanage.pw, monitor.pw
 	// TODO: This should be generated if the secret is not found.
-	SecretReferencePasswords string `json:"secretReferencePasswords,omitempty"`
-	SecretReference          string `json:"secretReference,omitempty"`
+	SecretReferencePasswords string                      `json:"secretReferencePasswords,omitempty"`
+	SecretReference          string                      `json:"secretReference,omitempty"`
+	Resources                corev1.ResourceRequirements `json:"resources,omitempty"`
+	AccountSecrets           []DirectoryAccountSecrets   `json:"accountSecrets"`
+}
+
+// DirectoryAccountSecrets is a reference to an account secret.
+// The operator can set the passwords for accounts such as the uid=admin, uid=monitor and service accounts such as uid=idm-admin,ou=admins
+type DirectoryAccountSecrets struct {
+	// The ldap DN of the account
+	Dn string `json:"dn"`
+	// The name of a secret
+	SecretName string `json:"secretName"`
+	// The key within the secret
+	Key string `json:"key"`
+	// Create a random secret if no existing secret is supplied
+	CreateIfMissing bool `json:"createIfMissing,omitempty"`
 }
 
 // DirectoryServiceStatus defines the observed state of DirectoryService
