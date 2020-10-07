@@ -1,4 +1,4 @@
-domain: forgerock.com
+domain: forgerock.io
 repo: github.com/ForgeRock/ds-operator
 resources:
 - group: directory

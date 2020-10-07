@@ -22,7 +22,6 @@ func (ds *DSConnection) Connect() error {
 	if err != nil {
 		return fmt.Errorf("Cant open ldap connection to %s using dn %s :  %s", ds.URL, ds.DN, err.Error())
 	}
-	//defer l.Close()
 
 	err = l.Bind(ds.DN, ds.Password)
 
@@ -37,8 +36,8 @@ func (ds *DSConnection) Connect() error {
 }
 
 // GetEntry get an ldap entry.
-// This doesn't do much right now ... just searches for an entry
-func (ds *DSConnection) getEntry(dn string) error {
+// This doesn't do much right now ... just searches for an entry. Just for testing
+func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 
 	req := ldap.NewSearchRequest("ou=admins,ou=identities",
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -47,12 +46,16 @@ func (ds *DSConnection) getEntry(dn string) error {
 		nil)
 
 	res, err := ds.ldap.Search(req)
+	if err != nil {
+		return nil, err
+	}
 
+	// just for info...
 	for _, entry := range res.Entries {
 		fmt.Printf("%s: %v cn=%s\n", entry.DN, entry.GetAttributeValue("uid"), entry.GetAttributeValue("cn"))
 	}
 
-	return err
+	return res.Entries[0], err
 }
 
 // UpdatePassword changes the password for the user identified by the DN. This is done as an administrative password change

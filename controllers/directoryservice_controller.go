@@ -22,10 +22,15 @@ type DirectoryServiceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var (
+	// requeue the request
+	requeue = ctrl.Result{RequeueAfter: time.Second * 30}
+)
+
 // Reconcile loop for DS controller
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
-// +kubebuilder:rbac:groups=directory.forgerock.com,resources=directoryservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=directory.forgerock.com,resources=directoryservices/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get
 // +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get
@@ -50,7 +55,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	// finalizer hooks..
 	// This registers finalizers for deleting the object
-	myFinalizerName := "directory.finalizers.forgerock.com"
+	myFinalizerName := "directory.finalizers.forgerock.io"
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if ds.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -97,30 +102,25 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	//// Services ////
-	if res, err := r.reconcileService(ctx, &ds); err != nil {
-		return res, err
+	svc, err := r.reconcileService(ctx, &ds)
+	if err != nil {
+		return requeue, err
 	}
 
-	// TODO: Remove this...
-	// Just for testing
-	if ds.CreationTimestamp.IsZero() {
-		log.Info("ohh noes... should not happen")
-
-	} else {
-		log.Info("Update ds status")
-		now := time.Now()
-		ds.Status.LastUpdate.Seconds = now.Unix()
+	// update ldap service account passwords
+	if _, err := r.updatePasswords(ctx, &ds, &svc); err != nil {
+		return requeue, nil
 	}
 
-	log.Info("DS object", "directoryserver", ds)
-
-	// Update the status of our ds
+	// Update the status of our ds object
 	if err := r.Status().Update(ctx, &ds); err != nil {
 		log.Error(err, "unable to update Directory status")
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{RequeueAfter: time.Second * 20}, nil
+	log.Info("Returning from Reconcile")
+
+	return requeue, nil
 }
 
 // SetupWithManager stuff

@@ -61,7 +61,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "5bca1d4b.forgerock.com",
+		LeaderElectionID:   "5bca1d4b.forgerock.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

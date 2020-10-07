@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   creationTimestamp: null
-  name: directoryservices.directory.forgerock.com
+  name: directoryservices.directory.forgerock.io
 spec:
-  group: directory.forgerock.com
+  group: directory.forgerock.io
   names:
     kind: DirectoryService
     listKind: DirectoryServiceList
@@ -16,6 +16,9 @@ spec:
     singular: directoryservice
   scope: Namespaced
   subresources:
+    scale:
+      specReplicasPath: .spec.replicas
+      statusReplicasPath: .status.currentReplicas
     status: {}
   validation:
     openAPIV3Schema:

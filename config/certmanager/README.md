@@ -36,7 +36,7 @@ Example
 
 ```
 # A small deployment using sane defaults where possible
-apiVersion: directory.forgerock.com/v1alpha1
+apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
   name: cts

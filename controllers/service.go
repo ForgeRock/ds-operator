@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
+func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (v1.Service, error) {
 	// create or update the service
 	var svc v1.Service
 	svc.Name = ds.Name
@@ -35,7 +35,7 @@ func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *d
 		r.Log.V(8).Info("svc after update/create", "svc", svc)
 		return err
 	})
-	return ctrl.Result{}, err
+	return svc, err
 
 }
 

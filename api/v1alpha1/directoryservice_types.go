@@ -64,6 +64,7 @@ type DirectoryServiceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.currentReplicas
 
 // DirectoryService is the Schema for the directoryservices API
 type DirectoryService struct {

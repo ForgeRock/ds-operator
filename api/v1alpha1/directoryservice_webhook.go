@@ -37,7 +37,7 @@ func (r *DirectoryService) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
-// +kubebuilder:webhook:path=/mutate-directory-forgerock-com-forgerock-com-v1alpha1-directoryservice,mutating=true,failurePolicy=fail,groups=directory.forgerock.com.forgerock.com,resources=directoryservices,verbs=create;update,versions=v1alpha1,name=mdirectoryservice.kb.io
+// +kubebuilder:webhook:path=/mutate-directory-forgerock-com-forgerock-com-v1alpha1-directoryservice,mutating=true,failurePolicy=fail,groups=directory.forgerock.io.forgerock.io,resources=directoryservices,verbs=create;update,versions=v1alpha1,name=mdirectoryservice.kb.io
 
 var _ webhook.Defaulter = &DirectoryService{}
 
@@ -55,7 +55,7 @@ func (r *DirectoryService) Default() {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// +kubebuilder:webhook:verbs=create;update,path=/validate-directory-forgerock-com-forgerock-com-v1alpha1-directoryservice,mutating=false,failurePolicy=fail,groups=directory.forgerock.com.forgerock.com,resources=directoryservices,versions=v1alpha1,name=vdirectoryservice.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-directory-forgerock-com-forgerock-com-v1alpha1-directoryservice,mutating=false,failurePolicy=fail,groups=directory.forgerock.io.forgerock.io,resources=directoryservices,versions=v1alpha1,name=vdirectoryservice.kb.io
 
 var _ webhook.Validator = &DirectoryService{}
 
@@ -74,7 +74,7 @@ func (r *DirectoryService) ValidateCreate() error {
 	}
 
 	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "directory.forgerock.com", Kind: "DirectoryService"},
+		schema.GroupKind{Group: "directory.forgerock.io", Kind: "DirectoryService"},
 		r.Name, allErrs)
 }
 

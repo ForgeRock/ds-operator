@@ -5,7 +5,7 @@ metadata:
   name: directoryservice-editor-role
 rules:
 - apiGroups:
-  - directory.forgerock.com
+  - directory.forgerock.io
   resources:
   - directoryservices
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - directory.forgerock.com
+  - directory.forgerock.io
   resources:
   - directoryservices/status
   verbs:
