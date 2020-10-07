@@ -55,12 +55,15 @@ type DirectoryServiceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// A list of pointers to currently running jobs.
 	// +optional
-	Active []corev1.ObjectReference `json:"active,omitempty"`
+	Active                           []corev1.ObjectReference `json:"active,omitempty"`
+	LastUpdate                       metav1.Timestamp         `json:"lastUpdateTime,omitempty"`
+	CurrentReplicas                  *int32                   `json:"currentReplicas,omitempty"`
+	ServiceAccountPasswordsUpdatedAt metav1.Timestamp         `json:"serviceAccountPasswordsUpdatedAt,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // DirectoryService is the Schema for the directoryservices API
 type DirectoryService struct {

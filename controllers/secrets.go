@@ -1,13 +1,38 @@
 package controllers
 
 import (
+	"context"
 	"math/rand"
 	"time"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+// loop over all the secrets that we own, and create or update
+// Note there may be accountSecrets that are referenced (bring your own secrets use case), but we don't own them
+func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
+	for _, secret := range createSecretTemplates(ds) {
+		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
+			if secret.CreationTimestamp.IsZero() {
+				r.Log.V(8).Info("Created Secret", "secret", secret)
+				_ = controllerutil.SetControllerReference(ds, &secret, r.Scheme)
+			} else {
+				r.Log.V(8).Info("TODO: Update secret", "secret", secret)
+			}
+			return nil
+		})
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Secret")
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
 
 // Create secret templates for secrets we need to create
 // This iterates through the list of secrets, seeing which ones we own

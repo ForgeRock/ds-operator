@@ -78,3 +78,7 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+# Integration tests assume and ldap server is running via a localhost:1389 proxy
+integration_test:
+	cd pkg/ldap && go test --tags=integration

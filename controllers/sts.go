@@ -5,12 +5,63 @@
 package controllers
 
 import (
+	"context"
+
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
+	"github.com/pkg/errors"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
+	var sts apps.StatefulSet
+	sts.Name = ds.Name
+	sts.Namespace = ds.Namespace
+
+	_, err := ctrl.CreateOrUpdate(ctx, r, &sts, func() error {
+		// todo:
+		// Fill in STS fields. If the object already exists this should only update fields.
+		// ModifyStatefulSet(ds,&sts)
+		r.Log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
+
+		var err error
+		// does the sts not exist yet? Is this the right check?
+		if sts.CreationTimestamp.IsZero() {
+			err = createDSStatefulSet(ds, &sts)
+			_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
+			r.Log.V(8).Info("Created New sts from template", "sts", sts)
+		} else {
+			// If the sts exists already - we want to update any fields to bring its state into
+			// alignment with the Custom Resource
+			err = updateDSStatefulSet(ds, &sts)
+		}
+
+		r.Log.V(8).Info("sts after update/create", "sts", sts)
+		return err
+
+	})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
+	}
+	return ctrl.Result{}, nil
+}
+
+// This function updates an existing statefulset to match settings in the custom resource
+// TODO: What kinds of things should we update?
+func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
+
+	// Copy our expected replicas to the statefulset
+	sts.Spec.Replicas = ds.Spec.Replicas
+
+	// copy the current sts replicas up the ds status
+	ds.Status.CurrentReplicas = &sts.Status.CurrentReplicas
+
+	return nil
+}
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
 func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
@@ -161,62 +212,3 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	stemplate.DeepCopyInto(sts)
 	return nil
 }
-
-// Create the service for ds
-func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
-	svcTemplate := v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
-			Name:        ds.Name,
-			Namespace:   ds.Namespace,
-		},
-		Spec: v1.ServiceSpec{
-			ClusterIP: "None", // headless service
-			Selector: map[string]string{
-				"app": ds.Name,
-			},
-			Ports: []v1.ServicePort{
-				{
-					Name: "admin",
-					Port: 4444,
-				},
-				{
-					Name: "ldap",
-					Port: 1389,
-				},
-				{
-					Name: "ldaps",
-					Port: 1636,
-				},
-				{
-					Name: "http",
-					Port: 8080,
-				},
-			},
-		},
-	}
-
-	svcTemplate.DeepCopyInto(svc)
-	return nil // todo: can this ever fail?
-}
-
-// Generate a new secret for the admin passwords
-// Sets the passwords to random strings
-// func createAdminSecret(ds *directoryv1alpha1.DirectoryService, secret *v1.Secret) error {
-// 	secretTemplate := v1.Secret{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Labels:      make(map[string]string),
-// 			Annotations: make(map[string]string),
-// 			Name:        ds.Spec.SecretReferencePasswords,
-// 			Namespace:   ds.Namespace,
-// 		},
-// 		Data: map[string][]byte{
-// 			"dirmanager.pw": []byte(randPassword(24)),
-// 			"monitor.pw":    []byte(randPassword(15)),
-// 		},
-// 	}
-// 	secretTemplate.DeepCopyInto(secret)
-
-// 	return nil
-// }

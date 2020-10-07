@@ -28,8 +28,8 @@ spec:
       secretName: monitor
       key: password
       create: true
-  # An example of a service account password
-  # TODO: We dont yet support changing / setting service account passwords.
+    # An example of a service account password. The operator will generate a password (create=true)
+    # And will set the password value in ldap
     "uid=openam_cts,ou=admins,ou=famrecords,ou=openam-session,ou=tokens":
       secretName: am-cts-account
       key: password

@@ -6,17 +6,13 @@ package controllers
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
+	"time"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
-	apps "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DirectoryServiceReconciler reconciles a DirectoryService object
@@ -36,6 +32,7 @@ type DirectoryServiceReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
+	// This adds the log data to every log line
 	var log = r.Log.WithValues("directoryservice", req.NamespacedName)
 
 	log.Info("Started")
@@ -57,7 +54,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if ds.ObjectMeta.DeletionTimestamp.IsZero() {
-		log.Info("Registering finalizer for Directory Service", "name", ds.Name)
+		log.V(3).Info("Registering finalizer for Directory Service", "name", ds.Name)
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -89,111 +86,41 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, nil
 	}
 
-	// From https://engineering.pivotal.io/post/gp4k-kubebuilder-lessons/
-	// In your mutate callback, you should surgically modify individual fields of the object. Don’t overwrite
-	// large chunks of the object, or the whole object, as we tried to do initially.
-
 	//// SECRETS ////
-
-	for _, secret := range createSecretTemplates(&ds) {
-		// var secret v1.Secret
-		// secret.Name = sec.Name
-		// secret.Namespace = sec.Namespace
-		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
-			if secret.CreationTimestamp.IsZero() {
-				log.Info("Created Secret", "secret", secret)
-				//secret.Data = sec.DeepCopy().Data
-				_ = controllerutil.SetControllerReference(&ds, &secret, r.Scheme)
-			} else {
-				log.Info("TODO: Update secret", "secret", secret)
-			}
-			return nil
-		})
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Service")
-		}
+	if res, err := r.reconcileSecrets(ctx, &ds); err != nil {
+		return res, err
 	}
 
-	// var adminSecret v1.Secret
-	// adminSecret.Name = ds.Spec.SecretReferencePasswords
-	// adminSecret.Namespace = ds.Namespace
-
-	// _, err = ctrl.CreateOrUpdate(ctx, r, &adminSecret, func() error {
-	// 	if adminSecret.CreationTimestamp.IsZero() {
-	// 		createAdminSecret(&ds, &adminSecret)
-	// 		_ = controllerutil.SetControllerReference(&ds, &adminSecret, r.Scheme)
-
-	// 	} else {
-	// 		// todo: Do we allow changing the secret in any way?
-	// 		log.Info("TODO- update admin secret")
-	// 	}
-	// 	log.Info("Updated admin secret", "adminSecret", adminSecret)
-	// 	return nil
-	// })
-
-	// This creates a stub sts with only the name/namespace set.
-	// The CreateOrUpdate Method will then take this and fill it in the actual values (if the sts exists already)
-	var sts apps.StatefulSet
-	sts.Name = ds.Name
-	sts.Namespace = ds.Namespace
-
-	_, err := ctrl.CreateOrUpdate(ctx, r, &sts, func() error {
-		// todo:
-		// Fill in STS fields. If the object already exists this should only update fields.
-		// ModifyStatefulSet(ds,&sts)
-		log.Info("CreateorUpdate statefulset", "sts", sts)
-
-		var err error
-		// does the sts not exist yet? Is this the right check?
-		if sts.CreationTimestamp.IsZero() {
-			err = createDSStatefulSet(&ds, &sts)
-			_ = controllerutil.SetControllerReference(&ds, &sts, r.Scheme)
-			log.Info("Created New sts from template", "sts", sts)
-		} else {
-			// If the sts exists already - we want to update any fields to bring its state into
-			// alignment with the Custom Resource
-			err = updateDSStatefulSet(&ds, &sts)
-		}
-
-		log.Info("sts after update/create", "sts", sts)
-		return err
-
-	})
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
+	//// StatefulSets ////
+	if res, err := r.reconcileSTS(ctx, &ds); err != nil {
+		return res, err
 	}
 
-	// create or update the service
-	var svc v1.Service
-	svc.Name = ds.Name
-	svc.Namespace = ds.Namespace
-
-	_, err = ctrl.CreateOrUpdate(ctx, r, &svc, func() error {
-		log.Info("CreateorUpdate service", "svc", svc)
-
-		var err error
-		// does the service not exist yet?
-		if svc.CreationTimestamp.IsZero() {
-			err = createService(&ds, &svc)
-			log.Info("Setting ownerref for service", "svc", svc.Name)
-			_ = controllerutil.SetControllerReference(&ds, &svc, r.Scheme)
-			log.Info("Created New sts from template", "sts", sts)
-		} else {
-			// If the sts exists already - we want to update any fields to bring its state into
-			// alignment with the Custom Resource
-			//err = updateService(&ds, &sts)
-			log.Info("TODO: Handle update of ds service")
-		}
-
-		log.Info("svc after update/create", "svc", svc)
-		return err
-	})
-
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Service")
+	//// Services ////
+	if res, err := r.reconcileService(ctx, &ds); err != nil {
+		return res, err
 	}
 
-	return ctrl.Result{}, nil
+	// TODO: Remove this...
+	// Just for testing
+	if ds.CreationTimestamp.IsZero() {
+		log.Info("ohh noes... should not happen")
+
+	} else {
+		log.Info("Update ds status")
+		now := time.Now()
+		ds.Status.LastUpdate.Seconds = now.Unix()
+	}
+
+	log.Info("DS object", "directoryserver", ds)
+
+	// Update the status of our ds
+	if err := r.Status().Update(ctx, &ds); err != nil {
+		log.Error(err, "unable to update Directory status")
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{RequeueAfter: time.Second * 20}, nil
 }
 
 // SetupWithManager stuff
@@ -201,14 +128,6 @@ func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&directoryv1alpha1.DirectoryService{}).
 		Complete(r)
-}
-
-// This function updates an existing statefulset to match settings in the custom resource
-// TODO: What kinds of things should we update?
-func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
-
-	sts.Spec.Replicas = ds.Spec.Replicas
-	return nil
 }
 
 func (r *DirectoryServiceReconciler) deleteExternalResources(ds *directoryv1alpha1.DirectoryService) error {
