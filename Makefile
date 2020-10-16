@@ -2,7 +2,9 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+#CRD_OPTIONS ?= "crd:trivialVersions=false"
+# This will work on kube versions 1.16+. We want the CRD OpenAPI validation features in v1
+CRD_OPTIONS ?= "crd:crdVersions=v1"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -80,5 +82,5 @@ CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
 # Integration tests assume and ldap server is running via a localhost:1389 proxy
-integration_test:
+int:
 	cd pkg/ldap && go test --tags=integration

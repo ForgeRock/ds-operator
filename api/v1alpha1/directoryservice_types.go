@@ -28,26 +28,61 @@ import (
 type DirectoryServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Docker Image for the directory server. Defaults if not provided?
-	Image string `json:"image,omitempty"`
+	// Docker Image for the directory server.
+	Image string `json:"image,required"`
 	// Replicas is the number of directory server instances to create
+	// +kubebuilder:validation:Maximum:=8
+	// +kubebuilder:default:=1
 	Replicas *int32 `json:"replicas,required"`
 	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
 	// DSType string `json:"dsType,omitempty"`
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
-	AccountSecrets map[string]DirectoryAccountSecrets `json:"accountSecrets"`
+	Passwords map[string]DirectoryPasswords `json:"passwords"`
+	// Keystore references
+	Keystores DirectoryKeystores `json:"keystores,omitempty"`
+
+	// Backup
+	Backup DirectoryBackup `json:"backup,omitempty"`
+	// Restore
+	Restore DirectoryRestore `json:"restore,omitempty"`
 }
 
-// DirectoryAccountSecrets is a reference to an account secret.
+// DirectoryPasswords is a reference to account secrets that contain passwords for the directory.
 // The operator can set the passwords for accounts such as the uid=admin, uid=monitor and service accounts such as uid=idm-admin,ou=admins
-type DirectoryAccountSecrets struct {
+type DirectoryPasswords struct {
 	// The name of a secret
 	SecretName string `json:"secretName"`
 	// The key within the secret
 	Key string `json:"key"`
-	// Create a random secret. Assumes no external secret manager is creating
+	// Create a random secret if true. Otherwise assumes the secret already exists
 	Create bool `json:"create,omitempty"`
+}
+
+// DirectoryKeystores provides a reference to the keystore secrets
+type DirectoryKeystores struct {
+	// The name of a secret containing the keystore
+	// +kubebuilder:default:=ds
+	KeyStoreSecretName   string `json:"keyStoreSecretName,required"`
+	TrustStoreSecretName string `json:"trustStoreSecretName,omitempty"`
+
+	// The key within the secret. TODO: Perhaps keys should be by convention only...
+
+}
+
+// DirectoryBackup defines how and where to backup DS to
+type DirectoryBackup struct {
+	Enabled    bool   `json:"enabled,required"`
+	Path       string `json:"path,required"`
+	Cron       string `json:"cron,required"`
+	SecretName string `json:"secretName,omitempty"`
+}
+
+// DirectoryRestore defines how to restore a new directory from a backup
+type DirectoryRestore struct {
+	Enabled    bool   `json:"enabled,required"`
+	Path       string `json:"path,required"`
+	SecretName string `json:"secretName,omitempty"`
 }
 
 // DirectoryServiceStatus defines the observed state of DirectoryService
@@ -91,7 +126,7 @@ func init() {
 // SecretNameForDN looks up the secret name for the given dn (example, uid=admin)
 // If the secret is one we generate, we prefix the name with metadata.name
 func (ds *DirectoryService) SecretNameForDN(pathRef string) string {
-	sec := ds.Spec.AccountSecrets[pathRef]
+	sec := ds.Spec.Passwords[pathRef]
 	if sec.Create {
 		return ds.Name + "-" + sec.SecretName
 	}

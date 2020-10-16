@@ -34,7 +34,7 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 
 	// lookup the admin password. Do we want to cache this?
 	var adminSecret v1.Secret
-	account := ds.Spec.AccountSecrets["uid=admin"]
+	account := ds.Spec.Passwords["uid=admin"]
 	name := types.NamespacedName{Namespace: ds.Namespace, Name: account.SecretName}
 
 	if err := r.Get(ctx, name, &adminSecret); err != nil {
@@ -52,7 +52,7 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 	}
 	defer ldap.Close()
 
-	for key, account := range ds.Spec.AccountSecrets {
+	for key, account := range ds.Spec.Passwords {
 		// we skip any internal accounts as they are managed on boot by the ds image
 		if key == "uid=admin" || key == "uid=monitor" {
 			continue

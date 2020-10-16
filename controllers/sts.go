@@ -70,8 +70,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// not a constant
 	var fsGroup int64 = 0
 	var forgerockUser int64 = 11111
-	// todo: update proper tag
-	var image = "gcr.io/engineering-devops/ds-idrepo:master-ready-for-dev-pipelines-232-gc547ff85e-dirty"
 
 	// Create a template
 	stemplate := &apps.StatefulSet{
@@ -92,14 +90,51 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": ds.Name,
+						"app":      ds.Name,
+						"affinity": "directory", // for anti-affinity
 					},
 				},
 				Spec: v1.PodSpec{
+					// We use anti affinity to spread the pods out over host node
+
+					Affinity: &v1.Affinity{
+						// NodeAffinity:    &v1.NodeAffinity{},
+						// PodAffinity:     &v1.PodAffinity{},
+						PodAntiAffinity: &v1.PodAntiAffinity{
+							//RequiredDuringSchedulingIgnoredDuringExecution:  []v1.PodAffinityTerm{},
+							PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+								{
+									Weight: 100,
+									PodAffinityTerm: v1.PodAffinityTerm{
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{},
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{
+													Key:      "affinity",
+													Operator: "In",
+													Values:   []string{"directory"},
+												},
+											},
+										},
+										TopologyKey: "kubernetes.io/hostname",
+									},
+								},
+							},
+						},
+					},
+					// Tolerate any nodes tainted with kubectl taint nodes node1 key=directory:NoSchedule
+					Tolerations: []v1.Toleration{
+						{
+							Key:      "key",
+							Operator: "Equal",
+							Value:    "directory",
+							Effect:   "NoSchedule",
+						},
+					},
 					InitContainers: []v1.Container{
 						{
 							Name:            "init",
-							Image:           image,
+							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullAlways, // todo: for testing this is good. Remove later?
 							//Command: []string{"/opt/opendj/scripts/init-and-restore.sh"},
 							Args: []string{"initialize-only"},
@@ -146,7 +181,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					Containers: []v1.Container{
 						{
 							Name:  "ds",
-							Image: image,
+							Image: ds.Spec.Image,
 							// ImagePullPolicy: ImagePullPolicy,
 							Args: []string{"start-ds"},
 							VolumeMounts: []v1.VolumeMount{
@@ -171,7 +206,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name: "secrets",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: "ds", // NOTE: Do we want common secrets for all instances in the NS?
+									SecretName: ds.Spec.Keystores.KeyStoreSecretName,
 								},
 							},
 						},

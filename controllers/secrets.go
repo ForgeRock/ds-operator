@@ -14,7 +14,7 @@ import (
 )
 
 // loop over all the secrets that we own, and create or update
-// Note there may be accountSecrets that are referenced (bring your own secrets use case), but we don't own them
+// Note there may be DirectoryPasswords that are referenced (bring your own secrets use case), but we don't own them
 func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
 	for _, secret := range createSecretTemplates(ds) {
 		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
@@ -40,7 +40,7 @@ func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *d
 func createSecretTemplates(ds *directoryv1alpha1.DirectoryService) []v1.Secret {
 	var secrets []v1.Secret
 
-	for dn, accountSecret := range ds.Spec.AccountSecrets {
+	for dn, accountSecret := range ds.Spec.Passwords {
 		if accountSecret.Create {
 			// we own creating the secret
 			secretTemplate := v1.Secret{
