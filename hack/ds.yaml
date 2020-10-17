@@ -47,8 +47,8 @@ spec:
     enabled: true
     # starts with s3://, gs:// , az:// or a path to the filesystem
     # The system will calculate a unique name for the backup that includes then name, namespace
-    path: /var/run/backup
-    cron: "0 * * * *"
+    path: /var/tmp/backup
+    cron: "*/5 * * * *"
     secretName: cloud-storage-credentials
   # Restore from the backup if the data directory is empty
   restore:

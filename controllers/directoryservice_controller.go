@@ -6,11 +6,16 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
+	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	"github.com/go-logr/logr"
+	"github.com/prometheus/common/log"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -39,7 +44,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	// This adds the log data to every log line
 	var log = r.Log.WithValues("directoryservice", req.NamespacedName)
 
-	log.Info("Started")
+	log.Info("Reconcile")
 
 	var ds directoryv1alpha1.DirectoryService
 
@@ -101,14 +106,33 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	//// Services ////
-	svc, err := r.reconcileService(ctx, &ds)
+	_, err := r.reconcileService(ctx, &ds)
 	if err != nil {
 		return requeue, err
 	}
 
-	// update ldap service account passwords
-	if _, err := r.updatePasswords(ctx, &ds, &svc); err != nil {
+	//// LDAP Updates
+	ldap, err := r.getAdminLDAPConnection(ctx, &ds)
+	// server may be down or coming up. Reque
+	if err != nil {
 		return requeue, nil
+	}
+	defer ldap.Close()
+
+	// update ldap service account passwords
+	if err := r.updatePasswords(ctx, &ds, ldap); err != nil {
+		return requeue, nil
+	}
+
+	// Update backup / restore options
+	if err := r.updateBackup(ctx, &ds, ldap); err != nil {
+		return requeue, nil
+	}
+
+	// Get the LDAP backup status
+	if err := r.updateBackupStatus(ctx, &ds, ldap); err != nil {
+		log.Info("Could not get backup status", "err", err)
+		// todo: We still want to update the remaining status....
 	}
 
 	// Update the status of our ds object
@@ -156,4 +180,33 @@ func removeString(slice []string, s string) (result []string) {
 		result = append(result, item)
 	}
 	return
+}
+
+func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (*ldap.DSConnection, error) {
+	// TODO: is there a more reliable way of getting the service hostname?
+	// url := fmt.Sprintf("ldap://%s.%s.svc.cluster.local:1389", svc.Name, svc.Namespace)
+	// For local testing we need to run kube port-forward and localhost...
+	url := fmt.Sprintf("ldap://localhost:1389")
+
+	// lookup the admin password. Do we want to cache this?
+	var adminSecret v1.Secret
+	account := ds.Spec.Passwords["uid=admin"]
+	name := types.NamespacedName{Namespace: ds.Namespace, Name: account.SecretName}
+
+	if err := r.Get(ctx, name, &adminSecret); err != nil {
+		log.Error(err, "Can't find secret for the admin password", "secret", name)
+		return nil, fmt.Errorf("Can't find the admin ldap secret")
+	}
+
+	password := adminSecret.Data[account.Key]
+
+	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: string(password[:])}
+
+	if err := ldap.Connect(); err != nil {
+		r.Log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)
+		return nil, err
+	}
+
+	return &ldap, nil
+
 }

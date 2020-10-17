@@ -65,9 +65,6 @@ type DirectoryKeystores struct {
 	// +kubebuilder:default:=ds
 	KeyStoreSecretName   string `json:"keyStoreSecretName,required"`
 	TrustStoreSecretName string `json:"trustStoreSecretName,omitempty"`
-
-	// The key within the secret. TODO: Perhaps keys should be by convention only...
-
 }
 
 // DirectoryBackup defines how and where to backup DS to
@@ -95,6 +92,15 @@ type DirectoryServiceStatus struct {
 	LastUpdate                       metav1.Timestamp         `json:"lastUpdateTime,omitempty"`
 	CurrentReplicas                  *int32                   `json:"currentReplicas,omitempty"`
 	ServiceAccountPasswordsUpdatedAt metav1.Timestamp         `json:"serviceAccountPasswordsUpdatedAt,omitempty"`
+	BackupStatus                     []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
+}
+
+// DirectoryBackupStatus provides the status of the backup
+type DirectoryBackupStatus struct {
+	// note DS returns these as string values. For status is ok
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+	Status    string `json:"status"`
 }
 
 // +kubebuilder:object:root=true

@@ -4,6 +4,7 @@ package ldap
 import (
 	"fmt"
 
+	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/go-ldap/ldap"
 )
 
@@ -13,6 +14,13 @@ type DSConnection struct {
 	DN       string
 	Password string
 	ldap     *ldap.Conn
+}
+
+// BackupParams parameters for DS backups
+type BackupParams struct {
+	Cron string
+	Path string
+	ID   string
 }
 
 // Connect to LDAP server via admin credentials
@@ -63,66 +71,129 @@ func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
 	req := ldap.NewPasswordModifyRequest(DN, "", newPassword)
 	_, err := ds.ldap.PasswordModify(req)
-	//fmt.Printf("res = %v gen pass=%v", res, res.GeneratedPassword)
 	return err
 }
 
-// GetBackupTasks query the backup tasks
-func (ds *DSConnection) GetBackupTasks() error {
-	req := ldap.NewSearchRequest("cn=Recurring Tasks,cn=Tasks",
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+// GetBackupTask queries the backup task and returns the parameters
+func (ds *DSConnection) GetBackupTask(id string) (*BackupParams, error) {
+
+	req := ldap.NewSearchRequest("ds-recurring-task-id="+id+",cn=Recurring Tasks,cn=Tasks",
+		ldap.ScopeBaseObject, ldap.NeverDerefAliases, 0, 0, false,
 		"(objectClass=ds-task-backup)",
 		[]string{}, // return the default set of entries
 		nil)
 
-	// ./ldapmodify --useSSL -X -p 1444 -D "uid=admin" -w welcome1
-	// 		dn: ds-recurring-task-id=NightlyBackup2,cn=Recurring Tasks,cn=Tasks
-	// changetype: add
-	// objectClass: top
-	// objectClass: ds-task
-	// objectClass: ds-recurring-task
-	// objectClass: ds-task-backup
-
-	// description: Nightly backup at 2 AM
-	// ds-backup-location: bak
-	// ds-recurring-task-id: NightlyBackup2
-	// ds-recurring-task-schedule: 00 02 * * *
-	// ds-task-class-name: org.opends.server.tasks.BackupTask
-	// ds-task-id: NightlyBackup2
-	// ds-task-state: RECURRING
-
 	res, err := ds.ldap.Search(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fmt.Printf("\n********* Result %v\n", res.Entries[0])
-	res.PrettyPrint(4)
-	return nil
+	var b BackupParams
+
+	if len(res.Entries) == 1 {
+		e := res.Entries[0]
+		for _, attr := range e.Attributes {
+
+			switch n := attr.Name; n {
+			case "ds-recurring-task-schedule":
+				b.Cron = attr.Values[0]
+			case "ds-backup-location":
+				b.Path = attr.Values[0]
+			case "ds-recurring-task-id":
+				b.ID = attr.Values[0]
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("Expected exactly one entry got %d", len(res.Entries))
+	}
+	return &b, nil
 }
 
-// ScheduleBackup - create a backup task
-// This can be done over 1389.
-func (ds *DSConnection) ScheduleBackup() error {
+//  GetBackupTaskStatus queries for the completed backup tasks for the given id
+func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupStatus, error) {
 
-	var taskID = "test"
+	// we need to order via start time..
+	req := ldap.NewSearchRequest("cn=Scheduled Tasks,cn=tasks",
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1000, 0, false,
+		"(ds-recurring-task-id="+id+")",
+		//[]string{"ds-task-scheduled-start-time", "ds-task-completion-time", "ds-task-state"},
+		[]string{},
+		nil)
+
+	var dstat []dir.DirectoryBackupStatus
+
+	res, err := ds.ldap.Search(req)
+
+	// res.PrettyPrint(2)
+	if err != nil {
+		return dstat, err
+	}
+	if len(res.Entries) == 0 {
+		return dstat, nil
+	}
+
+	for i, e := range res.Entries {
+		if i > 10 {
+			continue
+		}
+		var item dir.DirectoryBackupStatus
+
+		for _, attr := range e.Attributes {
+			switch attr.Name {
+			case "ds-task-scheduled-start-time":
+				item.StartTime = attr.Values[0]
+			case "ds-task-completion-time":
+				item.EndTime = attr.Values[0]
+			case "ds-task-state":
+				item.Status = attr.Values[0]
+			default:
+				//fmt.Printf("att = %s", attr.Name)
+			}
+		}
+		dstat = append(dstat, item)
+		fmt.Printf("***** add %v\n", item)
+	}
+	return dstat, nil
+}
+
+// DeleteBackupSchedule deletes a scheduled backup. If the connection is OK, but the task does  not exist
+// we still return ok.
+func (ds *DSConnection) DeleteBackupSchedule(id string) error {
+	task := "ds-recurring-task-id=" + id + ",cn=Recurring Tasks,cn=Tasks"
+	req := ldap.NewDelRequest(task, []ldap.Control{})
+	err := ds.ldap.Del(req)
+	return err
+}
+
+// ScheduleBackup - create or update a backup task
+// This can be done over 1389.
+func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
+
+	// TODO: We should really check to see if the task already exists, and return without the delete/create
+	oldparams, err := ds.GetBackupTask(b.ID)
+	if *oldparams == *b {
+		return nil // params have not changed - nothing to do
+	}
+
+	// delete the existing task id..
+	err = ds.DeleteBackupSchedule(b.ID)
 
 	// the dn needs to be unique for a recurring task
-	req := ldap.NewAddRequest("ds-recurring-task-id=test,cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
+	req := ldap.NewAddRequest("ds-recurring-task-id="+b.ID+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
 	req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", "ds-task-backup"})
-	req.Attribute("description", []string{"test"})
-	req.Attribute("ds-backup-location", []string{"/var/tmp"})
-	req.Attribute("ds-recurring-task-id", []string{taskID})
-	req.Attribute("ds-task-id", []string{taskID}) // needed?
+
+	req.Attribute("description", []string{"backup auto scheduled by ds operator"})
+	req.Attribute("ds-backup-location", []string{b.Path})
+	req.Attribute("ds-recurring-task-id", []string{b.ID})
+	req.Attribute("ds-task-id", []string{b.ID})
 	req.Attribute("ds-task-state", []string{"RECURRING"})
-	req.Attribute("ds-recurring-task-schedule", []string{"25 * * * *"})
+	req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
 	req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
 
-	err := ds.ldap.Add(req)
+	err = ds.ldap.Add(req)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("LDAP added ok")
 	return nil
 }
 

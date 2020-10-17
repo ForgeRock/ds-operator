@@ -86,3 +86,19 @@ ds-recurring-task-schedule: 00 02 * * *
 ds-task-class-name: org.opends.server.tasks.BackupTask
 ds-task-id: NightlyBackup2
 ds-task-state: RECURRING
+
+
+
+Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
+
+
+If I parse that, it means you should do Status().Update() first (to not lose your status), and then Update()?
+
+negz  16 hours ago
+@warren.strange Kind of - the inverse is also true though. If you call Status().Update() you’ll lose any uncommitted changes to the spec or metadata.
+
+
+negz  16 hours ago
+So it’s less of a hard and fast ordering rule vs something to be aware of.
+
+One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status.

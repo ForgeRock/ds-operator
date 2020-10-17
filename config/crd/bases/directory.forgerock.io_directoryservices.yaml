@@ -200,6 +200,24 @@ spec:
                       type: string
                   type: object
                 type: array
+              backupStatus:
+                items:
+                  description: DirectoryBackupStatus provides the status of the backup
+                  properties:
+                    endTime:
+                      type: string
+                    startTime:
+                      description: note DS returns these as string values. For status
+                        is ok
+                      type: string
+                    status:
+                      type: string
+                  required:
+                  - endTime
+                  - startTime
+                  - status
+                  type: object
+                type: array
               currentReplicas:
                 format: int32
                 type: integer
