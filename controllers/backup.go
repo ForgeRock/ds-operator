@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
@@ -33,17 +32,15 @@ func (r *DirectoryServiceReconciler) updateBackup(ctx context.Context, ds *direc
 }
 
 func (r *DirectoryServiceReconciler) updateBackupStatus(ctx context.Context, ds *directoryv1alpha1.DirectoryService, l *ldap.DSConnection) error {
-	fmt.Printf("**** current stat %v", ds.Status.BackupStatus)
-	ds.Status.BackupStatus = nil
+	r.Log.V(5).Info("Current backup status", "status", ds.Status.BackupStatus)
 	stat, err := l.GetBackupTaskStatus(ds.Name)
-	// l.GetBackupTaskStatus(ds.Name)
 
-	// take the first 10 ???
-	ds.Status.BackupStatus = stat[:10]
-	r.Log.Info("status", "stat", stat)
 	if err != nil {
+		r.Log.V(5).Info("Can't get backup status. This is OK if no backups have been scheduled", "err", err)
 		return err
 	}
+	r.Log.Info("Backup status", "stat", stat)
+	ds.Status.BackupStatus = stat
 
 	return nil
 }

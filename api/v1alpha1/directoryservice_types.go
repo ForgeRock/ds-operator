@@ -96,6 +96,11 @@ type DirectoryServiceStatus struct {
 }
 
 // DirectoryBackupStatus provides the status of the backup
+// NOTE: This does not work, because we are mixing schema (backup info and replica info above)
+// TODO: Can we model this a separate resource, so kubectl describe does the right thing?
+// +kubebuilder:printcolumn:name="Start Time",type="string",JSONPath=".status.backupStatus.startTime",description="Backup Start time"
+// +kubebuilder:printcolumn:name="End Time",type="string",JSONPath=".status.backupStatus.startTime",description="Backup End time"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.backupStatus.endTime",description="Backup Start time"
 type DirectoryBackupStatus struct {
 	// note DS returns these as string values. For status is ok
 	StartTime string `json:"startTime"`

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
-	ldap "github.com/go-ldap/ldap"
+	ldap "github.com/go-ldap/ldap/v3"
 )
 
 // DSConnection parameters for managing the DS ldap service
@@ -85,6 +85,8 @@ func (ds *DSConnection) GetBackupTask(id string) (*BackupParams, error) {
 
 	res, err := ds.ldap.Search(req)
 	if err != nil {
+		// todo: Do we want to log this here?
+		//fmt.Printf("ldap errror %v result is %v", err, res)
 		return nil, err
 	}
 
@@ -109,12 +111,16 @@ func (ds *DSConnection) GetBackupTask(id string) (*BackupParams, error) {
 	return &b, nil
 }
 
-//  GetBackupTaskStatus queries for the completed backup tasks for the given id
+// GetBackupTaskStatus queries for the completed backup tasks for the given id
 func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupStatus, error) {
 
-	// we need to order via start time..
+	// Get the last 10 results
+	// TODO: Search needs to order by recent date. We need server side sort controls for this
+	// https://github.com/go-ldap/ldap/issues/290
+	// In the interim we might have to put a > condition on the search filter.
+	// Look for entries > time.now - 5 days
 	req := ldap.NewSearchRequest("cn=Scheduled Tasks,cn=tasks",
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1000, 0, false,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 10, 0, false,
 		"(ds-recurring-task-id="+id+")",
 		//[]string{"ds-task-scheduled-start-time", "ds-task-completion-time", "ds-task-state"},
 		[]string{},
@@ -124,18 +130,15 @@ func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupSta
 
 	res, err := ds.ldap.Search(req)
 
-	// res.PrettyPrint(2)
-	if err != nil {
+	// An error 4 (sizes result exceeded) is expected - so ignore it
+	if err != nil && !ldap.IsErrorAnyOf(err, ldap.LDAPResultSizeLimitExceeded) {
 		return dstat, err
 	}
 	if len(res.Entries) == 0 {
 		return dstat, nil
 	}
 
-	for i, e := range res.Entries {
-		if i > 10 {
-			continue
-		}
+	for _, e := range res.Entries {
 		var item dir.DirectoryBackupStatus
 
 		for _, attr := range e.Attributes {
@@ -151,7 +154,6 @@ func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupSta
 			}
 		}
 		dstat = append(dstat, item)
-		fmt.Printf("***** add %v\n", item)
 	}
 	return dstat, nil
 }
@@ -169,13 +171,17 @@ func (ds *DSConnection) DeleteBackupSchedule(id string) error {
 // This can be done over 1389.
 func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 
-	// TODO: We should really check to see if the task already exists, and return without the delete/create
+	// See if the scheduled task already exists, and if it does, we dont attempt to reschedule
 	oldparams, err := ds.GetBackupTask(b.ID)
-	if *oldparams == *b {
-		return nil // params have not changed - nothing to do
+	// If the search fails (err != nil) we still want to fall through and try to create the schedule
+	// It might be the case that no schedule exists at all - which will have a fail with error 32
+	if err == nil {
+		if *oldparams == *b {
+			return nil // params have not changed - nothing to do
+		}
 	}
 
-	// delete the existing task id..
+	// delete the existing task id.. Ignore any failed deletes..
 	err = ds.DeleteBackupSchedule(b.ID)
 
 	// the dn needs to be unique for a recurring task
@@ -190,11 +196,7 @@ func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 	req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
 	req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
 
-	err = ds.ldap.Add(req)
-	if err != nil {
-		return err
-	}
-	return nil
+	return ds.ldap.Add(req)
 }
 
 // Close the ldap connection
