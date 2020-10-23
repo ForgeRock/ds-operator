@@ -130,10 +130,18 @@ spec:
                 - enabled
                 - path
                 type: object
+              storage:
+                default: 100Gi
+                type: string
+              storageClassName:
+                default: standard
+                type: string
             required:
             - image
             - passwords
             - replicas
+            - storage
+            - storageClassName
             type: object
           status:
             description: DirectoryServiceStatus defines the observed state of DirectoryService

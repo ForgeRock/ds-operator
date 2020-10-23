@@ -211,13 +211,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 								},
 							},
 							Resources: ds.DeepCopy().Spec.Resources,
-							// Env: []v1.EnvVar{
-							// 	{
-							// 		// We use the first two servers as bootstrap servers for replication.
-							// 		Name:  "DS_BOOTSTRAP_REPLICATION_SERVERS",
-							// 		Value: ds.Name + "-0:8989," + ds.Name + "-1:8989",
-							// 	},
-							// },
 							EnvFrom: []v1.EnvFromSource{
 								{
 									SecretRef: &v1.SecretEnvSource{
@@ -245,8 +238,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name: "passwords",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									// todo
-									//SecretName: ds.Spec.SecretReferencePasswords,
+									// TODO: Fix me. Should be a reference from the Spec
 									SecretName: "ds-passwords",
 								},
 							},
@@ -275,10 +267,11 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 						Resources: v1.ResourceRequirements{
 							Requests: v1.ResourceList{
-								v1.ResourceName(v1.ResourceStorage): resource.MustParse("10Gi"),
+								v1.ResourceName(v1.ResourceStorage): resource.MustParse(ds.Spec.Storage),
 							},
 						},
-					},
+						StorageClassName: &ds.Spec.StorageClassName,
+\					},
 				},
 			},
 		},

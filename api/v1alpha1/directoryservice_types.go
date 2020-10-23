@@ -42,6 +42,12 @@ type DirectoryServiceSpec struct {
 	// Keystore references
 	Keystores DirectoryKeystores `json:"keystores,omitempty"`
 
+	//  +kubebuilder:default:="100Gi"
+	Storage string `json:"storage"`
+
+	// +kubebuilder:default:="standard"
+	StorageClassName string `json:"storageClassName"`
+
 	// Backup
 	Backup DirectoryBackup `json:"backup,omitempty"`
 	// Restore
