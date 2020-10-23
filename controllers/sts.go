@@ -71,6 +71,13 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	var fsGroup int64 = 0
 	var forgerockUser int64 = 11111
 
+	var initArgs []string
+
+	// Init container args.  If restore is enabled, provide the path as the container arg
+	if ds.Spec.Restore.Enabled {
+		initArgs = append(initArgs, ds.Spec.Restore.Path)
+	}
+
 	// Create a template
 	stemplate := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -85,8 +92,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					"app": ds.Name,
 				},
 			},
-			// ServiceName: cr.ObjectMeta.Name,
-			Replicas: ds.Spec.Replicas,
+			ServiceName: ds.Name,
+			Replicas:    ds.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -136,8 +143,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name:            "init",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullAlways, // todo: for testing this is good. Remove later?
-							//Command: []string{"/opt/opendj/scripts/init-and-restore.sh"},
-							Args: []string{"initialize-only"},
+							Command:         []string{"/opt/opendj/scripts/operator-init.sh"},
+							Args:            initArgs,
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "data",
@@ -151,8 +158,13 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									Name:      "passwords",
 									MountPath: "/var/run/secrets/opendj-passwords",
 								},
+								{
+									Name:      "cloud-storage-credentials",
+									MountPath: "/var/run/secrets/cloud-credentials-cache/",
+								},
 							},
 							// TODO: Do we just hard code resource requirements for the init container? Or copy the main container
+							// the init container does not need the same amount of resources..
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
 									"memory": resource.MustParse("1024Mi"),
@@ -180,10 +192,10 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					},
 					Containers: []v1.Container{
 						{
-							Name:  "ds",
-							Image: ds.Spec.Image,
-							// ImagePullPolicy: ImagePullPolicy,
-							Args: []string{"start-ds"},
+							Name:            "ds",
+							Image:           ds.Spec.Image,
+							ImagePullPolicy: v1.PullAlways,
+							Args:            []string{"start-ds"},
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "data",
@@ -193,8 +205,27 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									Name:      "secrets",
 									MountPath: "/opt/opendj/secrets",
 								},
+								{
+									Name:      "cloud-storage-credentials",
+									MountPath: "/var/run/secrets/cloud-credentials-cache/",
+								},
 							},
 							Resources: ds.DeepCopy().Spec.Resources,
+							// Env: []v1.EnvVar{
+							// 	{
+							// 		// We use the first two servers as bootstrap servers for replication.
+							// 		Name:  "DS_BOOTSTRAP_REPLICATION_SERVERS",
+							// 		Value: ds.Name + "-0:8989," + ds.Name + "-1:8989",
+							// 	},
+							// },
+							EnvFrom: []v1.EnvFromSource{
+								{
+									SecretRef: &v1.SecretEnvSource{
+										LocalObjectReference: v1.LocalObjectReference{Name: "cloud-storage-credentials"},
+										//Optional:             new(false),
+									},
+								},
+							},
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
@@ -217,6 +248,14 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									// todo
 									//SecretName: ds.Spec.SecretReferencePasswords,
 									SecretName: "ds-passwords",
+								},
+							},
+						},
+						{
+							Name: "cloud-storage-credentials",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: "cloud-storage-credentials",
 								},
 							},
 						},

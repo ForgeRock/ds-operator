@@ -16,6 +16,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,8 +24,9 @@ import (
 // DirectoryServiceReconciler reconciles a DirectoryService object
 type DirectoryServiceReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	recorder record.EventRecorder
 }
 
 var (
@@ -148,6 +150,8 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 // SetupWithManager stuff
 func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// add this line
+	r.recorder = mgr.GetEventRecorderFor("DirectoryService")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&directoryv1alpha1.DirectoryService{}).
 		Complete(r)

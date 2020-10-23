@@ -149,6 +149,9 @@ func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupSta
 				item.EndTime = attr.Values[0]
 			case "ds-task-state":
 				item.Status = attr.Values[0]
+			// todo: Capture status messages from ds
+			// case "ds-task-log-messages":
+			// 	item.Messages = append(item.Messages, attr.Values...)
 			default:
 				//fmt.Printf("att = %s", attr.Name)
 			}
@@ -195,6 +198,12 @@ func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 	req.Attribute("ds-task-state", []string{"RECURRING"})
 	req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
 	req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
+	// We set the storage props for all clouds - even if they are not used
+	req.Attribute("ds-task-backup-storage-property", []string{
+		"gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json",
+		"s3.keyId.env.var:AWS_ACCESS_KEY_ID", "s3.secret.env.var:AWS_SECRET_ACCESS_KEY",
+		"az.accountName.env.var:AZURE_ACCOUNT_NAME", "az.accountKey.env.var:AZURE_ACCOUNT_KEY",
+	})
 
 	return ds.ldap.Add(req)
 }

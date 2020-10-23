@@ -198,7 +198,6 @@ func (in *DirectoryServiceStatus) DeepCopyInto(out *DirectoryServiceStatus) {
 		*out = make([]v1.ObjectReference, len(*in))
 		copy(*out, *in)
 	}
-	out.LastUpdate = in.LastUpdate
 	if in.CurrentReplicas != nil {
 		in, out := &in.CurrentReplicas, &out.CurrentReplicas
 		*out = new(int32)

@@ -1,4 +1,4 @@
- # DS Operator - experimental
+ # DS Operator - experimental / POC
 
 ## Hacking
 
@@ -47,6 +47,13 @@ kubectl delete -f hack/ds.yaml
 
 See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
 In 1.17, some sts settings can be updated: image, Resource req/limit, labels and annotations. Might be useful to adjust JVM memory
+* Alerts?
+* Disk full alerts?
+* Tuning. How do we tune backend params, or is that a function of the docker image
+
+* cli tool that can run commands in ds. For example, running dsconfig / dsbackup commands.  cli could grab the admin creds to make this simpler.
+**
+* Snapshots - when K8S snapshots are widely supported, should we use snapshots for backup?
 
 ## Life-cycle hooks
 
@@ -64,29 +71,12 @@ The operator provides the following control over scheduling:
 
 * The pods will tolerate nodes that have been tainted like the following: `kubectl taint nodes node1 key=directory:NoSchedule`. Tainting
  such nodes will help them "repel" any non DS images, which can be helpful for performance.  If nodes are not tainted,
- this toleration has no effect.
+ this toleration has no effect. This should be thought of as an optional feature that most users will not require.
 * Anti-Affinity: The DS nodes will prefer to be scheduled on nodes that do not have other directory pods on them. This is
   "soft" anti-affinity.  DS pods will be scheduled on the same node if the scheduler is not able to fulfill the request.
 
 
-
-Backup:
-
-./ldapmodify --useSSL -X -p 1444 -D "uid=admin" -w welcome1
-dn: ds-recurring-task-id=NightlyBackup2,cn=Recurring Tasks,cn=Tasks
-changetype: add
-objectClass: top
-objectClass: ds-task
-objectClass: ds-recurring-task
-objectClass: ds-task-backup
-description: Nightly backup at 2 AM
-ds-backup-location: bak
-ds-recurring-task-id: NightlyBackup2
-ds-recurring-task-schedule: 00 02 * * *
-ds-task-class-name: org.opends.server.tasks.BackupTask
-ds-task-id: NightlyBackup2
-ds-task-state: RECURRING
-
+## Implementation Notes
 
 
 Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
@@ -102,3 +92,63 @@ negz  16 hours ago
 So it’s less of a hard and fast ordering rule vs something to be aware of.
 
 One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status.
+
+dsbackup  \
+--storageProperty gs.credentials.env.var:GOOGLE_CREDENTIALS \
+ --backupLocation gs://forgeops/dj-backup/wstest
+
+
+ dsbackup create \
+ --hostname localhost \
+ --port 4444 \
+ --bindDN uid=admin \
+ --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
+-X \
+--storageProperty gs.credentials.path:/var/tmp/sa.json \
+ --recurringTask "*/5 * * * *" \
+ --taskId NightlyBackup \
+--backupLocation gs://forgeops/dj-backup/wstest
+
+
+# This is really slow...
+dsbackup list \
+--noPropertiesFile \
+--storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS \
+--backupLocation gs://forgeops/dj-backup/wstest \
+--verify --last
+
+
+ dsbackup restore \
+ --hostname localhost \
+ --port 4444 \
+ --bindDN uid=admin \
+ --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
+-X \
+--storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS \
+ --taskId NightlyRestore \
+--backupLocation gs://forgeops/dj-backup/wstest \
+--backendName amIdentityStore
+
+
+
+Parsing DS zulu time: 20201021162043Z
+
+
+https://backstage.forgerock.com/docs/ds/7/maintenance-guide/backup-restore.html#cloud-storage
+
+
+Q: What happens if Istio injects a sidecar into the DS container? How does the operator make an ldap connection over mTLS
+
+
+ds-task (structural)
+ds-task-restore (structural)
+top (abstract)
+gs://forgeops/dj-backup/wstest
+org.opends.server.tasks.RestoreTask
+NightlyRestore
+20201021224819Z
+amIdentityStore
+gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS
+[21/Oct/2020:22:48:19 +0000] category=BACKEND severity=NOTICE seq=0 msgID=413 msg=Restore task NightlyRestore started execution
+RUNNING
+

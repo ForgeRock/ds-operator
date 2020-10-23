@@ -88,11 +88,11 @@ type DirectoryServiceStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
-	Active                           []corev1.ObjectReference `json:"active,omitempty"`
-	LastUpdate                       metav1.Timestamp         `json:"lastUpdateTime,omitempty"`
-	CurrentReplicas                  *int32                   `json:"currentReplicas,omitempty"`
-	ServiceAccountPasswordsUpdatedAt metav1.Timestamp         `json:"serviceAccountPasswordsUpdatedAt,omitempty"`
-	BackupStatus                     []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
+	Active []corev1.ObjectReference `json:"active,omitempty"`
+	//LastUpdate                       metav1.Timestamp         `json:"lastUpdateTime,omitempty"`
+	CurrentReplicas                  *int32                  `json:"currentReplicas,omitempty"`
+	ServiceAccountPasswordsUpdatedAt metav1.Timestamp        `json:"serviceAccountPasswordsUpdatedAt,omitempty"`
+	BackupStatus                     []DirectoryBackupStatus `json:"backupStatus,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup
@@ -106,6 +106,7 @@ type DirectoryBackupStatus struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 	Status    string `json:"status"`
+	//Messages  []string `json:"messages"`
 }
 
 // +kubebuilder:object:root=true

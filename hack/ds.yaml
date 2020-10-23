@@ -3,9 +3,9 @@ kind: DirectoryService
 metadata:
   name: ds
 spec:
-  image: gcr.io/forgeops-public/ds-idrepo:latest
+  image:  gcr.io/engineering-devops/ds-idrepo:ed87c289-dirty
   # The number of DS servers in the topology
-  replicas: 1
+  replicas: 2
   # The resources assigned to each DS pod
   resources:
     requests:
@@ -44,17 +44,22 @@ spec:
     # Truststore - Do we need it?
     # trustStoreSecretName: foo
   backup:
-    enabled: true
-    # starts with s3://, gs:// , az:// or a path to the filesystem
-    # The system will calculate a unique name for the backup that includes then name, namespace
-    path: /var/tmp/backup
+    enabled: false
+    # Path starts with s3://, gs:// , az:// or a path to the filesystem
+    #path: /var/tmp/backup
+    path: gs://forgeops/dj-backup/wstest
     cron: "*/5 * * * *"
+    # The secret must have one of the following keys:
+    # AZURE_ACCOUNT_KEY:       # Update if using Azure cloud storage for DS Backups
+    # AZURE_ACCOUNT_NAME:      # Update if using Azure cloud storage for DS Backups
+    # AWS_ACCESS_KEY_ID:       # Update if using AWS cloud storage for DS Backups
+    # AWS_SECRET_ACCESS_KEY:   # Update if using AWS cloud storage for DS Backups
+    # GOOGLE_CREDENTIALS: # Update if using GCP cloud storage for DS Backups
     secretName: cloud-storage-credentials
-  # Restore from the backup if the data directory is empty
+  # Restore from the last backup if the data directory is empty
   restore:
     enabled: true
-    # TODO: Do we infer the backup to restore using the namespace and name
-    path: /var/run/backup
+    path: gs://forgeops/dj-backup/wstest
     secretName: cloud-storage-credentials
 
 
