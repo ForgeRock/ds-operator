@@ -1,7 +1,7 @@
 // +build integration
 
 // Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
-// This is in an integration test that requires a running ldap server
+// IMPORTANT NOTE:  This is in an integration test that requires a running ldap server. This test will not run standalone
 package ldap
 
 import (

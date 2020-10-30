@@ -5,8 +5,10 @@
 Note: Secrets are not generated yet - so run another deployment to get secrets generated (e.g. ds-only, all, etc)
 
 ```bash
-# We are not using webhooks just yet...
+# We are not using webhooks right now...
 export ENABLE_WEBHOOKS="false"
+# for running locally instead of in the cluster
+export DEV_MODE=true
 make install
 make run
 kubectl apply -f hack/ds.yaml

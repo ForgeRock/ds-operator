@@ -34,8 +34,6 @@ func (ds *DSConnection) Connect() error {
 
 	err = l.Bind(ds.DN, ds.Password)
 
-	fmt.Printf("Connection status = %v", err)
-
 	if err != nil {
 		defer l.Close()
 		return fmt.Errorf("Cant bind ldap connection to %s wiht %s: %s ", ds.URL, ds.DN, err.Error())
@@ -45,7 +43,7 @@ func (ds *DSConnection) Connect() error {
 }
 
 // GetEntry get an ldap entry.
-// This doesn't do much right now ... just searches for an entry. Just for testing
+// This doesn't do much right now ... just searches for an entry. Just for testing and to provide an example
 func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 
 	req := ldap.NewSearchRequest("ou=admins,ou=identities",

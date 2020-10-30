@@ -39,7 +39,7 @@ func (r *DirectoryServiceReconciler) updateBackupStatus(ctx context.Context, ds 
 		r.Log.V(5).Info("Can't get backup status. This is OK if no backups have been scheduled", "err", err)
 		return err
 	}
-	r.Log.Info("Backup status", "stat", stat)
+	r.Log.V(5).Info("Backup status", "stat", stat)
 	ds.Status.BackupStatus = stat
 
 	return nil

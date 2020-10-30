@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
@@ -20,6 +21,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// DevMode is true if running outside of K8S
+var DevMode = false
+
+func init() {
+	if os.Getenv("DEV_MODE") == "true" {
+		DevMode = true
+	}
+}
 
 // DirectoryServiceReconciler reconciles a DirectoryService object
 type DirectoryServiceReconciler struct {
@@ -108,13 +118,13 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	//// Services ////
-	_, err := r.reconcileService(ctx, &ds)
+	svc, err := r.reconcileService(ctx, &ds)
 	if err != nil {
 		return requeue, err
 	}
 
 	//// LDAP Updates
-	ldap, err := r.getAdminLDAPConnection(ctx, &ds)
+	ldap, err := r.getAdminLDAPConnection(ctx, &ds, &svc)
 	// server may be down or coming up. Reque
 	if err != nil {
 		return requeue, nil
@@ -186,12 +196,14 @@ func removeString(slice []string, s string) (result []string) {
 	return
 }
 
-func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (*ldap.DSConnection, error) {
-	// TODO: is there a more reliable way of getting the service hostname?
-	// url := fmt.Sprintf("ldap://%s.%s.svc.cluster.local:1389", svc.Name, svc.Namespace)
+func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
+	// Target the first pod (-0) because tasks are specfic to a pod
+	url := fmt.Sprintf("ldap://%s-0.%s.svc.cluster.local:1389", svc.Name, svc.Namespace)
 	// For local testing we need to run kube port-forward and localhost...
-	url := fmt.Sprintf("ldap://localhost:1389")
 
+	if DevMode {
+		url = fmt.Sprintf("ldap://localhost:1389")
+	}
 	// lookup the admin password. Do we want to cache this?
 	var adminSecret v1.Secret
 	account := ds.Spec.Passwords["uid=admin"]

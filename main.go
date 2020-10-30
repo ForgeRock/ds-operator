@@ -43,6 +43,7 @@ func init() {
 	_ = directoryv1alpha1.AddToScheme(scheme)
 	_ = directoryforgerockcomv1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
+
 }
 
 func main() {
@@ -52,9 +53,12 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	opts := zap.Options{}
+	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -76,7 +80,8 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DirectoryService")
 		os.Exit(1)
 	}
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	if os.Getenv("ENABLE_WEBHOOKS") == "true" {
+		setupLog.Info("Setting up webhooks")
 		if err = (&directoryforgerockcomv1alpha1.DirectoryService{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "DirectoryService")
 			os.Exit(1)
