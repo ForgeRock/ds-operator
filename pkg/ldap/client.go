@@ -3,6 +3,7 @@ package ldap
 
 import (
 	"fmt"
+	"time"
 
 	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/go-ldap/ldap/v3"
@@ -114,14 +115,16 @@ func (ds *DSConnection) GetBackupTask(id string) (*BackupParams, error) {
 // GetBackupTaskStatus queries for the completed backup tasks for the given id
 func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupStatus, error) {
 
-	// Get the last 10 results
 	// TODO: Search needs to order by recent date. We need server side sort controls for this
 	// https://github.com/go-ldap/ldap/issues/290
-	// In the interim we might have to put a > condition on the search filter.
-	// Look for entries > time.now - 5 days
+
+	// current time minus 2 days
+	t := time2DirectoryTimeString(time.Now().AddDate(0, 0, -2))
+	query := fmt.Sprintf("(&(ds-recurring-task-id=%s)(ds-task-scheduled-start-time>=%s))", id, t)
+
+	// return 24 results. Too many results will clutter the status update
 	req := ldap.NewSearchRequest("cn=Scheduled Tasks,cn=tasks",
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 10, 0, false,
-		"(ds-recurring-task-id="+id+")",
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 24, 0, false, query,
 		//[]string{"ds-task-scheduled-start-time", "ds-task-completion-time", "ds-task-state"},
 		[]string{},
 		nil)
@@ -171,7 +174,7 @@ func (ds *DSConnection) DeleteBackupSchedule(id string) error {
 }
 
 // ScheduleBackup - create or update a backup task
-// This can be done over 1389.
+// NOTE: This can be done over 1389 from inside the cluster, but we may want to migrate to 4444
 func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 
 	// See if the scheduled task already exists, and if it does, we dont attempt to reschedule
@@ -208,7 +211,36 @@ func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 	return ds.ldap.Add(req)
 }
 
+// GetMonitorData returns cn=monitor data. We use thi for status updates.
+// todo: What kinds of data do we want?
+func (ds *DSConnection) GetMonitorData() error {
+
+	req := ldap.NewSearchRequest("cn=monitor",
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 100, 0, false,
+		"(objectclass=*)",
+		//[]string{}, // get default attrs
+		[]string{},
+		nil)
+
+	res, err := ds.ldap.Search(req)
+
+	res.PrettyPrint(2)
+	fmt.Printf("Results %v", res.Entries)
+
+	return err
+}
+
 // Close the ldap connection
 func (ds *DSConnection) Close() {
 	ds.ldap.Close()
+}
+
+const timeFormatSpec = "20060102150500"
+
+func directoryTime2Time(dsTime string) (time.Time, error) {
+	return time.Parse(timeFormatSpec, dsTime)
+}
+
+func time2DirectoryTimeString(t time.Time) string {
+	return t.Format(timeFormatSpec)
 }

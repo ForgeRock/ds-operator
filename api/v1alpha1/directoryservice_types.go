@@ -75,16 +75,18 @@ type DirectoryKeystores struct {
 
 // DirectoryBackup defines how and where to backup DS to
 type DirectoryBackup struct {
-	Enabled    bool   `json:"enabled,required"`
-	Path       string `json:"path,required"`
-	Cron       string `json:"cron,required"`
+	Enabled bool   `json:"enabled,required"`
+	Path    string `json:"path,required"`
+	Cron    string `json:"cron,required"`
+	// +kubebuilder:default:=cloud-storage-credentials
 	SecretName string `json:"secretName,omitempty"`
 }
 
 // DirectoryRestore defines how to restore a new directory from a backup
 type DirectoryRestore struct {
-	Enabled    bool   `json:"enabled,required"`
-	Path       string `json:"path,required"`
+	Enabled bool   `json:"enabled,required"`
+	Path    string `json:"path,required"`
+	// +kubebuilder:default:=cloud-storage-credentials
 	SecretName string `json:"secretName,omitempty"`
 }
 
@@ -94,11 +96,10 @@ type DirectoryServiceStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
-	Active []corev1.ObjectReference `json:"active,omitempty"`
-	//LastUpdate                       metav1.Timestamp         `json:"lastUpdateTime,omitempty"`
-	CurrentReplicas                  *int32                  `json:"currentReplicas,omitempty"`
-	ServiceAccountPasswordsUpdatedAt metav1.Timestamp        `json:"serviceAccountPasswordsUpdatedAt,omitempty"`
-	BackupStatus                     []DirectoryBackupStatus `json:"backupStatus,omitempty"`
+	Active                             []corev1.ObjectReference `json:"active,omitempty"`
+	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
+	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
+	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup
@@ -142,11 +143,7 @@ func init() {
 }
 
 // SecretNameForDN looks up the secret name for the given dn (example, uid=admin)
-// If the secret is one we generate, we prefix the name with metadata.name
 func (ds *DirectoryService) SecretNameForDN(pathRef string) string {
 	sec := ds.Spec.Passwords[pathRef]
-	if sec.Create {
-		return ds.Name + "-" + sec.SecretName
-	}
 	return sec.SecretName
 }

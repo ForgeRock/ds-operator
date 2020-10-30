@@ -15,23 +15,29 @@ import (
 
 // loop over all the secrets that we own, and create or update
 // Note there may be DirectoryPasswords that are referenced (bring your own secrets use case), but we don't own them
-func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
+func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
+
+	// Loop through the spec.passwords - creating secrets as required
 	for _, secret := range createSecretTemplates(ds) {
 		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
 			if secret.CreationTimestamp.IsZero() {
 				r.Log.V(8).Info("Created Secret", "secret", secret)
 				_ = controllerutil.SetControllerReference(ds, &secret, r.Scheme)
 			} else {
+				// The secret already exists... Do we want to update it?
 				r.Log.V(8).Info("TODO: Update secret", "secret", secret)
 			}
 			return nil
 		})
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate Secret")
+			return errors.Wrap(err, "unable to CreateOrUpdate Secret")
 		}
 	}
 
-	return ctrl.Result{}, nil
+	// TODO: check for the cloud-storage-credentials
+	// If the user is not backing up to cloud - create a dummy secret?
+
+	return nil
 }
 
 // Create secret templates for secrets we need to create

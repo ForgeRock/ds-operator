@@ -7,7 +7,6 @@ import (
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -16,9 +15,9 @@ import (
 func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *directoryv1alpha1.DirectoryService, ldap *ldap.DSConnection) error {
 	log := r.Log
 
-	if ds.Status.ServiceAccountPasswordsUpdatedAt.Seconds != 0 {
+	if ds.Status.ServiceAccountPasswordsUpdatedTime != 0 {
 		// TODO: Do we want to trigger a password update if a secret changes?
-		log.Info("Service account passwords already updated, nothing to do")
+		log.V(5).Info("Service account passwords already updated, nothing to do")
 		return nil
 	}
 	log.Info("Updating service account passwords")
@@ -43,7 +42,7 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 		log.Info("Updated password", "dn", key)
 	}
 	// if we get to here we have updated the passwords OK
-	ds.Status.ServiceAccountPasswordsUpdatedAt = metav1.Timestamp{Seconds: time.Now().Unix()}
+	ds.Status.ServiceAccountPasswordsUpdatedTime = time.Now().Unix()
 
 	// todo: Update the status so we dont do this everytime
 	return nil

@@ -98,13 +98,13 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	//// SECRETS ////
-	if res, err := r.reconcileSecrets(ctx, &ds); err != nil {
-		return res, err
+	if err := r.reconcileSecrets(ctx, &ds); err != nil {
+		return requeue, err
 	}
 
 	//// StatefulSets ////
-	if res, err := r.reconcileSTS(ctx, &ds); err != nil {
-		return res, err
+	if err := r.reconcileSTS(ctx, &ds); err != nil {
+		return requeue, err
 	}
 
 	//// Services ////
@@ -202,9 +202,9 @@ func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context,
 		return nil, fmt.Errorf("Can't find the admin ldap secret")
 	}
 
-	password := adminSecret.Data[account.Key]
+	password := string(adminSecret.Data[account.Key][:])
 
-	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: string(password[:])}
+	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password}
 
 	if err := ldap.Connect(); err != nil {
 		r.Log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)

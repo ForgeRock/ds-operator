@@ -203,7 +203,6 @@ func (in *DirectoryServiceStatus) DeepCopyInto(out *DirectoryServiceStatus) {
 		*out = new(int32)
 		**out = **in
 	}
-	out.ServiceAccountPasswordsUpdatedAt = in.ServiceAccountPasswordsUpdatedAt
 	if in.BackupStatus != nil {
 		in, out := &in.BackupStatus, &out.BackupStatus
 		*out = make([]DirectoryBackupStatus, len(*in))

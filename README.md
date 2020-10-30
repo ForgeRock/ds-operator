@@ -14,25 +14,36 @@ kubectl scale directoryservice/ds --replicas=2
 kubectl delete -f hack/ds.yaml
 ```
 
+You must provide the following secrets:
+
+* cloud-storage-credentials - can be dummy values if you dont use cloud backup, but the secret is still required.
+* ds - keystore with the master keystore and pin. Created by Secret Agent
+
 ## Design notes / philosophy
 
-* We want to avoid just reimplementing the kustomize deployment as an operator. The operator should make some
+* Avoid just reimplementing the kustomize deployment as an operator. The operator should make some
   opiionated choices about how DS gets deployed. Ideally covering most use cases, but not attempting to cover all.
 * Support bring your own secrets (secret agent) as well as operator generated secrets.
 
 
 ## What works now
 
-* basic statefulset is created and comes up OK
+* basic statefulset is created
 * headless service created
 * Deleting the CR properly cleans up the statefulset and service (owner refs are working OK). PVC is left behind - which is a good thing
 * Scale subresource support (kubectl scale directoryservice/ds --replicas=2)
 * Service account passwords are now suported. The operator can change the acount password.
+* backup / restore implemented
+
+Updating the spec.image will update the statefulset and perform a rolling update. For example:
+
+```bash
+kubectl patch directoryservice/ds --type='json' \
+   -p='[{"op": "replace", "path": "/spec/image", "value":"gcr.io/forgeops-public/ds-idrepo:2020.10.28-AlSugoDiNoci"}]'
+```
 
 ## What doesn't work
 
-* No webhooks or validation
-* No backup/restore yet
 * No load balancer
 * Limited status updated on CR object
 * Few modifications when the CR changes. Need to understand what changes in the CR can be reflected in the sts:
@@ -43,7 +54,10 @@ kubectl delete -f hack/ds.yaml
 ## Optional Features
 
 * snapshots using k8s snapshots?
-* Updates
+* Updates - patches
+* Return dsrepl status for CR status updates
+* DS proxy with affinity
+* SSL / client auth
 
 See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
 In 1.17, some sts settings can be updated: image, Resource req/limit, labels and annotations. Might be useful to adjust JVM memory
@@ -76,22 +90,16 @@ The operator provides the following control over scheduling:
   "soft" anti-affinity.  DS pods will be scheduled on the same node if the scheduler is not able to fulfill the request.
 
 
+## DS JIRAs to track
+
+* https://bugster.forgerock.org/jira/browse/OPENDJ-7582
+
+
 ## Implementation Notes
 
 
 Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
-
-
-If I parse that, it means you should do Status().Update() first (to not lose your status), and then Update()?
-
-negz  16 hours ago
-@warren.strange Kind of - the inverse is also true though. If you call Status().Update() you’ll lose any uncommitted changes to the spec or metadata.
-
-
-negz  16 hours ago
-So it’s less of a hard and fast ordering rule vs something to be aware of.
-
-One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status.
+"One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status."
 
 dsbackup  \
 --storageProperty gs.credentials.env.var:GOOGLE_CREDENTIALS \
@@ -109,13 +117,6 @@ dsbackup  \
  --taskId NightlyBackup \
 --backupLocation gs://forgeops/dj-backup/wstest
 
-
-# This is really slow...
-dsbackup list \
---noPropertiesFile \
---storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS \
---backupLocation gs://forgeops/dj-backup/wstest \
---verify --last
 
 
  dsbackup restore \
@@ -151,4 +152,38 @@ amIdentityStore
 gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS
 [21/Oct/2020:22:48:19 +0000] category=BACKEND severity=NOTICE seq=0 msgID=413 msg=Restore task NightlyRestore started execution
 RUNNING
+
+
+
+
+Sample bin/status output
+
+disk free space - /opt/opendj/db
+
+Backend info:
+
+Base DN                       : Entries : Replication : Receive delay : Replay delay : Backend         : Type  : Active cache
+
+
+
+cn=monitor
+
+ds-mon-disk-root=/opt/opendj/db,cn=disk space monitor,cn=monitor
+ds-mon-disk-free   - disk free space on /opt/opendj/db (data partition). Specific to the node queried, but should be relatively equal
+
+
+cn=jvm,cn=monitor
+ds-mon-jvm-memory-heap-used
+ds-mon-jvm-memory-heap-max
+
+
+
+ds-mon-domain-name=dc=openidm\,dc=forgerock\,dc=io,cn=replicas,cn=replication,cn=monitor
+ds-mon-status
+objectclass: ds-monitor-replica (structural)
+
+
+ds-mon-server-id=ds-0,cn=servers,cn=topology,cn=monitor
+objectclass: ds-monitor-topology-server (structural)
+ds-mon-replication-domain - multi value- each entry is a dn that is replicated. ou=identities, etc.
 

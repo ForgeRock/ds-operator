@@ -79,14 +79,13 @@ func TestDSAdmin(t *testing.T) {
 				t.Errorf("DSConnection.Connect() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			defer ds.Close()
-
-			if err := ds.GetBackupTasks(); err != nil {
-				t.Errorf("Cant get backup tasks %v", err)
+			if err := ds.GetMonitorData(); err != nil {
+				t.Errorf("Can't read monitoring data")
 			}
 
-			err := ds.ScheduleBackup()
-			if err != nil {
-				t.Errorf("Schedule backup failed %v", err)
+			/// This wont find any backup tasks by default...
+			if _, err := ds.GetBackupTask("ds"); err != nil {
+				t.Errorf("Cant get backup tasks %v", err)
 			}
 
 		})

@@ -17,19 +17,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (ctrl.Result, error) {
+func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 	var sts apps.StatefulSet
 	sts.Name = ds.Name
 	sts.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r, &sts, func() error {
-		// todo:
-		// Fill in STS fields. If the object already exists this should only update fields.
-		// ModifyStatefulSet(ds,&sts)
 		r.Log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
 
 		var err error
-		// does the sts not exist yet? Is this the right check?
+		// does the sts not exist yet?
 		if sts.CreationTimestamp.IsZero() {
 			err = createDSStatefulSet(ds, &sts)
 			_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
@@ -45,13 +42,13 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 
 	})
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
+		return errors.Wrap(err, "unable to CreateOrUpdate StateFulSet")
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // This function updates an existing statefulset to match settings in the custom resource
-// TODO: What kinds of things should we update?
+// StatefulSets allow only a limited number of changes
 func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
 
 	// Copy our expected replicas to the statefulset
@@ -59,6 +56,10 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 	// copy the current sts replicas up the ds status
 	ds.Status.CurrentReplicas = &sts.Status.CurrentReplicas
+
+	// Update the image
+	sts.Spec.Template.Spec.Containers[0].Image = ds.Spec.Image
+	sts.Spec.Template.Spec.InitContainers[0].Image = ds.Spec.Image
 
 	return nil
 }
@@ -71,7 +72,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	var fsGroup int64 = 0
 	var forgerockUser int64 = 11111
 
-	var initArgs []string
+	var initArgs []string // args provided to the init container
 
 	// Init container args.  If restore is enabled, provide the path as the container arg
 	if ds.Spec.Restore.Enabled {
@@ -81,15 +82,18 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// Create a template
 	stemplate := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:      make(map[string]string),
-			Annotations: make(map[string]string),
-			Name:        ds.Name,
-			Namespace:   ds.Namespace,
+			Labels: make(map[string]string),
+			// Annotations: make(map[string]string),
+			Annotations: map[string]string{
+				"app.kubernetes.io/managed-by": "ds-operator",
+			},
+			Name:      ds.Name,
+			Namespace: ds.Namespace,
 		},
 		Spec: apps.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": ds.Name,
+					"app.kubernetes.io/name": ds.Name,
 				},
 			},
 			ServiceName: ds.Name,
@@ -97,8 +101,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":      ds.Name,
-						"affinity": "directory", // for anti-affinity
+						"affinity":               "directory", // for anti-affinity
+						"app.kubernetes.io/name": ds.Name,
 					},
 				},
 				Spec: v1.PodSpec{
@@ -130,6 +134,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						},
 					},
 					// Tolerate any nodes tainted with kubectl taint nodes node1 key=directory:NoSchedule
+					// This has no effect if the user does not wish to taint any nodes.
 					Tolerations: []v1.Toleration{
 						{
 							Key:      "key",
@@ -151,15 +156,19 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									MountPath: "/opt/opendj/data",
 								},
 								{
-									Name:      "secrets",
+									Name:      "secrets", // keystores
 									MountPath: "/opt/opendj/secrets",
 								},
 								{
-									Name:      "passwords",
-									MountPath: "/var/run/secrets/opendj-passwords",
+									Name:      "admin-password",
+									MountPath: "/var/run/secrets/admin",
 								},
 								{
-									Name:      "cloud-storage-credentials",
+									Name:      "monitor-password",
+									MountPath: "/var/run/secrets/monitor",
+								},
+								{
+									Name:      "cloud-restore-credentials",
 									MountPath: "/var/run/secrets/cloud-credentials-cache/",
 								},
 							},
@@ -181,11 +190,11 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 								},
 								{
 									Name:  "DS_UID_MONITOR_PASSWORD_FILE",
-									Value: "/var/run/secrets/opendj-passwords/monitor.pw",
+									Value: "/var/run/secrets/monitor/" + ds.Spec.Passwords["uid=monitor"].Key,
 								},
 								{
 									Name:  "DS_UID_ADMIN_PASSWORD_FILE",
-									Value: "/var/run/secrets/opendj-passwords/dirmanager.pw",
+									Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
 								},
 							},
 						},
@@ -206,7 +215,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									MountPath: "/opt/opendj/secrets",
 								},
 								{
-									Name:      "cloud-storage-credentials",
+									Name:      "cloud-backup-credentials",
 									MountPath: "/var/run/secrets/cloud-credentials-cache/",
 								},
 							},
@@ -227,7 +236,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					},
 					Volumes: []v1.Volume{
 						{
-							Name: "secrets",
+							Name: "secrets", // keystore and pin
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
 									SecretName: ds.Spec.Keystores.KeyStoreSecretName,
@@ -235,26 +244,42 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							},
 						},
 						{
-							Name: "passwords",
+							Name: "admin-password",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									// TODO: Fix me. Should be a reference from the Spec
-									SecretName: "ds-passwords",
+									SecretName: ds.Spec.Passwords["uid=admin"].SecretName,
 								},
 							},
 						},
 						{
-							Name: "cloud-storage-credentials",
+							Name: "monitor-password",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: "cloud-storage-credentials",
+									SecretName: ds.Spec.Passwords["uid=monitor"].SecretName,
+								},
+							},
+						},
+						{
+							Name: "cloud-backup-credentials",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: ds.Spec.Backup.SecretName,
+								},
+							},
+						},
+						{
+							Name: "cloud-restore-credentials",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: ds.Spec.Restore.SecretName,
 								},
 							},
 						},
 					},
 				},
 			},
-			VolumeClaimTemplates: []v1.PersistentVolumeClaim{
+			VolumeClaimTemplates: []v1.
+				PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "data",
@@ -271,7 +296,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							},
 						},
 						StorageClassName: &ds.Spec.StorageClassName,
-\					},
+					},
 				},
 			},
 		},
