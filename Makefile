@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= gcr.io/engineering-devops/ds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=false"
 # This will work on kube versions 1.16+. We want the CRD OpenAPI validation features in v1
@@ -62,7 +62,7 @@ docker-build: test
 	docker build . -t ${IMG}
 
 # Push the docker image
-docker-push:
+push: docker-build
 	docker push ${IMG}
 
 # find or download controller-gen

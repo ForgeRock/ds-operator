@@ -46,7 +46,7 @@ spec:
     # Truststore - Do we need it?
     # trustStoreSecretName: foo
   backup:
-    enabled: true
+    enabled: false
     # Path starts with s3://, gs:// , az:// or a path to the filesystem
     #path: /var/tmp/backup
     path: gs://forgeops/dj-backup/wstest
@@ -60,7 +60,7 @@ spec:
     secretName: cloud-storage-credentials
   # Restore from the last backup if the data directory is empty
   restore:
-    enabled: true
+    enabled: false
     path: gs://forgeops/dj-backup/wstest
     secretName: cloud-storage-credentials
 

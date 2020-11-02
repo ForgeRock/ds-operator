@@ -44,13 +44,14 @@ var (
 	requeue = ctrl.Result{RequeueAfter: time.Second * 30}
 )
 
-// Reconcile loop for DS controller
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=batch,resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get,update,patch,delete
+// +kubebuilder:rbac:groups="",resources=secrets;services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+
+// Reconcile loop for DS controller
 func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	// This adds the log data to every log line
@@ -198,7 +199,7 @@ func removeString(slice []string, s string) (result []string) {
 
 func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
 	// Target the first pod (-0) because tasks are specfic to a pod
-	url := fmt.Sprintf("ldap://%s-0.%s.svc.cluster.local:1389", svc.Name, svc.Namespace)
+	url := fmt.Sprintf("ldap://%s-0.%s.%s.svc.cluster.local:1389", svc.Name, svc.Name, svc.Namespace)
 	// For local testing we need to run kube port-forward and localhost...
 
 	if DevMode {

@@ -110,7 +110,7 @@ type DirectoryBackupStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.currentReplicas
-
+// +kubebuilder:resource:shortName=ds
 // DirectoryService is the Schema for the directoryservices API
 type DirectoryService struct {
 	metav1.TypeMeta   `json:",inline"`
