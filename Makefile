@@ -1,11 +1,16 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= gcr.io/engineering-devops/ds-operator:latest
+DEFAULT_IMG = gcr.io/engineering-devops/ds-operator
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 #CRD_OPTIONS ?= "crd:trivialVersions=false"
 # This will work on kube versions 1.16+. We want the CRD OpenAPI validation features in v1
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
+# If IMG not set and PR not set, set it to latest
+IMG ?= "${DEFAULT_IMG}:pr-${PR_NUMBER}"
+ifeq ($(PR_NUMBER),)
+IMG = "${DEFAULT_IMG}:latest"
+endif
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -13,15 +18,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-all: manager
+all: build
 
 # Run tests
 test: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
-
-# Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 # Use --zap-log-level 10 to set detailed trace
@@ -57,9 +58,21 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
+# just build binary to dist/ AND container
+build:
+	IMG=${IMG} goreleaser --snapshot --rm-dist
+
+# Test and Build container
+docker-build: test build
+	@echo "${IMG} built"
+
+# Build, push, and create GitHub release
+release:
+	IMG=${IMG} goreleaser
+	
+# Install tools
+install-tools:
+	./hack/install-goreleaser.sh
 
 # Push the docker image
 push: docker-build
