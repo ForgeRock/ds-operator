@@ -1,7 +1,8 @@
 # ForgeRock Directory Service Operator - ds-operator
 
 The ds-operator deploys and manages the ForgeRock Directory Server into a namespace on a Kubernetes cluster.
-This is an early alpha project and should not be used in production.
+
+**This is an early alpha project and should not be used in production.**
 
 Please see the annotated [hack/ds.yaml](hack/ds.yaml) for the up to date reference on
 the format of the DirectoryService custom resource.
@@ -19,21 +20,24 @@ kubectl apply -f config/default
 
 The operator runs in the `fr-system` namespace. To see log output use kubectl:
 
-```
+```bash
 kubectl -n fr-system get pods
 kubectl -n fr-system logs ds-operator-xxxx -f
+# or if you have stern installed...
+stern -n fr-system ds-
 ```
+
 Only one instance of the operator is required per cluster.
 
 ## Operation
 
-Assuming the ds-operator has been deployed, you can deploy a directory service instance using:
+Once the ds-operator has been installed, you can deploy a directory service instance using:
 
 ```bash
 # Sample ds deployment
 kubectl apply -f hack/ds.yaml
 
-# You can scale the deployment:
+# Scale the deployment:
 kubectl scale directoryservice/ds --replicas=2
 ```
 
@@ -43,7 +47,7 @@ The directory service deployment creates a statefulset to run the directory serv
 ## Secrets
 
 The operator supports creating (some) secrets, or a bring your own secrets model. Currently the operator CAN NOT generate the
-keystore required for the directory service. Use [secret agent](https://github.com/ForgeRock/secret-agent) for that. If you have a forgeops deployment
+keystore required for the directory service. Use [secret agent](https://github.com/ForgeRock/secret-agent) for that. If you have a ForgeOps deployment
 the secrets created for the directory service are compatible with the operator.
 
 ## Cloud Storage Credentials
@@ -61,8 +65,11 @@ AWS_SECRET_ACCESS_KEY:   # Update if using AWS cloud storage for DS Backups
 GOOGLE_CREDENTIALS:      #  google credentials.json format - Update if using GCP cloud storage for DS Backups
 ```
 
-If you do not wish to use this feature, the operator will create a dummy secret `cloud-storage-credentials`. You
-can ignore this secret. It will be deleted when the custom resource is deleted.
+If you do not wish to use this feature, the operator will create a dummy  `cloud-storage-credentials` secret which
+you can ignore. It will be deleted when the custom resource is deleted.
+
+For GCP, a sample script [create-gcp-creds.sh](hack/create-gcp-creds.sh) is provided that will create a storage bucket and a
+service account that can access that bucket. It also creates kubernetes  `cloud-storage-credentials` secret.
 
 See the annotated resource for more information
 
