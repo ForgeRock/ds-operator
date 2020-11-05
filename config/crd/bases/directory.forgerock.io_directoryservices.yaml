@@ -47,6 +47,13 @@ spec:
                     type: boolean
                   path:
                     type: string
+                  purgeCron:
+                    default: 40 0 * * *
+                    type: string
+                  purgeHours:
+                    default: 2400
+                    format: int32
+                    type: integer
                   secretName:
                     default: cloud-storage-credentials
                     type: string
@@ -233,6 +240,8 @@ spec:
               currentReplicas:
                 format: int32
                 type: integer
+              serverMessage:
+                type: string
               serviceAccountPasswordsUpdatedTime:
                 format: int64
                 type: integer

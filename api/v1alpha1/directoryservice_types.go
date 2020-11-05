@@ -80,6 +80,10 @@ type DirectoryBackup struct {
 	Cron    string `json:"cron,required"`
 	// +kubebuilder:default:=cloud-storage-credentials
 	SecretName string `json:"secretName,omitempty"`
+	//  +kubebuilder:default:=2400
+	PurgeHours int32 `json:"purgeHours,omitempty"`
+	// +kubebuilder:default:="40 0 * * *"
+	PurgeCron string `json:"purgeCron,omitempty"`
 }
 
 // DirectoryRestore defines how to restore a new directory from a backup
@@ -97,6 +101,7 @@ type DirectoryServiceStatus struct {
 	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
 	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
 	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
+	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup

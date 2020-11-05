@@ -7,7 +7,7 @@ import (
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 )
 
-/// Update the backup schedule, and get backup status
+/// Update the backup and purge schedules, and get backup status
 
 func (r *DirectoryServiceReconciler) updateBackup(ctx context.Context, ds *directoryv1alpha1.DirectoryService, l *ldap.DSConnection) error {
 	log := r.Log
@@ -21,7 +21,7 @@ func (r *DirectoryServiceReconciler) updateBackup(ctx context.Context, ds *direc
 	}
 	// todo: We also need to check to see if the backup has already been scheduled, in which case we dont need to do it again
 
-	bp := ldap.BackupParams{ID: ds.Name, Cron: ds.Spec.Backup.Cron, Path: ds.Spec.Backup.Path}
+	bp := ldap.BackupParams{ID: ds.Name, Cron: ds.Spec.Backup.Cron, Path: ds.Spec.Backup.Path, PurgeHours: ds.Spec.Backup.PurgeHours, PurgeCron: ds.Spec.Backup.PurgeCron}
 	err := l.ScheduleBackup(&bp)
 	if err != nil {
 		log.Error(err, "backup schedule failed")

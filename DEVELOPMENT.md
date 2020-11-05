@@ -120,6 +120,19 @@ dsbackup  \
 --backendName amIdentityStore
 
 
+dsbackup purge  \
+--hostname localhost \
+ --port 4444 \
+ --bindDN uid=admin \
+ --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
+-X \
+    --storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json \
+    --backupLocation gs://ds-operator-engineering-devops/ds-backup-test \
+     --taskId PurgeTask \
+     --olderThan '12h' \
+     --recurringTask "*/5 * * * *"
+
+
 https://backstage.forgerock.com/docs/ds/7/maintenance-guide/backup-restore.html#cloud-storage
 
 

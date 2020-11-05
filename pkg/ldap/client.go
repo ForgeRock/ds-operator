@@ -19,9 +19,12 @@ type DSConnection struct {
 
 // BackupParams parameters for DS backups
 type BackupParams struct {
-	Cron string
-	Path string
-	ID   string
+	Cron       string
+	Path       string
+	ID         string
+	PurgeHours int32  // backups older than this will be purged
+	PurgeCron  string // cron schedule for purge task
+
 }
 
 // Connect to LDAP server via admin credentials
@@ -171,7 +174,7 @@ func (ds *DSConnection) DeleteBackupSchedule(id string) error {
 	return err
 }
 
-// ScheduleBackup - create or update a backup task
+// ScheduleBackup - create or update a backup and purge tasks
 // NOTE: This can be done over 1389 from inside the cluster, but we may want to migrate to 4444
 func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 
@@ -188,17 +191,58 @@ func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
 	// delete the existing task id.. Ignore any failed deletes..
 	err = ds.DeleteBackupSchedule(b.ID)
 
-	// the dn needs to be unique for a recurring task
-	req := ldap.NewAddRequest("ds-recurring-task-id="+b.ID+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
-	req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", "ds-task-backup"})
+	// taskID := b.ID + "-backup"
 
-	req.Attribute("description", []string{"backup auto scheduled by ds operator"})
-	req.Attribute("ds-backup-location", []string{b.Path})
-	req.Attribute("ds-recurring-task-id", []string{b.ID})
-	req.Attribute("ds-task-id", []string{b.ID})
+	// // the dn needs to be unique for a recurring task
+	// req := ldap.NewAddRequest("ds-recurring-task-id="+taskId+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
+	// req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", "ds-task-backup"})
+
+	// req.Attribute("description", []string{"backup auto scheduled by ds operator"})
+	// req.Attribute("ds-backup-location", []string{b.Path})
+	// req.Attribute("ds-recurring-task-id", []string{b.ID})
+	// req.Attribute("ds-task-id", []string{b.ID})
+	// req.Attribute("ds-task-state", []string{"RECURRING"})
+	// req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
+	// req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
+	// // We set the storage props for all clouds - even if they are not used
+	// req.Attribute("ds-task-backup-storage-property", []string{
+	// 	"gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json",
+	// 	"s3.keyId.env.var:AWS_ACCESS_KEY_ID", "s3.secret.env.var:AWS_SECRET_ACCESS_KEY",
+	// 	"az.accountName.env.var:AZURE_ACCOUNT_NAME", "az.accountKey.env.var:AZURE_ACCOUNT_KEY",
+	// })
+
+	// return ds.ldap.Add(req)
+
+	// schedule the backup task
+	if err := ds.createTask(b.ID+"-backup", b.Cron, b.Path, "ds-task-backup", 0); err != nil {
+		return err
+	}
+	// and the purge task
+	return ds.createTask(b.ID+"-purge", b.PurgeCron, b.Path, "ds-task-purge", b.PurgeHours)
+
+}
+
+// Create a task in DS. Currently suports only purge and backup. If we need more tasks, consider refactoring this to be
+// more generic
+func (ds *DSConnection) createTask(taskID string, cron string, backupPath string, taskObjClass string, purgeHours int32) error {
+	req := ldap.NewAddRequest("ds-recurring-task-id="+taskID+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
+	req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", taskObjClass})
+	req.Attribute("description", []string{"task auto scheduled by ds-operator"})
+	req.Attribute("ds-backup-location", []string{backupPath})
+	req.Attribute("ds-recurring-task-id", []string{taskID})
+	req.Attribute("ds-task-id", []string{taskID})
 	req.Attribute("ds-task-state", []string{"RECURRING"})
-	req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
-	req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
+	req.Attribute("ds-recurring-task-schedule", []string{cron})
+
+	if taskObjClass == "ds-task-purge" {
+		req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupPurgeTask"})
+		h := fmt.Sprintf("%dh", purgeHours)
+		fmt.Printf("hours=%s", h)
+		req.Attribute("ds-task-purge-older-than", []string{h})
+	} else {
+		req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
+	}
+
 	// We set the storage props for all clouds - even if they are not used
 	req.Attribute("ds-task-backup-storage-property", []string{
 		"gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json",
