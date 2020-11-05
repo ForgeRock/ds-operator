@@ -1,0 +1,25 @@
+steps:
+# Setup the workspace so we have a viable place to point GOPATH at.
+- name: gcr.io/cloud-builders/go
+  env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator']
+  args: ['env']
+
+- name: gcr.io/cloud-builders/go                          
+  env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator'] 
+  args: ['test', './...']                                           
+
+- name: goreleaser/goreleaser
+  entrypoint: /bin/sh
+  dir: gopath/src/github.com
+  env: ['GOPATH=/workspace/gopath']
+  # we "create" the tag because cloud build doesn't pull the tags, just commit
+  args: ['-c', 'cd ForgeRock/ds-operator && git tag $TAG_NAME && IMG=gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME make release' ]
+  secretEnv: ['GITHUB_TOKEN']
+
+secrets:
+- kmsKeyName: projects/engineering-devops/locations/global/keyRings/engineering-devops/cryptoKeys/github-key
+  secretEnv:
+    GITHUB_TOKEN: |
+      CiQAWHysaumBCi7eM+fysjiJWzP2vFq50c6h78JyNyyS3RJSQlASUQBqP6GPGGhZy6CwJOwzTvLf
+      jhnEY3cT3uM0RunKcS1wXK+7q93BAmi3UsV7z2HWf3/ppWiwZTEepEd4X1S9NgVEQPTZuQ+ZJbdN
+      q2BJRn6SVA==
