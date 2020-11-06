@@ -63,7 +63,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	// Load the DirectoryService
 	if err := r.Get(ctx, req.NamespacedName, &ds); err != nil {
-		log.Info("unable to fetch DirectorService. You can probably ignore this..")
+		log.V(5).Info("Unable to fetch DirectorService - it is in the process of being deleted")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
@@ -76,7 +76,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	// examine DeletionTimestamp to determine if object is under deletion
 	if ds.ObjectMeta.DeletionTimestamp.IsZero() {
-		log.V(3).Info("Registering finalizer for Directory Service", "name", ds.Name)
+		log.V(3).Info("Registering finalizer for Directory Service")
 		// The object is not being deleted, so if it does not have our finalizer,
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
@@ -87,7 +87,7 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			}
 		}
 	} else {
-		log.Info("Deleting Directory Service", "name", ds.Name)
+		log.Info("Deleting Directory Service")
 		// The object is being deleted
 		if containsString(ds.GetFinalizers(), myFinalizerName) {
 			// our finalizer is present, so lets handle any external dependency
