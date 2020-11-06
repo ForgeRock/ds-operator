@@ -7,6 +7,8 @@ package ldap
 import (
 	"fmt"
 	"testing"
+
+	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 )
 
 const (
@@ -79,14 +81,33 @@ func TestDSAdmin(t *testing.T) {
 				t.Errorf("DSConnection.Connect() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			defer ds.Close()
-			if err := ds.GetMonitorData(); err != nil {
-				t.Errorf("Can't read monitoring data")
+			// if err := ds.GetMonitorData(); err != nil {
+			// 	t.Errorf("Can't read monitoring data")
+			// }
+
+			_ = ds.DeleteBackupTask("ds")
+
+			dsb := dir.DirectoryBackup{
+				Enabled:    true,
+				Cron:       "55 * * * *",
+				PurgeCron:  "*/5 * * * *",
+				Path:       "/var/tmp/backup",
+				PurgeHours: 12,
 			}
 
-			/// This wont find any backup tasks by default...
-			if _, err := ds.GetBackupTask("ds"); err != nil {
-				t.Errorf("Cant get backup tasks %v", err)
+			// try to schedule a backup
+			if err := ds.ScheduleBackup("ds", &dsb); err != nil {
+				t.Errorf("Backup schedule failed %v", err)
 			}
+
+			var dsb2 *dir.DirectoryBackup
+			var e error
+
+			if dsb2, e = ds.GetBackupTask("ds"); e != nil {
+				t.Errorf("Could not get backup tasks %v", e)
+			}
+
+			fmt.Printf("\nGot %+v\n", dsb2)
 
 		})
 	}

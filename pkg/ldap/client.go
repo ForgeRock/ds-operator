@@ -17,16 +17,6 @@ type DSConnection struct {
 	ldap     *ldap.Conn
 }
 
-// BackupParams parameters for DS backups
-type BackupParams struct {
-	Cron       string
-	Path       string
-	ID         string
-	PurgeHours int32  // backups older than this will be purged
-	PurgeCron  string // cron schedule for purge task
-
-}
-
 // Connect to LDAP server via admin credentials
 func (ds *DSConnection) Connect() error {
 	l, err := ldap.DialURL(ds.URL)
@@ -76,43 +66,6 @@ func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
 	return err
 }
 
-// GetBackupTask queries the backup task and returns the parameters
-func (ds *DSConnection) GetBackupTask(id string) (*BackupParams, error) {
-
-	req := ldap.NewSearchRequest("ds-recurring-task-id="+id+",cn=Recurring Tasks,cn=Tasks",
-		ldap.ScopeBaseObject, ldap.NeverDerefAliases, 0, 0, false,
-		"(objectClass=ds-task-backup)",
-		[]string{}, // return the default set of entries
-		nil)
-
-	res, err := ds.ldap.Search(req)
-	if err != nil {
-		// todo: Do we want to log this here?
-		//fmt.Printf("ldap errror %v result is %v", err, res)
-		return nil, err
-	}
-
-	var b BackupParams
-
-	if len(res.Entries) == 1 {
-		e := res.Entries[0]
-		for _, attr := range e.Attributes {
-
-			switch n := attr.Name; n {
-			case "ds-recurring-task-schedule":
-				b.Cron = attr.Values[0]
-			case "ds-backup-location":
-				b.Path = attr.Values[0]
-			case "ds-recurring-task-id":
-				b.ID = attr.Values[0]
-			}
-		}
-	} else {
-		return nil, fmt.Errorf("Expected exactly one entry got %d", len(res.Entries))
-	}
-	return &b, nil
-}
-
 // GetBackupTaskStatus queries for the completed backup tasks for the given id
 func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupStatus, error) {
 
@@ -121,7 +74,7 @@ func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupSta
 
 	// current time minus 2 days
 	t := time2DirectoryTimeString(time.Now().AddDate(0, 0, -2))
-	query := fmt.Sprintf("(&(ds-recurring-task-id=%s)(ds-task-scheduled-start-time>=%s))", id, t)
+	query := fmt.Sprintf("(&(ds-recurring-task-id=%s-backup)(ds-task-scheduled-start-time>=%s))", id, t)
 
 	// return 24 results. Too many results will clutter the status update
 	req := ldap.NewSearchRequest("cn=Scheduled Tasks,cn=tasks",
@@ -165,71 +118,50 @@ func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupSta
 	return dstat, nil
 }
 
-// DeleteBackupSchedule deletes a scheduled backup. If the connection is OK, but the task does  not exist
-// we still return ok.
-func (ds *DSConnection) DeleteBackupSchedule(id string) error {
-	task := "ds-recurring-task-id=" + id + ",cn=Recurring Tasks,cn=Tasks"
-	req := ldap.NewDelRequest(task, []ldap.Control{})
-	err := ds.ldap.Del(req)
-	return err
+// DeleteBackupTask deletes a scheduled backup and purge tasks in DS.
+// deletes the backup and the purge tasks in DS
+// TODO: Check for Not found error code- which we can ignore and not consider an error
+func (ds *DSConnection) DeleteBackupTask(id string) error {
+	req := ldap.NewDelRequest(purgeTaskDN(id), []ldap.Control{})
+	err1 := ds.ldap.Del(req)
+
+	req2 := ldap.NewDelRequest(backupTaskDN(id), []ldap.Control{})
+	err2 := ds.ldap.Del(req2)
+
+	if err1 != nil || err2 != nil {
+		return fmt.Errorf("%v %v", err1, err2)
+	}
+	return nil
+}
+
+func purgeTaskDN(id string) string {
+	return "ds-recurring-task-id=" + id + "-purge,cn=Recurring Tasks,cn=Tasks"
+}
+
+func backupTaskDN(id string) string {
+	return "ds-recurring-task-id=" + id + "-backup,cn=Recurring Tasks,cn=Tasks"
 }
 
 // ScheduleBackup - create or update a backup and purge tasks
-// NOTE: This can be done over 1389 from inside the cluster, but we may want to migrate to 4444
-func (ds *DSConnection) ScheduleBackup(b *BackupParams) error {
-
-	// See if the scheduled task already exists, and if it does, we dont attempt to reschedule
-	oldparams, err := ds.GetBackupTask(b.ID)
-	// If the search fails (err != nil) we still want to fall through and try to create the schedule
-	// It might be the case that no schedule exists at all - which will have a fail with error 32
-	if err == nil {
-		if *oldparams == *b {
-			return nil // params have not changed - nothing to do
-		}
-	}
-
+func (ds *DSConnection) ScheduleBackup(id string, d *dir.DirectoryBackup) error {
 	// delete the existing task id.. Ignore any failed deletes..
-	err = ds.DeleteBackupSchedule(b.ID)
-
-	// taskID := b.ID + "-backup"
-
-	// // the dn needs to be unique for a recurring task
-	// req := ldap.NewAddRequest("ds-recurring-task-id="+taskId+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
-	// req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", "ds-task-backup"})
-
-	// req.Attribute("description", []string{"backup auto scheduled by ds operator"})
-	// req.Attribute("ds-backup-location", []string{b.Path})
-	// req.Attribute("ds-recurring-task-id", []string{b.ID})
-	// req.Attribute("ds-task-id", []string{b.ID})
-	// req.Attribute("ds-task-state", []string{"RECURRING"})
-	// req.Attribute("ds-recurring-task-schedule", []string{b.Cron})
-	// req.Attribute("ds-task-class-name", []string{"org.opends.server.tasks.BackupTask"})
-	// // We set the storage props for all clouds - even if they are not used
-	// req.Attribute("ds-task-backup-storage-property", []string{
-	// 	"gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json",
-	// 	"s3.keyId.env.var:AWS_ACCESS_KEY_ID", "s3.secret.env.var:AWS_SECRET_ACCESS_KEY",
-	// 	"az.accountName.env.var:AZURE_ACCOUNT_NAME", "az.accountKey.env.var:AZURE_ACCOUNT_KEY",
-	// })
-
-	// return ds.ldap.Add(req)
-
+	_ = ds.DeleteBackupTask(id)
 	// schedule the backup task
-	if err := ds.createTask(b.ID+"-backup", b.Cron, b.Path, "ds-task-backup", 0); err != nil {
+	if err := ds.createTask(id, backupTaskDN(id), d.Cron, d.Path, "ds-task-backup", 0); err != nil {
 		return err
 	}
-	// and the purge task
-	return ds.createTask(b.ID+"-purge", b.PurgeCron, b.Path, "ds-task-purge", b.PurgeHours)
-
+	// schedule the purge task
+	return ds.createTask(id, purgeTaskDN(id), d.PurgeCron, d.Path, "ds-task-purge", d.PurgeHours)
 }
 
 // Create a task in DS. Currently suports only purge and backup. If we need more tasks, consider refactoring this to be
 // more generic
-func (ds *DSConnection) createTask(taskID string, cron string, backupPath string, taskObjClass string, purgeHours int32) error {
-	req := ldap.NewAddRequest("ds-recurring-task-id="+taskID+",cn=Recurring Tasks,cn=Tasks", []ldap.Control{})
+func (ds *DSConnection) createTask(taskID string, taskDN string, cron string, backupPath string, taskObjClass string, purgeHours int32) error {
+	req := ldap.NewAddRequest(taskDN, []ldap.Control{})
 	req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", taskObjClass})
 	req.Attribute("description", []string{"task auto scheduled by ds-operator"})
 	req.Attribute("ds-backup-location", []string{backupPath})
-	req.Attribute("ds-recurring-task-id", []string{taskID})
+	//req.Attribute("ds-recurring-task-id", []string{taskID})
 	req.Attribute("ds-task-id", []string{taskID})
 	req.Attribute("ds-task-state", []string{"RECURRING"})
 	req.Attribute("ds-recurring-task-schedule", []string{cron})
@@ -253,6 +185,48 @@ func (ds *DSConnection) createTask(taskID string, cron string, backupPath string
 	return ds.ldap.Add(req)
 }
 
+// GetBackupTask reads the directory and gets the current state of the backup task.
+func (ds *DSConnection) GetBackupTask(id string) (*dir.DirectoryBackup, error) {
+
+	// filter for OR of either task DN
+	filter := fmt.Sprintf("(|(ds-recurring-task-id=%s-backup)(ds-recurring-task-id=%s-purge))", id, id)
+
+	req := ldap.NewSearchRequest("cn=Recurring Tasks,cn=Tasks",
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		filter,
+		[]string{}, // return the default set of entries
+		nil)
+	res, err := ds.ldap.Search(req)
+	//res.PrettyPrint(2)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.Entries) <= 0 {
+		return nil, fmt.Errorf("No Backup task found")
+	}
+
+	var d dir.DirectoryBackup
+
+	d.Enabled = true // if there are backup tasks, it must be enabled
+
+	for _, entry := range res.Entries {
+		if entry.DN == purgeTaskDN(id) {
+			d.PurgeCron = entry.GetAttributeValue("ds-recurring-task-schedule")
+			hours := entry.GetAttributeValue("ds-task-purge-older-than")
+			fmt.Sscanf(hours, "%d", &d.PurgeHours)
+		} else if entry.DN == backupTaskDN(id) {
+			d.Cron = entry.GetAttributeValue("ds-recurring-task-schedule")
+			d.Path = entry.GetAttributeValue("ds-backup-location")
+		} else {
+			return &d, fmt.Errorf("Unexpected DN found %s", entry.DN)
+		}
+
+	}
+	return &d, nil
+
+}
+
 // GetMonitorData returns cn=monitor data. We use thi for status updates.
 // todo: What kinds of data do we want?
 func (ds *DSConnection) GetMonitorData() error {
@@ -260,14 +234,12 @@ func (ds *DSConnection) GetMonitorData() error {
 	req := ldap.NewSearchRequest("cn=monitor",
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 100, 0, false,
 		"(objectclass=*)",
-		//[]string{}, // get default attrs
 		[]string{},
 		nil)
 
 	res, err := ds.ldap.Search(req)
 
 	res.PrettyPrint(2)
-	fmt.Printf("Results %v", res.Entries)
 
 	return err
 }
