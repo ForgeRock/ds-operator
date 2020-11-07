@@ -40,3 +40,5 @@ release:
     name: ds-operator
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
+  extra_files:
+    - glob: ds_operator.yaml

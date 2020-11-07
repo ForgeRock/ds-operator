@@ -14,6 +14,8 @@ steps:
     env: ['GOPATH=/workspace/gopath']
     args: ['-c', 'cd ForgeRock/ds-operator && make build PR_NUMBER=$_PR_NUMBER']
     secretEnv: ['GITHUB_TOKEN']
+images:
+  - 'gcr.io/$PROJECT_ID/ds-operator:pr-$_PR_NUMBER'
 secrets:
   - kmsKeyName: projects/engineering-devops/locations/global/keyRings/engineering-devops/cryptoKeys/github-key
     secretEnv:

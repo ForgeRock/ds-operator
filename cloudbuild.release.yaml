@@ -13,7 +13,7 @@ steps:
   dir: gopath/src/github.com
   env: ['GOPATH=/workspace/gopath']
   # we "create" the tag because cloud build doesn't pull the tags, just commit
-  args: ['-c', 'cd ForgeRock/ds-operator && git tag $TAG_NAME && IMG=gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME make release' ]
+  args: ['-c', 'cd ForgeRock/ds-operator && git tag $TAG_NAME && IMG=gcr.io/forgeops-public/ds-operator:$TAG_NAME make release' ]
   secretEnv: ['GITHUB_TOKEN']
 
 secrets:
