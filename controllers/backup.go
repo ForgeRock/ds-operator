@@ -13,7 +13,7 @@ func (r *DirectoryServiceReconciler) updateBackup(ctx context.Context, ds *direc
 	log := r.Log
 
 	if !ds.Spec.Backup.Enabled {
-		log.Info("Backup is disabled. Nothing to do")
+		log.V(5).Info("Backup is disabled. Nothing to do")
 		// Delete the backup tasks - even if they dont exist - this is no more expensive than querying then deleting..
 		l.DeleteBackupTask(ds.Name)
 		return nil
