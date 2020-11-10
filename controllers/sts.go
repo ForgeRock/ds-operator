@@ -1,5 +1,5 @@
 /*
-  Templates for creating object instances
+	Copyright 2020 ForgeRock AS.
 */
 
 package controllers

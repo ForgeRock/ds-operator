@@ -1,3 +1,6 @@
+/*
+	Copyright 2020 ForgeRock AS.
+*/
 // Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
 package ldap
 

@@ -1,3 +1,6 @@
+/*
+	Copyright 2020 ForgeRock AS.
+*/
 package controllers
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
