@@ -1,7 +1,8 @@
+// +build integration
+
 /*
 	Copyright 2020 ForgeRock AS.
 */
-// +build integration
 
 // Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
 // IMPORTANT NOTE:  This is in an integration test that requires a running ldap server. This test will not run standalone
