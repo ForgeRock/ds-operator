@@ -1,7 +1,11 @@
+/*
+	Copyright 2020 ForgeRock AS.
+*/
 // +build integration
 
 // Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
 // IMPORTANT NOTE:  This is in an integration test that requires a running ldap server. This test will not run standalone
+
 package ldap
 
 import (
@@ -11,6 +15,7 @@ import (
 	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 )
 
+// Set the Directory Admin password
 const (
 	PASSWORD = "xetvjwgos5e75pty0e5w3vnbpk3nwt1e"
 )

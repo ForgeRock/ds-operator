@@ -1,5 +1,9 @@
 /*
-   skeleton DS controller
+
+Copyright 2020 ForgeRock AS.
+
+Controller loop for the Directory Server resource
+
 */
 
 package controllers
