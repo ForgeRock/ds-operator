@@ -10,9 +10,13 @@ the format of the DirectoryService custom resource.
 Developers please refer to the [developers guide](DEVELOPMENT.md)
 
 
-## Deployment
+## Install the Operator
 
-The operator is deployed with the following command:
+**Important: Only one instance of the operator is required per cluster.**
+
+ForgeRock developers: This is already installed on the eng-shared cluster.
+
+The operator is deployed from source with the following command:
 
 ```bash
 kubectl apply -f config/default
@@ -27,13 +31,14 @@ kubectl -n fr-system logs ds-operator-xxxx -f
 stern -n fr-system ds-
 ```
 
-Only one instance of the operator is required per cluster.
 
 ## Operation
 
 Once the ds-operator has been installed, you can deploy a directory service instance using:
 
 ```bash
+# Create the required secrets using secret agent
+kubectl apply -f hack/secret_agent.yaml
 # Sample ds deployment
 kubectl apply -f hack/ds.yaml
 
@@ -43,6 +48,9 @@ kubectl scale directoryservice/ds --replicas=2
 
 The directory service deployment creates a statefulset to run the directory service. The usual
 `kubectl` commands (get, describe) can be used to diagnose the statefulset, pods, and services.
+
+To delete the directory server instance run `kubectl delete -f hack/ds.yaml`
+
 
 ## Secrets
 

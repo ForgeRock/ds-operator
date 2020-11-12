@@ -77,6 +77,13 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 ## DS JIRAs to track
 
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7582  This will allow dynamic enable/disable of backups
+* https://bugster.forgerock.org/jira/browse/OPENDJ-7502
+* https://bugster.forgerock.org/jira/browse/OPENDJ-7501
+* https://bugster.forgerock.org/jira/browse/OPENDJ-7352
+* https://bugster.forgerock.org/jira/browse/CLOUD-2666
+* 
+
+
 
 
 ## Implementation Notes
