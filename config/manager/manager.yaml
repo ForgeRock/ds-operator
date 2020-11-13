@@ -24,12 +24,12 @@ spec:
     spec:
       containers:
       - command:
-        - /manager
+        - /ds-operator
         args:
         - --enable-leader-election
         image: controller:latest
         imagePullPolicy: Always
-        name: manager
+        name: ds-operator
         resources:
           limits:
             cpu: 100m

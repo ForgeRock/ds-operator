@@ -81,7 +81,8 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7501
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7352
 * https://bugster.forgerock.org/jira/browse/CLOUD-2666
-* 
+* https://bugster.forgerock.org/jira/browse/OPENDJ-5308 -  Task backend via REST
+*
 
 
 
@@ -160,4 +161,6 @@ objectclass: ds-monitor-replica (structural)
 ds-mon-server-id=ds-0,cn=servers,cn=topology,cn=monitor
 objectclass: ds-monitor-topology-server (structural)
 ds-mon-replication-domain - multi value- each entry is a dn that is replicated. ou=identities, etc.
+
+## SSL
 

@@ -203,11 +203,10 @@ func removeString(slice []string, s string) (result []string) {
 
 func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
 	// Target the first pod (-0) because tasks are specfic to a pod
-	url := fmt.Sprintf("ldap://%s-0.%s.%s.svc.cluster.local:1389", svc.Name, svc.Name, svc.Namespace)
+	url := fmt.Sprintf("ldaps://%s-0.%s.%s.svc.cluster.local:1636", svc.Name, svc.Name, svc.Namespace)
 	// For local testing we need to run kube port-forward and localhost...
-
 	if DevMode {
-		url = fmt.Sprintf("ldap://localhost:1389")
+		url = fmt.Sprintf("ldaps://localhost:1636")
 	}
 	// lookup the admin password. Do we want to cache this?
 	var adminSecret v1.Secret
