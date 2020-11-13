@@ -8,7 +8,7 @@ steps:
   env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator'] 
   args: ['test', './...']                                           
 
-- name: goreleaser/goreleaser
+- name: gcr.io/engineering-devops/skaffold
   entrypoint: /bin/sh
   dir: gopath/src/github.com
   env: ['GOPATH=/workspace/gopath']
