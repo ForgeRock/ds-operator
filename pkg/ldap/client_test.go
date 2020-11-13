@@ -4,7 +4,7 @@
 	Copyright 2020 ForgeRock AS.
 */
 
-// Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
+// Package ldap provides ldap client access to our DS deployment. Used to manage users, tasks, etc.
 // IMPORTANT NOTE:  This is in an integration test that requires a running ldap server. This test will not run standalone
 
 package ldap
@@ -18,7 +18,8 @@ import (
 
 // Set the Directory Admin password
 const (
-	PASSWORD = "xetvjwgos5e75pty0e5w3vnbpk3nwt1e"
+	PASSWORD = "Ij3uu7QBZn1u5Nt8"
+	LDAP_URL = "ldaps://localhost:1636"
 )
 
 func TestDSConnection_Connect_test(t *testing.T) {
@@ -33,7 +34,7 @@ func TestDSConnection_Connect_test(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Pick the password up from a file
-		{"localhost test", fields{"ldap://localhost:1389", "uid=admin", PASSWORD}, false},
+		{"localhost test", fields{LDAP_URL, "uid=admin", PASSWORD}, false},
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
@@ -73,7 +74,7 @@ func TestDSAdmin(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Pick the password up from a file
-		{"localhost test", fields{"ldap://localhost:1389", "uid=admin", PASSWORD}, false},
+		{"localhost test", fields{LDAP_URL, "uid=admin", PASSWORD}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

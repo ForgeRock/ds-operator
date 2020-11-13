@@ -5,6 +5,7 @@
 package ldap
 
 import (
+	"crypto/tls"
 	"fmt"
 	"time"
 
@@ -22,7 +23,9 @@ type DSConnection struct {
 
 // Connect to LDAP server via admin credentials
 func (ds *DSConnection) Connect() error {
-	l, err := ldap.DialURL(ds.URL)
+
+	l, err := ldap.DialURL(ds.URL, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
+	// l, err := ldap.Dial(ds.URL)
 
 	if err != nil {
 		return fmt.Errorf("Cant open ldap connection to %s using dn %s :  %s", ds.URL, ds.DN, err.Error())
