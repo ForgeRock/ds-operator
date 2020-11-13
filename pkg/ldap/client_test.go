@@ -1,5 +1,5 @@
 // +build integration
-// Note the comment above MUST BE ON THE FIRST LINE.
+
 /*
 	Copyright 2020 ForgeRock AS.
 */
