@@ -27,3 +27,6 @@ bin
 dist/*
 # gcp things
 gopath/*
+
+ds-operator.yaml
+

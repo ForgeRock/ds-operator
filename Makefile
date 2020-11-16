@@ -7,10 +7,10 @@ DEFAULT_IMG = gcr.io/engineering-devops/ds-operator
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
 # If IMG not set and PR not set, set it to latest
+ifdef PR_NUMBER
 IMG ?= "${DEFAULT_IMG}:pr-${PR_NUMBER}"
-ifeq ($(PR_NUMBER),)
-IMG = "${DEFAULT_IMG}:latest"
 endif
+IMG ?= "${DEFAULT_IMG}:latest"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -67,15 +67,17 @@ docker-build: test build
 	@echo "${IMG} built"
 
 # Build, push, and create GitHub release
-release:
-	@cd config/manager && kustomize edit set image controller=${IMG} 
-	@kustomize build config/default > ds_operator.yaml
-	@IMG=${IMG} goreleaser
+release: install-tools
+	cd config/manager && kustomize edit set image controller=${IMG} 
+	kustomize build config/default > ds-operator.yaml
+	git checkout config # goreleaser requires a clean workspace
+	IMG=${IMG} goreleaser
 
 	
 # Install tools
 install-tools:
 	./hack/install-goreleaser.sh
+	./hack/install-kustomize.sh
 
 # Push the docker image
 push: docker-build

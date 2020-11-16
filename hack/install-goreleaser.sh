@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+if type -P goreleaser &> /dev/null;           
+then                                            
+	echo "kustomize installed, not installing"; 
+	exit;                                       
+fi                                              
                                                                                                                                            
 case "${OSTYPE}" in                                                                                                                        
     "darwin"*) os="Darwin";;                                                                                                               
@@ -15,7 +20,7 @@ then
     echo "failed to extract go releaser"
     exit 1;
 fi
-if ! install /tmp/goreleaser bin/goreleaser; 
+if ! install /tmp/goreleaser $(go env GOPATH)/bin/goreleaser; 
 then
     echo "failed to install to bin/"
     exit 1;

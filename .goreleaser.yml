@@ -5,7 +5,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-    id: ds-operator
+    id: manager 
     goos:
       - linux
     goarch:
@@ -16,7 +16,7 @@ dockers:
     goarch: amd64
     goarm: ''
     builds:
-      - ds-operator
+      - manager
     image_templates:
       - "{{.Env.IMG}}"
     dockerfile: build/Dockerfile
@@ -41,4 +41,4 @@ release:
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
   extra_files:
-    - glob: ds_operator.yaml
+    - glob: ds-operator.yaml
