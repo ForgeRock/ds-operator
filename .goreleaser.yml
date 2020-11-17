@@ -5,7 +5,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
-    id: manager 
+    id: manager
     goos:
       - linux
     goarch:
@@ -38,7 +38,8 @@ release:
   github:
     owner: ForgeRock
     name: ds-operator
-  prerelease: auto
+  # Set to auto once we are out of alpha/beta
+  prerelease: false
   name_template: "{{.ProjectName}}-v{{.Version}}"
   extra_files:
     - glob: ds-operator.yaml
