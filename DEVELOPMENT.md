@@ -28,7 +28,7 @@ kubectl delete -f hack/ds.yaml
 ```
 
 When testing out of cluster, the controller on your desktop needs to open an ldap connection to the directory.
-The variables DEV_MODE (see above) configures the controller connect to  localhost:1636.  In dev mode, port forward to the ds container:
+The DEV_MODE variable  (see above) configures the connection to localhost:1636.  In dev mode, port forward to the ds container:
 
 ```bash
 kubectl port-forward ds-0 1389
