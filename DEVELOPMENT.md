@@ -1,5 +1,15 @@
 # Development notes - Directory Services Operator
 
+## Installing the Operator from source
+
+
+The operator is deployed from source with the following command:
+
+```bash
+make manifests
+kubectl apply -f config/default
+```
+
 
 ## Hacking
 
@@ -8,7 +18,7 @@ Note: Secrets are not generated yet - so run another deployment to get secrets g
 ```bash
 # We are not using webhooks right now...
 export ENABLE_WEBHOOKS="false"
-# for running locally instead of in the cluster
+# See below for dev mode explanation
 export DEV_MODE=true
 make install
 make run
@@ -18,15 +28,18 @@ kubectl delete -f hack/ds.yaml
 ```
 
 When testing out of cluster, the controller on your desktop needs to open an ldap connection to the directory.
-The variables DEV_MODE (see above) configures the controller connect to  localhost:1389.  In dev mode, port forward to the ds container:
+The DEV_MODE variable  (see above) configures the connection to localhost:1636.  In dev mode, port forward to the ds container:
 
 ```bash
 kubectl port-forward ds-0 1389
 ```
+## Secrets
 
-You must provide the following secrets:
+You must provide at a minimum the following secret
 
-* ds - keystore with the master keystore and pin. Created by Secret Agent
+* ds - keystore with the master keystore and pin.
+
+Use the hack/secret_agent.yaml file to create the secrets
 
 ## Design notes / philosophy
 
@@ -56,9 +69,8 @@ kubectl patch directoryservice/ds --type='json' \
 
 * No load balancer or ds proxy
 * Limited status updated on CR object
-* SSL certificate management
-** Return dsrepl status for CR status updates
-
+* SSL certificate management. ldaps works, but the client must accept the cert. We need a scalable way for the user to supply a CA cert
+* ...
 
 
 ## Optional Features (Future...)
@@ -84,67 +96,21 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 * https://bugster.forgerock.org/jira/browse/OPENDJ-5308 -  Task backend via REST
 *
 
-
-
-
 ## Implementation Notes
 
 (Scratch Notes to implementers...)
-
 
 Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
 "One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status."
 
 
-Backup / restore notes
-
-dsbackup  \
---storageProperty gs.credentials.env.var:GOOGLE_CREDENTIALS \
- --backupLocation gs://forgeops/dj-backup/wstest
-
-
- dsbackup create \
- --hostname localhost \
- --port 4444 \
- --bindDN uid=admin \
- --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
--X \
---storageProperty gs.credentials.path:/var/tmp/sa.json \
- --recurringTask "*/5 * * * *" \
- --taskId NightlyBackup \
---backupLocation gs://forgeops/dj-backup/wstest
-
-
-
- dsbackup restore \
- --hostname localhost \
- --port 4444 \
- --bindDN uid=admin \
- --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
--X \
---storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/GOOGLE_CREDENTIALS \
- --taskId NightlyRestore \
---backupLocation gs://forgeops/dj-backup/wstest \
---backendName amIdentityStore
-
-
-dsbackup purge  \
---hostname localhost \
- --port 4444 \
- --bindDN uid=admin \
- --bindPassword "xetvjwgos5e75pty0e5w3vnbpk3nwt1e" \
--X \
-    --storageProperty gs.credentials.path:/var/run/secrets/cloud-credentials-cache/gcp-credentials.json \
-    --backupLocation gs://ds-operator-engineering-devops/ds-backup-test \
-     --taskId PurgeTask \
-     --olderThan '12h' \
-     --recurringTask "*/5 * * * *"
+Backup / restore commands
 
 
 https://backstage.forgerock.com/docs/ds/7/maintenance-guide/backup-restore.html#cloud-storage
 
 
-cn=monitor - things we might want to use for the status object:
+cn=monitor - status we might want to use for the operator status:
 
 ds-mon-disk-root=/opt/opendj/db,cn=disk space monitor,cn=monitor
 ds-mon-disk-free   - disk free space on /opt/opendj/db (data partition). Specific to the node queried, but should be relatively equal
@@ -161,6 +127,3 @@ objectclass: ds-monitor-replica (structural)
 ds-mon-server-id=ds-0,cn=servers,cn=topology,cn=monitor
 objectclass: ds-monitor-topology-server (structural)
 ds-mon-replication-domain - multi value- each entry is a dn that is replicated. ou=identities, etc.
-
-## SSL
-
