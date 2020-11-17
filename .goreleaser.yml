@@ -43,4 +43,4 @@ release:
   name_template: "{{.ProjectName}}-v{{.Version}}"
   extra_files:
     - glob: ds-operator.yaml
-    - install.sh
+    - glob: ./install.sh
