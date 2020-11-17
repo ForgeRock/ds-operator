@@ -1,8 +1,15 @@
 # ForgeRock Directory Service Operator - ds-operator
 
-The ds-operator deploys and manages the ForgeRock Directory Server in a Kubernetes cluster.
+The ds-operator deploys and manages
+the [ForgeRock Directory Server](https://www.forgerock.com/platform/directory-services)
+ in a Kubernetes cluster. This
+is an implementation of a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that will create the underlying StatefulSets, pods and services to
+run a replicated directory service in Kubernetes.
 
-**This is an early alpha project and should not be used in production.**
+The operator manages deployment, scaling replicas, backup and restore of the directory.
+In addition, the operator can manage application service account passwords.
+
+**Note: This is an early alpha project and should not be used in production.**
 
 Please see the annotated [hack/ds.yaml](hack/ds.yaml) for the most current reference on the DirectoryService custom resource specification.
 
@@ -32,25 +39,48 @@ kubectl logs -n fr-system  -l  control-plane=ds-operator -f
 stern -n fr-system ds-
 ```
 
+## Install the Secret Agent Operator
+
+The ds-operator can create some (but not all) secrets needed by the directory server.
+Use the [secret agent operator](https://github.com/ForgeRock/secret-agent) to
+create the required secrets.
+
+Secret agent can be installed using the [secret-agent.sh](https://raw.githubusercontent.com/ForgeRock/forgeops/master/bin/secret-agent.sh) script.
+
+* Note to ForgeRock developers: secret-agent is already installed on the eng-shared cluster.*
+
 ## Deploy a Directory Instance
 
 Once the ds-operator has been installed, you can deploy an instance of the directory service using the custom
-resource provided in `hack/ds.yaml`.  The directory requires secrets to be created for the keystore and admin credentials. There is
-a sample Secret Agent resource in `hack/secret_agent.yaml` that will create the requried secrets.
+resource provided in `hack/ds.yaml`.
+
+Clone this project to use the sample files below
+
+```bash
+git clone https://github.com/ForgeRock/ds-operator.git
+```
+
+Alternatively, you can deploy directly using the GitHub URLs. For example:
+
+```bash
+kubectl apply -f https://github.com/ForgeRock/ds-operator/blob/master/hack/secret_agent.yaml
+kubectl apply -f https://github.com/ForgeRock/ds-operator/blob/master/hack/ds.yaml
+```
+
+The sample Secret Agent custom resource in `hack/secret_agent.yaml` creates the required secrets.
 
 The directory service deployment creates a statefulset to run the directory service. The usual
-`kubectl` commands (get, describe) can be used to diagnose the statefulset, pods, and services.
+`kubectl` commands (get, describe) can be used to diagnose the statefulsets, pods, and services.
 
 
 Below is a sample deployment session
 
 ```bash
-# Make sure the secret agent operator is installed: For example, on minikube run
-path-to/forgeops/bin/secret-agent.sh install
-# switch to your own namespace
-kubectl ctx my-name
-# Create the required secrets using secret agent
+# Create the required secrets using secret agent. If you get an error here check
+# to see that you have deployed secret agent.
 kubectl apply -f hack/secret_agent.yaml
+kubectl get secrets
+
 # Deploy the sample directory instance
 kubectl apply -f hack/ds.yaml
 
@@ -63,7 +93,8 @@ kubectl get pod
 # Scale the deployment by adding another replica
 kubectl scale directoryservice/ds --replicas=2
 
-# Try to edit the resource and enable backup. Note: you need cloud storage credentials
+# You can edit the resource, or edit the ds.yaml and kubectl apply changes
+# Things you can change at runtime include the number of replicas, enable/disable of backup/restore
 kubectl edit directoryservice/ds
 
 # Delete the directory instance.
@@ -85,13 +116,16 @@ skaffold --default-repo gcr.io/engineering-devops build
 
 Evaluation images have been built for you on gcr.io/forgeops-public. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
 
-The operator assume the refernenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
+The operator assume the referenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
 
 ## Secrets
 
-The operator supports creating (some) secrets, or a bring-your-own secrets model. Currently the operator CAN NOT generate the
+The operator supports creating (some) secrets, or a bring-your-own secrets model. Currently the operator *CAN NOT* generate the
 keystore required for the directory service. Use [secret agent](https://github.com/ForgeRock/secret-agent) for that. If you have a ForgeOps deployment
 the secrets created for the existing directory service are compatible with the operator.
+
+The operator can generate random secrets for the `uid=admin` account, `cn=monitor` and application service accounts (for
+example - the AM CTS account). Refer to the annotated sample.
 
 ## Cloud Storage Credentials
 
@@ -112,7 +146,7 @@ If you do not wish to use this feature, the operator will create a dummy  `cloud
 you can ignore. It will be deleted when the custom resource is deleted.
 
 For GCP, a sample script [create-gcp-creds.sh](hack/create-gcp-creds.sh) is provided that will create a storage bucket and a
-service account that can access that bucket. It also creates kubernetes  `cloud-storage-credentials` secret.
+service account that can access that bucket. It also creates the Kubernetes  `cloud-storage-credentials` secret.
 
 Note to ForgeRock developers: A GCP bucket has been
 created for you. Reach out on slack.
