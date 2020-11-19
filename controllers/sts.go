@@ -172,17 +172,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									MountPath: "/var/run/secrets/cloud-credentials-cache/",
 								},
 							},
-							// TODO: Do we just hard code resource requirements for the init container? Or copy the main container
-							// the init container does not need the same amount of resources..
-							Resources: v1.ResourceRequirements{
-								Limits: v1.ResourceList{
-									"memory": resource.MustParse("1024Mi"),
-								},
-								Requests: v1.ResourceList{
-									"cpu":    resource.MustParse("250m"),
-									"memory": resource.MustParse("1024Mi"),
-								},
-							},
+							Resources: ds.DeepCopy().Spec.Resources,
 							Env: []v1.EnvVar{
 								{
 									Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
