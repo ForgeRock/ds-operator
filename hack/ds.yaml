@@ -17,8 +17,8 @@ spec:
   # The amount of disk space for directory data
   storage: 5Gi
   # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
-  # If the class is not specified "default" is used. Your cluster
-  # must have the the default storageClass admission controller enabled to use "default"
+  # If the class is not specified, "default" is used. Your cluster
+  # must have the default storageClass admission controller enabled to use "default".
   # The "standard" storageClass is available on minikube, GKE, and EKS
   storageClassName: standard
 
