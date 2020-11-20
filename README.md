@@ -1,13 +1,17 @@
 # ForgeRock Directory Service Operator - ds-operator
 
-The ds-operator deploys and manages
+The ds-operator deploys
 the [ForgeRock Directory Server](https://www.forgerock.com/platform/directory-services)
  in a Kubernetes cluster. This
-is an implementation of a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that will create the underlying StatefulSets, pods and services to
-run a replicated directory service in Kubernetes.
+is an implementation of a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that will create the underlying Kubernetes services to run a replicated directory service in Kubernetes.
 
-The operator manages deployment, scaling replicas, backup and restore of the directory.
-In addition, the operator can manage application service account passwords.
+Basic features of the operator include:
+
+* Creation of StatefulSets, Services and Persistent volume claims for the directory
+* Configures replication by adding new directory pods to the replication topology
+* Backup and restore of the directory to cloud storage such as AWS S3, GCP bukets or Azure storage
+* Change service account passwords in the directory using a Kubernetes secret.
+
 
 **Note: This is an early alpha project and should not be used in production.**
 
