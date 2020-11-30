@@ -58,16 +58,20 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 			},
 			Ports: []v1.ServicePort{
 				{
-					Name: "admin",
+					Name: "tcp-admin",
 					Port: 4444,
 				},
 				{
-					Name: "ldap",
+					Name: "tcp-ldap",
 					Port: 1389,
 				},
 				{
-					Name: "ldaps",
+					Name: "tls-ldaps",
 					Port: 1636,
+				},
+				{
+					Name: "tcp-replication",
+					Port: 8989,
 				},
 				{
 					Name: "http",

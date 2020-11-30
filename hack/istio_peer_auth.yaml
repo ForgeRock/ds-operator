@@ -1,0 +1,8 @@
+# For testing Istio.  Apply this to the namespace to set the mTLS policy.
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+ name: default
+spec:
+  mtls:
+    mode: STRICT
