@@ -29,6 +29,9 @@ import (
 // DevMode is true if running outside of K8S
 var DevMode = false
 
+// ApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
+const ApplicationName = "ds"
+
 func init() {
 	if os.Getenv("DEV_MODE") == "true" {
 		DevMode = true

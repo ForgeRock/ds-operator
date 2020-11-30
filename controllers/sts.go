@@ -86,6 +86,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			// Annotations: make(map[string]string),
 			Annotations: map[string]string{
 				"app.kubernetes.io/managed-by": "ds-operator",
+				"app.kubernetes.io/name":       ApplicationName,
+				"app.kubernetes.io/instance":   ds.Name,
 			},
 			Name:      ds.Name,
 			Namespace: ds.Namespace,
@@ -93,7 +95,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		Spec: apps.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/name": ds.Name,
+					"app.kubernetes.io/name":     ApplicationName,
+					"app.kubernetes.io/instance": ds.Name,
 				},
 			},
 			ServiceName: ds.Name,
@@ -101,8 +104,9 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"affinity":               "directory", // for anti-affinity
-						"app.kubernetes.io/name": ds.Name,
+						"affinity":                   "directory", // for anti-affinity
+						"app.kubernetes.io/name":     ApplicationName,
+						"app.kubernetes.io/instance": ds.Name,
 					},
 				},
 				Spec: v1.PodSpec{
