@@ -1,4 +1,6 @@
 # For testing Istio.  Apply this to the namespace to set the mTLS policy.
+# https://istio.io/latest/docs/tasks/security/authentication/authn-policy/#enable-mutual-tls-per-workload
+#
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
@@ -6,3 +8,36 @@ metadata:
 spec:
   mtls:
     mode: STRICT
+---
+# This disables mTLS for the replication port.
+# Per doc: The port value in the peer authentication policy is the container’s port. The value the destination rule is the service’s port.
+apiVersion: "security.istio.io/v1beta1"
+kind: "PeerAuthentication"
+metadata:
+  name: "ds"
+spec:
+  selector:
+    matchLabels:
+      app: ds
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    8989:
+      mode: DISABLE
+---
+# todo: Do we need this for pod to pod traffic?
+# According to docs: You can only use portLevelMtls if the port is bound to a service. Istio ignores it otherwise.
+# apiVersion: "networking.istio.io/v1alpha3"
+# kind: "DestinationRule"
+# metadata:
+#   name: "ds"
+# spec:
+#   host: ds.bar.svc.cluster.local
+#   trafficPolicy:
+#     tls:
+#       mode: ISTIO_MUTUAL
+#     portLevelSettings:
+#     - port:
+#         number: 8989
+#       tls:
+#         mode: DISABLE

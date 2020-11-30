@@ -54,7 +54,8 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 		Spec: v1.ServiceSpec{
 			ClusterIP: "None", // headless service
 			Selector: map[string]string{
-				"app.kubernetes.io/name": ds.Name,
+				"app.kubernetes.io/name":     ApplicationName,
+				"app.kubernetes.io/instance": ds.Name,
 			},
 			Ports: []v1.ServicePort{
 				{
