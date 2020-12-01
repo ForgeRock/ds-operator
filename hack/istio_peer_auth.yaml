@@ -1,6 +1,5 @@
 # For testing Istio.  Apply this to the namespace to set the mTLS policy.
 # https://istio.io/latest/docs/tasks/security/authentication/authn-policy/#enable-mutual-tls-per-workload
-#
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
