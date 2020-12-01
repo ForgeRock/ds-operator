@@ -18,6 +18,7 @@ import (
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	"github.com/go-logr/logr"
 	"github.com/prometheus/common/log"
+	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,8 +48,8 @@ type DirectoryServiceReconciler struct {
 }
 
 var (
-	// requeue the request
-	requeue = ctrl.Result{RequeueAfter: time.Second * 30}
+	// requeue the request after xx seconds.
+	requeue = ctrl.Result{RequeueAfter: time.Second * 60}
 )
 
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
@@ -172,6 +173,8 @@ func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.recorder = mgr.GetEventRecorderFor("DirectoryService")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&directoryv1alpha1.DirectoryService{}).
+		Owns(&v1.Secret{}).        // Owns() triggers the Reconcile method for secrets we create
+		Owns(&apps.StatefulSet{}). // and statefulsets
 		Complete(r)
 }
 

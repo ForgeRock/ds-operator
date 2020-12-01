@@ -3,7 +3,7 @@
 The ds-operator deploys
 the [ForgeRock Directory Server](https://www.forgerock.com/platform/directory-services)
  in a Kubernetes cluster. This
-is an implementation of a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that will create the underlying Kubernetes services to run a replicated directory service in Kubernetes.
+is an implementation of the [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) pattern.
 
 Basic features of the operator include:
 
