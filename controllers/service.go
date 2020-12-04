@@ -67,7 +67,7 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 					Port: 1389,
 				},
 				{
-					Name: "tls-ldaps",
+					Name: "tcp-ldaps",
 					Port: 1636,
 				},
 				{
