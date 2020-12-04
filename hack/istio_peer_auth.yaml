@@ -18,26 +18,44 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: ds
+       app.kubernetes.io/name: ds
   mtls:
     mode: STRICT
   portLevelMtls:
     8989:
       mode: DISABLE
+    1389:
+      mode: STRICT
+    1636:
+      mode: DISABLE
+    4444:
+      mode: DISABLE
 ---
-# todo: Do we need this for pod to pod traffic?
+# https://istio.io/latest/docs/reference/config/networking/destination-rule/
 # According to docs: You can only use portLevelMtls if the port is bound to a service. Istio ignores it otherwise.
-# apiVersion: "networking.istio.io/v1alpha3"
-# kind: "DestinationRule"
-# metadata:
-#   name: "ds"
-# spec:
-#   host: ds.bar.svc.cluster.local
-#   trafficPolicy:
-#     tls:
-#       mode: ISTIO_MUTUAL
-#     portLevelSettings:
-#     - port:
-#         number: 8989
-#       tls:
-#         mode: DISABLE
+apiVersion: "networking.istio.io/v1beta1"
+kind: "DestinationRule"
+metadata:
+  name: "ds"
+spec:
+  host: ds
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+    portLevelSettings:
+    - port:
+        number: 8989
+      tls:
+        mode: DISABLE
+    - port:
+        number: 1389
+      tls:
+        mode: ISTIO_MUTUAL
+    - port:
+        number: 4444
+      tls:
+        mode: DISABLE
+    - port:
+        number: 1636
+      tls:
+        mode: DISABLE
