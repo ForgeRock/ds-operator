@@ -2,7 +2,7 @@
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
-  name: ds
+  name: ds-idrepo
 spec:
   image: gcr.io/forgeops-public/ds-idrepo:dab61faf
   # The number of DS servers in the topology
@@ -34,13 +34,17 @@ spec:
     uid=monitor:
       secretName: ds-passwords
       key: monitor.pw
-    # An example of a service account password. The operator will generate a password (create=true)
-    # Create the secret containing the password (am-cts-account)
-    # And will set the password value in the ldap server
-    "uid=openam_cts,ou=admins,ou=famrecords,ou=openam-session,ou=tokens":
-      secretName: am-cts-account
-      key: password
-      create: true
+    # Set the service account passwords
+    # We also set the CTS account - in case the user wants to use a single ds instance
+    uid=openam_cts,ou=admins,ou=famrecords,ou=openam-session,ou=tokens:
+      secretName: ds-env-secrets
+      key: AM_STORES_CTS_PASSWORD
+    uid=am-identity-bind-account,ou=admins,ou=identities:
+      secretName: ds-env-secrets
+      key: AM_STORES_USER_PASSWORD
+    uid=am-config,ou=admins,ou=am-config:
+      secretName: ds-env-secrets
+      key: AM_STORES_APPLICATION_PASSWORD
   keystores:
     # The name of the secret that contains the DS keystore
     # The secret must contain at least two keys: keystore and keystore.pin
