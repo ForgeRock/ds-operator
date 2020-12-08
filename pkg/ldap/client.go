@@ -11,6 +11,7 @@ import (
 
 	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/go-logr/logr"
 )
 
 // DSConnection parameters for managing the DS ldap service
@@ -19,13 +20,13 @@ type DSConnection struct {
 	DN       string
 	Password string
 	ldap     *ldap.Conn
+	Log      logr.Logger
 }
 
 // Connect to LDAP server via admin credentials
 func (ds *DSConnection) Connect() error {
 
 	l, err := ldap.DialURL(ds.URL, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
-	// l, err := ldap.Dial(ds.URL)
 
 	if err != nil {
 		return fmt.Errorf("Cant open ldap connection to %s using dn %s :  %s", ds.URL, ds.DN, err.Error())
@@ -67,6 +68,7 @@ func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 // UpdatePassword changes the password for the user identified by the DN. This is done as an administrative password change
 // The old password is not required.
 func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
+	ds.Log.V(2).Info("ldap client - update password", "DN", DN)
 	req := ldap.NewPasswordModifyRequest(DN, "", newPassword)
 	_, err := ds.ldap.PasswordModify(req)
 	return err

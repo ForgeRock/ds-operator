@@ -226,7 +226,7 @@ func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context,
 
 	password := string(adminSecret.Data[account.Key][:])
 
-	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password}
+	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password, Log: r.Log}
 
 	if err := ldap.Connect(); err != nil {
 		r.Log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)

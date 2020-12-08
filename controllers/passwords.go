@@ -31,9 +31,9 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 		if key == "uid=admin" || key == "uid=monitor" {
 			continue
 		}
-		log.Info("Updating service account password", "dn", key, "secretName", account.SecretName)
+		log.Info("Updating service account password", "dn", key, "secretName", account.SecretName, "key", account.Key)
 		// get the secret with the password
-		pw, err := r.lookupSecret(ctx, ds.Namespace, ds.SecretNameForDN(key), key)
+		pw, err := r.lookupSecret(ctx, ds.Namespace, ds.SecretNameForDN(key), account.Key)
 		if err != nil {
 			log.Error(err, "Can't find secret containing the password", "account", key, "secretName", account.SecretName)
 			return err
@@ -51,7 +51,7 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 	return nil
 }
 
-// Lookup a secret value
+// Lookup a secret value.
 func (r *DirectoryServiceReconciler) lookupSecret(ctx context.Context, namespace, name, key string) (string, error) {
 	n := types.NamespacedName{Namespace: namespace, Name: name}
 	var secret v1.Secret
@@ -59,5 +59,5 @@ func (r *DirectoryServiceReconciler) lookupSecret(ctx context.Context, namespace
 		return "", err
 	}
 	password := secret.Data[key]
-	return string(password[:]), nil
+	return string(password), nil
 }
