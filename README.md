@@ -58,25 +58,6 @@ Secret agent can be installed using the [secret-agent.sh](https://raw.githubuser
 Once the ds-operator has been installed, you can deploy an instance of the directory service using the custom
 resource provided in `hack/ds.yaml`.
 
-Clone this project to use the sample files below
-
-```bash
-git clone https://github.com/ForgeRock/ds-operator.git
-```
-
-Alternatively, you can deploy directly using the GitHub URLs. For example:
-
-```bash
-kubectl apply -f https://github.com/ForgeRock/ds-operator/blob/master/hack/secret_agent.yaml
-kubectl apply -f https://github.com/ForgeRock/ds-operator/blob/master/hack/ds.yaml
-```
-
-The sample Secret Agent custom resource in `hack/secret_agent.yaml` creates the required secrets.
-
-The directory service deployment creates a statefulset to run the directory service. The usual
-`kubectl` commands (get, describe) can be used to diagnose the statefulsets, pods, and services.
-
-
 Below is a sample deployment session
 
 ```bash
@@ -95,11 +76,11 @@ kubectl apply -f hack/ds.yaml
 kubectl get pod
 
 # Scale the deployment by adding another replica
-kubectl scale directoryservice/ds --replicas=2
+kubectl scale directoryservice/ds-idrepo --replicas=2
 
 # You can edit the resource, or edit the ds.yaml and kubectl apply changes
 # Things you can change at runtime include the number of replicas, enable/disable of backup/restore
-kubectl edit directoryservice/ds
+kubectl edit directoryservice/ds-idrepo
 
 # Delete the directory instance.
 kubectl delete -f hack/ds.yaml
@@ -107,6 +88,9 @@ kubectl delete -f hack/ds.yaml
 # If you want to delete the PVC claims...
 kubectl delete pvc data-ds-0
 ```
+
+The directory service deployment creates a statefulset to run the directory service. The usual
+`kubectl` commands (get, describe) can be used to diagnose the statefulsets, pods, and services.
 
 ## Directory Docker Image
 
@@ -118,7 +102,7 @@ cd forgeops/docker/7.0/ds
 skaffold --default-repo gcr.io/engineering-devops build
 ```
 
-Evaluation images have been built for you on gcr.io/forgeops-public. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
+Evaluation images have been built for you on gcr.io/forgeops-public/ds-idrepo. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
 
 The operator assume the referenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
 
@@ -152,8 +136,7 @@ you can ignore. It will be deleted when the custom resource is deleted.
 For GCP, a sample script [create-gcp-creds.sh](hack/create-gcp-creds.sh) is provided that will create a storage bucket and a
 service account that can access that bucket. It also creates the Kubernetes  `cloud-storage-credentials` secret.
 
-Note to ForgeRock developers: A GCP bucket has been
-created for you. Reach out on slack.
+Note to ForgeRock developers: A GCP bucket has been created for you. Reach out on slack.
 
 See the annotated custom resource for more information
 
