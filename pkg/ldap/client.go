@@ -65,6 +65,19 @@ func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 	return res.Entries[0], err
 }
 
+// BindPassword tries to bind as the DN with the password. This is used to test the password to see if we need to change it.
+// Return nil if the password is OK, err otherwise
+func (ds *DSConnection) BindPassword(DN, password string) error {
+	ds.Log.V(2).Info("ldap client - BIND", "DN", DN)
+	// get a new connection. We cant do this with th existing connection as it would unbind us from the admin account..
+	tldap, err := ldap.DialURL(ds.URL, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
+	defer tldap.Close()
+	if err != nil {
+		return err
+	}
+	return tldap.Bind(DN, password)
+}
+
 // UpdatePassword changes the password for the user identified by the DN. This is done as an administrative password change
 // The old password is not required.
 func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
