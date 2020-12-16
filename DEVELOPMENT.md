@@ -10,36 +10,44 @@ make manifests
 kubectl apply -f config/default
 ```
 
-
-## Hacking
-
-Note: Secrets are not generated yet - so run another deployment to get secrets generated (e.g. ds-only, all, etc)
-
-```bash
-# We are not using webhooks right now...
-export ENABLE_WEBHOOKS="false"
-# See below for dev mode explanation
-export DEV_MODE=true
-make install
-make run
-kubectl apply -f hack/ds.yaml
-kubectl scale directoryservice/ds --replicas=2
-kubectl delete -f hack/ds.yaml
-```
-
-When testing out of cluster, the controller on your desktop needs to open an ldap connection to the directory.
-The DEV_MODE variable  (see above) configures the connection to localhost:1636.  In dev mode, port forward to the ds container:
-
-```bash
-kubectl port-forward ds-0 1389
-```
 ## Secrets
+
+Required secrets are not generated yet. You must use secret agent
+as documented in the [README](README.md)
 
 You must provide at a minimum the following secret
 
 * ds - keystore with the master keystore and pin.
 
-Use the hack/secret_agent.yaml file to create the secrets
+## Development Workflow
+
+Note:
+
+While the directory needs to run in Kubernetes, it is much easier to develop the operator running locally (outside of the cluster):
+
+```bash
+# See below for dev mode explanation
+export DEV_MODE=true
+make install
+make run
+# In another window...
+kubectl apply -f hack/ds.yaml
+kubectl scale directoryservice/ds --replicas=2
+kubectl delete -f hack/ds.yaml
+```
+
+When testing out of cluster, the controller on your desktop needs to open an ldap connection to the directory that is
+running in Kubernetes.
+The DEV_MODE variable  (see above) sets the operator connection to localhost:1636, instead of the Kubernetes
+pod hostname (default.ds-idrepo-0.ds-idrepo.cluster.local, for example) In dev mode, port forward to the ds container:
+
+```bash
+kubectl port-forward ds-idrepo-0 1636
+```
+
+This allows the opertor running on your desktop to communicate with the directory server. This is needed
+for any LDAP functionality.
+
 
 ## Design notes / philosophy
 
@@ -73,16 +81,16 @@ kubectl patch directoryservice/ds --type='json' \
 * ...
 
 
-## Optional Features (Future...)
+## Optional Features (Future Roadmap)
 
 * Snapshots using k8s snapshots when supported on all clouds (Kubernetes 1.18)
-* Updates - patches
+* Patching strategy on DS image updates
 * DS proxy with affinity
 * SSL / client authentication
-See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
-In 1.17, some sts settings can be updated: image, Resource req/limit, labels and annotations. Might be useful to adjust JVM memory
+* STS updates? See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
+In 1.17, some sts settings can be updated: image, Resource req/limit, labels and annotations. Might be useful to adjust JVM memory and allow restart
 * Alerts?
-* Disk full alerts?
+ * Disk full alerts?
 * Tuning. How do we tune backend params, or is that a function of the docker image?
 * cli tool that can run commands in ds. For example, running dsconfig / dsbackup commands.  cli can grab the admin creds to make this simpler.
 
@@ -105,7 +113,6 @@ Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?t
 
 
 Backup / restore commands
-
 
 https://backstage.forgerock.com/docs/ds/7/maintenance-guide/backup-restore.html#cloud-storage
 

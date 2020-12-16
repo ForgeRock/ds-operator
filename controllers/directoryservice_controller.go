@@ -27,11 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DevMode is true if running outside of K8S
+// DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
 var DevMode = false
 
-// ApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
-const ApplicationName = "ds"
+// LabelApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
+const LabelApplicationName = "ds"
 
 func init() {
 	if os.Getenv("DEV_MODE") == "true" {

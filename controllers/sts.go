@@ -82,20 +82,14 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// Create a template
 	stemplate := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: make(map[string]string),
-			// Annotations: make(map[string]string),
-			Annotations: map[string]string{
-				"app.kubernetes.io/managed-by": "ds-operator",
-				"app.kubernetes.io/name":       ApplicationName,
-				"app.kubernetes.io/instance":   ds.Name,
-			},
+			Labels:    createLabels(ds.Name, nil),
 			Name:      ds.Name,
 			Namespace: ds.Namespace,
 		},
 		Spec: apps.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app.kubernetes.io/name":     ApplicationName,
+					"app.kubernetes.io/name":     LabelApplicationName,
 					"app.kubernetes.io/instance": ds.Name,
 				},
 			},
@@ -103,15 +97,12 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			Replicas:    ds.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"affinity":                   "directory", // for anti-affinity
-						"app.kubernetes.io/name":     ApplicationName,
-						"app.kubernetes.io/instance": ds.Name,
-					},
+					Labels: createLabels(ds.Name, map[string]string{
+						"affinity": "directory", // for anti-affinity
+					}),
 				},
 				Spec: v1.PodSpec{
 					// We use anti affinity to spread the pods out over host node
-
 					Affinity: &v1.Affinity{
 						// NodeAffinity:    &v1.NodeAffinity{},
 						// PodAffinity:     &v1.PodAffinity{},
@@ -278,6 +269,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "data",
 						Namespace: ds.Namespace,
+						Labels:    createLabels(ds.Name, nil),
 						Annotations: map[string]string{
 							"pv.beta.kubernetes.io/gid": "0",
 						},

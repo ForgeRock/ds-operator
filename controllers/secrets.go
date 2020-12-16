@@ -93,7 +93,7 @@ func createSecretTemplates(ds *directoryv1alpha1.DirectoryService) []v1.Secret {
 			// we own creating the secret
 			secretTemplate := v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      make(map[string]string),
+					Labels:      createLabels(ds.Name, nil),
 					Annotations: make(map[string]string),
 					Name:        ds.SecretNameForDN(dn),
 					Namespace:   ds.Namespace,

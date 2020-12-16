@@ -3,6 +3,9 @@ apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
   name: ds-idrepo
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/part-of: forgerock
 spec:
   image: gcr.io/forgeops-public/ds-idrepo:7.1-dev
   # The number of DS servers in the topology
