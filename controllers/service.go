@@ -46,7 +46,7 @@ func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *d
 func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
 	svcTemplate := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:      make(map[string]string),
+			Labels:      createLabels(ds.Name, nil),
 			Annotations: make(map[string]string),
 			Name:        ds.Name,
 			Namespace:   ds.Namespace,
@@ -54,7 +54,7 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 		Spec: v1.ServiceSpec{
 			ClusterIP: "None", // headless service
 			Selector: map[string]string{
-				"app.kubernetes.io/name":     ApplicationName,
+				"app.kubernetes.io/name":     LabelApplicationName,
 				"app.kubernetes.io/instance": ds.Name,
 			},
 			Ports: []v1.ServicePort{
