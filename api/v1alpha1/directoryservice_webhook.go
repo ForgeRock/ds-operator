@@ -29,6 +29,7 @@ import (
 // log is for logging in this package.
 var directoryservicelog = logf.Log.WithName("directoryservice-resource")
 
+// SetupWebhookWithManager registers the webhook with the manager
 func (r *DirectoryService) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).

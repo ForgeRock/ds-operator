@@ -21,7 +21,7 @@ endif
 all: build
 
 # Run tests
-test: generate fmt vet manifests
+test tests: generate fmt vet manifests
 	go test ./... -coverprofile cover.out
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
@@ -43,7 +43,7 @@ deploy: manifests
 	kustomize build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
+manifest manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code

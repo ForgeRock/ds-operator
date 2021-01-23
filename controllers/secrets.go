@@ -1,6 +1,7 @@
 /*
 	Copyright 2020 ForgeRock AS.
 */
+
 package controllers
 
 import (

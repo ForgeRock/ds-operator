@@ -58,6 +58,8 @@ var (
 // +kubebuilder:rbac:groups="",resources=secrets;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile loop for DS controller
 func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -78,42 +80,8 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// finalizer hooks..
-	// This registers finalizers for deleting the object
-	myFinalizerName := "directory.finalizers.forgerock.io"
-
-	// examine DeletionTimestamp to determine if object is under deletion
-	if ds.ObjectMeta.DeletionTimestamp.IsZero() {
-		log.V(3).Info("Registering finalizer for Directory Service")
-		// The object is not being deleted, so if it does not have our finalizer,
-		// then lets add the finalizer and update the object. This is equivalent
-		// registering our finalizer.
-		if !containsString(ds.GetFinalizers(), myFinalizerName) {
-			ds.SetFinalizers(append(ds.GetFinalizers(), myFinalizerName))
-			if err := r.Update(context.Background(), &ds); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
-		log.Info("Deleting Directory Service")
-		// The object is being deleted
-		if containsString(ds.GetFinalizers(), myFinalizerName) {
-			// our finalizer is present, so lets handle any external dependency
-			if err := r.deleteExternalResources(&ds); err != nil {
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried
-				return ctrl.Result{}, err
-			}
-
-			// remove our finalizer from the list and update it.
-			ds.SetFinalizers(removeString(ds.GetFinalizers(), myFinalizerName))
-			if err := r.Update(context.Background(), &ds); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Stop reconciliation as the item is being deleted
-		return ctrl.Result{}, nil
+	if err := r.Update(ctx, &ds); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	//// SECRETS ////
@@ -125,10 +93,17 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	if err := r.reconcileSTS(ctx, &ds); err != nil {
 		return requeue, err
 	}
+	//// Proxy Deployment ////
+	if err := r.reconcileProxy(ctx, &ds); err != nil {
+		return requeue, err
+	}
 
 	//// Services ////
 	svc, err := r.reconcileService(ctx, &ds)
 	if err != nil {
+		return requeue, err
+	}
+	if _, err := r.reconcileProxyService(ctx, &ds); err != nil {
 		return requeue, err
 	}
 

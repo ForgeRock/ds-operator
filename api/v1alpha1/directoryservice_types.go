@@ -38,6 +38,11 @@ type DirectoryServiceSpec struct {
 	Replicas *int32 `json:"replicas,required"`
 	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
 	// DSType string `json:"dsType,omitempty"`
+
+	// GroupID is the value used to identify this group of directory servers (default: "default")
+	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
+	GroupID string `json:"groupID,omitempty"`
+
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
@@ -54,6 +59,8 @@ type DirectoryServiceSpec struct {
 	Backup DirectoryBackup `json:"backup,omitempty"`
 	// Restore
 	Restore DirectoryRestore `json:"restore,omitempty"`
+	// Proxy configurations
+	Proxy DirectoryProxy `json:"proxy,omitempty"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.
@@ -104,6 +111,7 @@ type DirectoryServiceStatus struct {
 	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
 	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
+	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup
@@ -114,10 +122,33 @@ type DirectoryBackupStatus struct {
 	Status    string `json:"status"`
 }
 
+// DirectoryProxyStatus defines the observed state of DirectoryService Proxy
+type DirectoryProxyStatus struct {
+	Replicas      int32  `json:"replicas,omitempty"`
+	ReadyReplicas int32  `json:"readyReplicas,omitempty"`
+	ServerMessage string `json:"serverMessage,omitempty"`
+}
+
+// DirectoryProxy defines the settings of the directory proxy
+type DirectoryProxy struct {
+	Enabled bool `json:"enabled,required"`
+	// Docker Image for the directory server.
+	Image string `json:"image,required"`
+	// Replicas is the number of directory server proxy instances to create
+	// +kubebuilder:validation:Maximum:=8
+	// +kubebuilder:validation:Minimum:=0
+	Replicas int32 `json:"replicas,required"`
+	// PrimaryGroupID specifies the group of servers the ds proxy should recognize as primary
+	// If no value is provided, all available directory servers will be considered to be primary
+	PrimaryGroupID string                      `json:"primaryGroupId,omitempty"`
+	Resources      corev1.ResourceRequirements `json:"resources,omitempty"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.currentReplicas
 // +kubebuilder:resource:shortName=ds
+
 // DirectoryService is the Schema for the directoryservices API
 type DirectoryService struct {
 	metav1.TypeMeta   `json:",inline"`

@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -142,7 +143,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
-							ImagePullPolicy: v1.PullAlways, // todo: for testing this is good. Remove later?
+							ImagePullPolicy: v1.PullIfNotPresent,
 							Command:         []string{"/opt/opendj/scripts/operator-init.sh"},
 							Args:            initArgs,
 							VolumeMounts: []v1.VolumeMount{
@@ -188,7 +189,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						{
 							Name:            "ds",
 							Image:           ds.Spec.Image,
-							ImagePullPolicy: v1.PullAlways,
+							ImagePullPolicy: v1.PullIfNotPresent,
 							Args:            []string{"start-ds"},
 							VolumeMounts: []v1.VolumeMount{
 								{
@@ -205,6 +206,24 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 								},
 							},
 							Resources: ds.DeepCopy().Spec.Resources,
+							Env: []v1.EnvVar{
+								{
+									Name: "POD_NAME",
+									ValueFrom: &v1.EnvVarSource{
+										FieldRef: &v1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
+								},
+								{
+									Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
+									Value: fmt.Sprintf("$(POD_NAME).%s", ds.Name),
+								},
+								{
+									Name:  "DS_GROUP_ID",
+									Value: ds.Spec.GroupID,
+								},
+							},
 							EnvFrom: []v1.EnvFromSource{
 								{
 									SecretRef: &v1.SecretEnvSource{
