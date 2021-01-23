@@ -1,6 +1,7 @@
 /*
 	Copyright 2020 ForgeRock AS.
 */
+
 package controllers
 
 import (
@@ -17,8 +18,13 @@ func (r *DirectoryServiceReconciler) updateBackup(ctx context.Context, ds *direc
 
 	if !ds.Spec.Backup.Enabled {
 		log.V(5).Info("Backup is disabled. Nothing to do")
-		// Delete the backup tasks - even if they dont exist - this is no more expensive than querying then deleting..
-		l.DeleteBackupTask(ds.Name)
+		bStatus, err := l.GetBackupTaskStatus(ds.Name)
+		if err != nil {
+			return err
+		}
+		if len(bStatus) > 0 {
+			l.DeleteBackupTask(ds.Name)
+		}
 		return nil
 	}
 
