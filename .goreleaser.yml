@@ -27,6 +27,7 @@ dockers:
 archives:
   - replacements:
       linux: Linux
+    name_template:  "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
 
 changelog:
   sort: asc
