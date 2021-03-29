@@ -22,8 +22,8 @@ spec:
   # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
   # If the class is not specified, "default" is used. Your cluster
   # must have the default storageClass admission controller enabled to use "default".
-  # The "standard" storageClass is available on minikube, GKE, and EKS
-  storageClassName: standard
+  # "standard-rwo" is a default storage class created by GKE for use by the CSI driver
+  storageClassName: standard-rwo
 
   ### Passwords ###
   # Passwords: maps DS accounts to new or existing secrets.

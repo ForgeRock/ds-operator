@@ -306,6 +306,23 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			},
 		},
 	}
+
+	// assign to variable - so we can take the address. Really go?
+	apiGroup := "snapshot.storage.k8s.io"
+
+	// If a snapshot name is provided - intialize from that
+	// TODO: If name is "latest" find the last snapshot
+	if ds.Spec.InitializeFromSnapshotName != "" {
+		stemplate.Spec.VolumeClaimTemplates[0].Spec.DataSource =
+			&v1.TypedLocalObjectReference{
+				Kind:     "VolumeSnapshot",
+				Name:     ds.Spec.InitializeFromSnapshotName,
+				APIGroup: &apiGroup,
+			}
+	}
+
+	// debug
+	//fmt.Printf("STS template struct = %v", stemplate)
 	stemplate.DeepCopyInto(sts)
 	return nil
 }
