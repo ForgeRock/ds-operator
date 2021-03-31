@@ -18,6 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	SnapshotApiGroup = "snapshot.storage.k8s.io"
+)
+
 func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 	var sts apps.StatefulSet
 	sts.Name = ds.Name
@@ -29,9 +33,14 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 		var err error
 		// does the sts not exist yet?
 		if sts.CreationTimestamp.IsZero() {
-			err = createDSStatefulSet(ds, &sts)
+			// create the STS template
+			createDSStatefulSet(ds, &sts)
 			_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
-			r.Log.V(8).Info("Created New sts from template", "sts", sts)
+
+			// If a snapshot is provided - initialize the PVC from that
+			// This can only be done at PVC creation time
+			r.setVolumeClaimTemplateFromSnapshot(ctx, ds, &sts)
+			//
 		} else {
 			// If the sts exists already - we want to update any fields to bring its state into
 			// alignment with the Custom Resource
@@ -66,7 +75,7 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 }
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
-func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
+func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
 
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
@@ -307,22 +316,32 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 
-	// assign to variable - so we can take the address. Really go?
-	apiGroup := "snapshot.storage.k8s.io"
+	stemplate.DeepCopyInto(sts)
+}
 
-	// If a snapshot name is provided - intialize from that
-	// TODO: If name is "latest" find the last snapshot
-	if ds.Spec.InitializeFromSnapshotName != "" {
-		stemplate.Spec.VolumeClaimTemplates[0].Spec.DataSource =
+// If the user supplies a snapshot update the PVC volume claim to initialize from it
+func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
+	snapName := ds.Spec.InitializeFromSnapshotName
+	if snapName != "" {
+		apiGroup := SnapshotApiGroup // assign so we can take the address
+
+		// "latest" is a sentinel value. It means
+		// calculate the most recent snapshot that the operator took
+		if snapName == "latest" {
+			snapList, err := r.getSnapshotList(ctx, ds)
+			if err != nil || len(snapList.Items) == 0 {
+				r.Log.Error(err, "Unable to get list of snapshots! Will continue")
+			} else {
+				// The snapList is sorted - the last entry is the most recent
+				snapName = snapList.Items[len(snapList.Items)-1].GetName()
+			}
+
+		}
+		sts.Spec.VolumeClaimTemplates[0].Spec.DataSource =
 			&v1.TypedLocalObjectReference{
 				Kind:     "VolumeSnapshot",
-				Name:     ds.Spec.InitializeFromSnapshotName,
+				Name:     snapName,
 				APIGroup: &apiGroup,
 			}
 	}
-
-	// debug
-	//fmt.Printf("STS template struct = %v", stemplate)
-	stemplate.DeepCopyInto(sts)
-	return nil
 }

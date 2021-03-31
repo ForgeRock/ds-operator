@@ -1,7 +1,8 @@
 /*
-	Copyright 2020 ForgeRock AS.
+	Copyright 2021 ForgeRock AS.
 */
 
+/// Manage Volume Snapshot creation
 package controllers
 
 import (
@@ -18,7 +19,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Create snapshots if enabled..
@@ -30,8 +30,23 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	if !ds.Spec.Snapshots.Enabled {
 		return nil
 	}
-
 	now := time.Now().Unix()
+
+	// If the timestamp is 0, we have never taken a snapshot before
+	// We want to skip the first snapshot time - because DS is in the process of initializing the disk
+	// We dont want to snapshot an empty disk
+	if ds.Status.SnapshotStatus.LastSnapshotTimeStamp == 0 {
+		ds.Status.SnapshotStatus.LastSnapshotTimeStamp = now
+		if err := r.Status().Update(ctx, ds); err != nil {
+			r.Log.Error(err, "Could not update status")
+			return err
+		}
+		r.Log.Info("Skipping first snapshot to allow the directory to come up")
+		return nil
+	}
+
+	// Update the status sooner vs. later so we record the last snap time
+
 	last := ds.Status.SnapshotStatus.LastSnapshotTimeStamp
 
 	deadline := last + int64(ds.Spec.Snapshots.PeriodMinutes*60)
@@ -60,8 +75,6 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 			VolumeSnapshotClassName: &ds.Spec.Snapshots.VolumeSnapshotClassName,
 			Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &pvcClaimToSnap}}}
 
-	fmt.Printf("snap is %+v\n", s)
-
 	r.Log.Info("taking snapshot ", "snasphot", snapName, "pvc", pvcClaimToSnap)
 
 	var snap snapshot.VolumeSnapshot
@@ -74,8 +87,10 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		// does the sanp not exist yet?
 		if snap.CreationTimestamp.IsZero() {
 			s.DeepCopyInto(&snap)
-			r.Log.V(8).Info("Setting ownerref for snapshot", "name", snap.Name)
-			_ = controllerutil.SetControllerReference(ds, &snap, r.Scheme)
+			// Note: We dont set the ownerref - we want to snapshot to persist even if the
+			// directory instance is deleted
+			// r.Log.V(8).Info("Setting ownerref for snapshot", "name", snap.Name)
+			// _ = controllerutil.SetControllerReference(ds, &snap, r.Scheme)
 		} else {
 			r.Log.V(8).Info("Snapshot should not already exist. Report this error", "snapshot", snap)
 		}
@@ -103,7 +118,6 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		for i := 0; i < numToDelete; i++ {
 			s := &snapList.Items[i]
 			r.Log.Info("Pruning older snapshop", "snapshot", s.GetName())
-			fmt.Printf("Snap to delete %+v\n", s)
 			// Ignore any errors - attempt to complete all deletes
 			if err := r.Client.Delete(ctx, s); err != nil {
 				r.Log.Error(err, "Warning - could not delete snapshot", "snapshot", s.GetName())

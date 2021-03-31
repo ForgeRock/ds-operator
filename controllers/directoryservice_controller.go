@@ -74,12 +74,14 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Load the DirectoryService
 	if err := r.Get(ctx, req.NamespacedName, &ds); err != nil {
-		log.V(5).Info("Unable to fetch DirectorService - it is in the process of being deleted")
+		log.Info("Unable to fetch DirectorService - it is in the process of being deleted. This is OK")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// fmt.Printf("Debug: ds %+v\n", ds)
 
 	if err := r.Update(ctx, &ds); err != nil {
 		return ctrl.Result{}, err
