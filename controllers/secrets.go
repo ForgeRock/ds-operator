@@ -24,7 +24,7 @@ func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *d
 
 	// Loop through the spec.passwords - creating secrets as required
 	for _, secret := range createSecretTemplates(ds) {
-		_, err := ctrl.CreateOrUpdate(ctx, r, &secret, func() error {
+		_, err := ctrl.CreateOrUpdate(ctx, r.Client, &secret, func() error {
 			if secret.CreationTimestamp.IsZero() {
 				r.Log.V(8).Info("Created Secret", "secret", secret)
 				_ = controllerutil.SetControllerReference(ds, &secret, r.Scheme)
@@ -72,7 +72,7 @@ func (r *DirectoryServiceReconciler) checkCloudStorageSecret(ctx context.Context
 			},
 		}
 
-		_, err := ctrl.CreateOrUpdate(ctx, r, &secretTemplate, func() error {
+		_, err := ctrl.CreateOrUpdate(ctx, r.Client, &secretTemplate, func() error {
 			r.Log.Info("Created place holder secret", "secret", secretName)
 			_ = controllerutil.SetControllerReference(ds, &secretTemplate, r.Scheme)
 			return nil // nothing really to do here except create the secret

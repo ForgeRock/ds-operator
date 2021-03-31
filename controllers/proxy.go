@@ -44,7 +44,7 @@ func (r *DirectoryServiceReconciler) reconcileProxy(ctx context.Context, ds *dir
 	deployment.Name = proxyName
 	deployment.Namespace = ds.Namespace
 
-	_, err := ctrl.CreateOrUpdate(ctx, r, &deployment, func() error {
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &deployment, func() error {
 		r.Log.V(8).Info("CreateorUpdate deployment", "deployment", deployment)
 
 		var err error

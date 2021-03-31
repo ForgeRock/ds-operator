@@ -31,6 +31,7 @@ import (
 	directoryforgerockcomv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/ForgeRock/ds-operator/controllers"
+	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v3/apis/volumesnapshot/v1beta1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -58,6 +59,8 @@ func main() {
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	snapshot.AddToScheme(scheme)
 
 	logger := zap.New(zap.UseFlagOptions(&opts))
 	ctrl.SetLogger(logger)

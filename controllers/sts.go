@@ -23,7 +23,7 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 	sts.Name = ds.Name
 	sts.Namespace = ds.Namespace
 
-	_, err := ctrl.CreateOrUpdate(ctx, r, &sts, func() error {
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &sts, func() error {
 		r.Log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
 
 		var err error

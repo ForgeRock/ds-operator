@@ -54,6 +54,7 @@ type DirectoryServiceSpec struct {
 
 	// If specified, create the PVC from the volume snapshot specified in the name
 	// If the name "latest" is used - attempt to calculate the latest snapshot the opertor took.
+	// +kubebuilder:validation:Optional
 	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 
 	// +kubebuilder:validation:Optional
@@ -77,7 +78,7 @@ type DirectorySnapshotSpec struct {
 	// +kubebuilder:default:=30
 	PeriodMinutes int32 `json:"periodMinutes,required"`
 	// +kubebuilder:default:=10
-	SnapshotsRetained int32 `json:"snapshotsRetained"`
+	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
 	// +kubebuilder:default:=ds-snapshot-class
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
@@ -132,6 +133,7 @@ type DirectoryServiceStatus struct {
 	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
+	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup
@@ -140,6 +142,10 @@ type DirectoryBackupStatus struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 	Status    string `json:"status"`
+}
+
+type SnapshotStatus struct {
+	LastSnapshotTimeStamp int64 `json:"lastSnapshotTimeStamp"`
 }
 
 // DirectoryProxyStatus defines the observed state of DirectoryService Proxy
