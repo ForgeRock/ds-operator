@@ -127,3 +127,10 @@ objectclass: ds-monitor-replica (structural)
 ds-mon-server-id=ds-0,cn=servers,cn=topology,cn=monitor
 objectclass: ds-monitor-topology-server (structural)
 ds-mon-replication-domain - multi value- each entry is a dn that is replicated. ou=identities, etc.
+
+## Release Process
+
+* Uses goreleaser and cloudbuild
+
+To run a test build,  issue `/gcbrun` in the PR comment
+To cut a release, create a release in GitHub. This creates a tag, and starts the cloudbuild / goreleaser process.

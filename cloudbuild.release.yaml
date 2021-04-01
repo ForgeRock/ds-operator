@@ -4,9 +4,9 @@ steps:
   env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator']
   args: ['env']
 
-- name: gcr.io/cloud-builders/go                          
-  env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator'] 
-  args: ['test', './...']                                           
+- name: gcr.io/cloud-builders/go
+  env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator']
+  args: ['test', './...']
 
 - name: goreleaser/goreleaser
   entrypoint: /bin/sh
@@ -16,10 +16,7 @@ steps:
   args: ['-c', 'cd ForgeRock/ds-operator && git tag $TAG_NAME && IMG=gcr.io/forgeops-public/ds-operator:$TAG_NAME make release' ]
   secretEnv: ['GITHUB_TOKEN']
 
-secrets:
-- kmsKeyName: projects/engineering-devops/locations/global/keyRings/engineering-devops/cryptoKeys/github-key
-  secretEnv:
-    GITHUB_TOKEN: |
-      CiQAWHysaumBCi7eM+fysjiJWzP2vFq50c6h78JyNyyS3RJSQlASUQBqP6GPGGhZy6CwJOwzTvLf
-      jhnEY3cT3uM0RunKcS1wXK+7q93BAmi3UsV7z2HWf3/ppWiwZTEepEd4X1S9NgVEQPTZuQ+ZJbdN
-      q2BJRn6SVA==
+availableSecrets:
+  secretManager:
+    - versionName: projects/1067706085367/secrets/GH_API_CLOUDBUILD/versions/2
+      env: 'GITHUB_TOKEN'
