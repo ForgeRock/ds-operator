@@ -20,4 +20,4 @@ images:
 availableSecrets:
   secretManager:
     - versionName: projects/1067706085367/secrets/GH_API_CLOUDBUILD/versions/2
-      env: 'GH_TOKEN'
+      env: 'GITHUB_TOKEN'
