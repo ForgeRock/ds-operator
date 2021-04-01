@@ -72,8 +72,8 @@ spec:
                 type: string
               initializeFromSnapshotName:
                 description: If specified, create the PVC from the volume snapshot
-                  specified in the name If the name "latest" is used - attempt to
-                  calculate the latest snapshot the opertor took.
+                  specified in the name. If the name "latest" is used - attempt to
+                  calculate the latest snapshot the operator took.
                 type: string
               keystores:
                 description: Keystore references
@@ -202,7 +202,7 @@ spec:
                   enabled:
                     type: boolean
                   path:
-                    description: Path to the backup location (could be an gcp or s3
+                    description: Path to the backup location (could be a gcp or s3
                       bucket)
                     type: string
                   secretName:
