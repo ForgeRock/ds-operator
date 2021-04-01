@@ -7,7 +7,7 @@ The operator is deployed from source with the following command:
 
 ```bash
 make manifests
-kubectl apply -f config/default
+kustomize build  config/default | kubectl apply -f -
 ```
 
 ## Secrets
@@ -65,6 +65,7 @@ for any LDAP functionality.
 * Scale subresource support (`kubectl scale directoryservice/ds --replicas=2`)
 * Service account passwords are now suported. The operator can change the account passwords for AM, IDM, etc..
 * backup / restore implemented
+* experimental ds proxy
 
 Updating the spec.image will update the statefulset and perform a rolling update. For example:
 
@@ -73,19 +74,11 @@ kubectl patch directoryservice/ds --type='json' \
    -p='[{"op": "replace", "path": "/spec/image", "value":"gcr.io/forgeops-public/ds-idrepo:2020.10.28-AlSugoDiNoci"}]'
 ```
 
-## What doesn't work
-
-* No load balancer or ds proxy
-* Limited status updated on CR object
-* SSL certificate management. ldaps works, but the client must accept the cert. We need a scalable way for the user to supply a CA cert
-* ...
-
 
 ## Optional Features (Future Roadmap)
 
 * Snapshots using k8s snapshots when supported on all clouds (Kubernetes 1.18)
 * Patching strategy on DS image updates
-* DS proxy with affinity
 * SSL / client authentication
 * STS updates? See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
 In 1.17, some sts settings can be updated: image, Resource req/limit, labels and annotations. Might be useful to adjust JVM memory and allow restart

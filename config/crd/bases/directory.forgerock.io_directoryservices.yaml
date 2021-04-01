@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.5
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: directoryservices.directory.forgerock.io
 spec:
@@ -69,6 +69,11 @@ spec:
                 type: string
               image:
                 description: Docker Image for the directory server.
+                type: string
+              initializeFromSnapshotName:
+                description: If specified, create the PVC from the volume snapshot
+                  specified in the name If the name "latest" is used - attempt to
+                  calculate the latest snapshot the opertor took.
                 type: string
               keystores:
                 description: Keystore references
@@ -197,6 +202,8 @@ spec:
                   enabled:
                     type: boolean
                   path:
+                    description: Path to the backup location (could be an gcp or s3
+                      bucket)
                     type: string
                   secretName:
                     default: cloud-storage-credentials
@@ -204,6 +211,29 @@ spec:
                 required:
                 - enabled
                 - path
+                type: object
+              snapshots:
+                description: Snapshots
+                properties:
+                  enabled:
+                    default: false
+                    type: boolean
+                  periodMinutes:
+                    default: 30
+                    format: int32
+                    type: integer
+                  snapshotsRetained:
+                    default: 10
+                    format: int32
+                    type: integer
+                  volumeSnapshotClassName:
+                    default: ds-snapshot-class
+                    type: string
+                required:
+                - enabled
+                - periodMinutes
+                - snapshotsRetained
+                - volumeSnapshotClassName
                 type: object
               storage:
                 default: 100Gi
@@ -320,6 +350,14 @@ spec:
               serviceAccountPasswordsUpdatedTime:
                 format: int64
                 type: integer
+              snapshotStatus:
+                properties:
+                  lastSnapshotTimeStamp:
+                    format: int64
+                    type: integer
+                required:
+                - lastSnapshotTimeStamp
+                type: object
             type: object
         type: object
     served: true

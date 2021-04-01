@@ -1,7 +1,16 @@
 domain: forgerock.io
-repo: github.com/ForgeRock/ds-operator
+layout:
+- go.kubebuilder.io/v3
+projectName: ds-operator
+repo: forgerock.io/ds-operator
 resources:
-- group: directory
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: forgerock.io
+  group: directory
   kind: DirectoryService
+  path: forgerock.io/ds-operator/api/v1alpha1
   version: v1alpha1
-version: "2"
+version: "3"

@@ -32,3 +32,6 @@ ds-operator.yaml
 
 # vscode config files
 .vscode/*
+tmp/
+ds-operator
+*.out

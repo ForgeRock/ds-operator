@@ -62,8 +62,9 @@ var (
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile loop for DS controller
-func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// todo: new lib does not need this...
+	// ctx := context.Background()
 	// This adds the log data to every log line
 	var log = r.Log.WithValues("directoryservice", req.NamespacedName)
 
@@ -73,12 +74,14 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	// Load the DirectoryService
 	if err := r.Get(ctx, req.NamespacedName, &ds); err != nil {
-		log.V(5).Info("Unable to fetch DirectorService - it is in the process of being deleted")
+		log.Info("Unable to fetch directoryservice - it is in the process of being deleted. This is OK")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// fmt.Printf("Debug: ds %+v\n", ds)
 
 	if err := r.Update(ctx, &ds); err != nil {
 		return ctrl.Result{}, err
@@ -103,8 +106,17 @@ func (r *DirectoryServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	if err != nil {
 		return requeue, err
 	}
-	if _, err := r.reconcileProxyService(ctx, &ds); err != nil {
+
+	//// Snapshots ////
+	err = r.reconcileSnapshots(ctx, &ds)
+	if err != nil {
 		return requeue, err
+	}
+
+	// Update the status of our ds object
+	if err := r.Status().Update(ctx, &ds); err != nil {
+		log.Error(err, "unable to update Directory status")
+		return ctrl.Result{}, err
 	}
 
 	//// LDAP Updates

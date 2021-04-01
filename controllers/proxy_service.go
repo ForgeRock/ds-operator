@@ -42,7 +42,7 @@ func (r *DirectoryServiceReconciler) reconcileProxyService(ctx context.Context, 
 	svc.Name = proxyName
 	svc.Namespace = ds.Namespace
 
-	_, err := ctrl.CreateOrUpdate(ctx, r, &svc, func() error {
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &svc, func() error {
 		r.Log.V(8).Info("CreateorUpdate proxy service", "svc", svc)
 
 		var err error

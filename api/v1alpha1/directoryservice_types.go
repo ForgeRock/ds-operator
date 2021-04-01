@@ -49,18 +49,38 @@ type DirectoryServiceSpec struct {
 	// Keystore references
 	Keystores DirectoryKeystores `json:"keystores,omitempty"`
 
-	//  +kubebuilder:default:="100Gi"
+	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
+
+	// If specified, create the PVC from the volume snapshot specified in the name.
+	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
+	// +kubebuilder:validation:Optional
+	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 
 	// +kubebuilder:validation:Optional
 	StorageClassName string `json:"storageClassName,omitempty"`
 
+	// Snapshots
+	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
 	// Backup
 	Backup DirectoryBackup `json:"backup,omitempty"`
 	// Restore
 	Restore DirectoryRestore `json:"restore,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
+}
+
+// DirectorySnapshotSpec defines how to take Volume Snapshots
+
+type DirectorySnapshotSpec struct {
+	// +kubebuilder:default:=false
+	Enabled bool `json:"enabled,required"`
+	// +kubebuilder:default:=30
+	PeriodMinutes int32 `json:"periodMinutes,required"`
+	// +kubebuilder:default:=10
+	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
+	// +kubebuilder:default:=ds-snapshot-class
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.
@@ -97,8 +117,9 @@ type DirectoryBackup struct {
 
 // DirectoryRestore defines how to restore a new directory from a backup
 type DirectoryRestore struct {
-	Enabled bool   `json:"enabled,required"`
-	Path    string `json:"path,required"`
+	Enabled bool `json:"enabled,required"`
+	// Path to the backup location (could be a gcp or s3 bucket)
+	Path string `json:"path,required"`
 	// +kubebuilder:default:=cloud-storage-credentials
 	SecretName string `json:"secretName,omitempty"`
 }
@@ -112,6 +133,7 @@ type DirectoryServiceStatus struct {
 	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
+	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`
 }
 
 // DirectoryBackupStatus provides the status of the backup
@@ -120,6 +142,10 @@ type DirectoryBackupStatus struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
 	Status    string `json:"status"`
+}
+
+type SnapshotStatus struct {
+	LastSnapshotTimeStamp int64 `json:"lastSnapshotTimeStamp"`
 }
 
 // DirectoryProxyStatus defines the observed state of DirectoryService Proxy
