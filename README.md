@@ -203,14 +203,14 @@ spec:
 ```
 
 The field `spec.initializeFromSnapshotName` is optional. If present, it is the name of a VolumeSnapshot that will be used
-to initialze the directory PVC claims. The special value "latest" will be interprested by the operator as the
+to initialze the directory PVC claims. The special value "latest" will be interpreted by the operator as the
 "latest" snapshot that the operator made (assuming automatic snapshots are enabled).
 
 Notes:
 
 * If a PVC claim is already provisioned, this setting has no effect. This setting only controls
 initialization of *new* PVC claims. Said another way, existing data will not be overwritten by the snapshot.
-* Changing this setting after deployment of directory instance does not have any effect. This
+* Changing this setting after deployment of a directory instance does not have any effect. This
 setting works by updating the volume claim template for the Kubernetes StatefulSet. Kubernetes
 does not allow the template to be updated after deployment.
 
@@ -218,7 +218,7 @@ does not allow the template to be updated after deployment.
 A "rollback" procedure is as follows:
 
 * Validate that you have a good snapshot to rollback to. `kubectl get volumesnapshots`.
-* Delete the directory deployment *and* the PVC claims.  `kubectl delete directoryservice/ds-idrepo-0 && kubectl delete pvc ds-idrepo-0` (repeat for all PVCs).
+* Delete the directory deployment *and* the PVC claims.  For example: `kubectl delete directoryservice/ds-idrepo-0 && kubectl delete pvc ds-idrepo-0` (repeat for all PVCs).
 * Set the `spec.initializeFromSnapshotName` either to "latest" (assuming the operator is taking snapshots) or the name of a specific volume snapshot.
 * Redeploy the directory service.  The new PVCs will be cloned from the snapshot.
 * *All* directory instances are initialized from the same snapshot volume. For example, in a two way replication topology,
@@ -226,7 +226,7 @@ A "rollback" procedure is as follows:
 
 *WARNING*: This procedure destroys any updates made since the last snapshot. Use with caution.
 
-### Taking Automatic VolumeSnapshots
+### Enabling Automatic VolumeSnapshots
 
 The ds-operator can be configured to automatically take snapshots. Update the CR spec:
 
@@ -246,7 +246,7 @@ Snapshot settings can be dynamically changed while the directory is running.
 Notes:
 
 * Only the first pvc (data-ds-idrepo-0 for example) is used for the snapshot. When initializing from a snapshot,
-  all directory replicas are start with the same data (see above)
+  all directory replicas start with the same data (see above)
 * Snapshots can be expensive. Do not snapshot overly frequently, and retain only the number of
   snapshots that you need for availability.
 * Snapshots are not a replacement for offline backups. If the data on disk is corrupt, the snapshot will also
