@@ -203,7 +203,7 @@ spec:
 ```
 
 The field `spec.initializeFromSnapshotName` is optional. If present, it is the name of a VolumeSnapshot that will be used
-to initialze the directory PVC claims. The special value "latest" will be interpreted by the operator as the
+to initialize the directory PVC claims. The special value "latest" will be interpreted by the operator as the
 "latest" snapshot that the operator made (assuming automatic snapshots are enabled).
 
 Notes:

@@ -26,7 +26,7 @@ import (
 // The spec.status records the last snapshot time.
 func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 
-	r.Log.Info("snapshot recon")
+	r.Log.V(5).Info("snapshot reconcile")
 
 	if !ds.Spec.Snapshots.Enabled {
 		return nil
@@ -81,7 +81,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
 		r.Log.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
 
-		// does the sanp not exist yet?
+		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
 			s.DeepCopyInto(&snap)
 			// Note: We dont set the ownerref - we want to snapshot to persist even if the

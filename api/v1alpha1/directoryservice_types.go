@@ -52,8 +52,8 @@ type DirectoryServiceSpec struct {
 	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
 
-	// If specified, create the PVC from the volume snapshot specified in the name
-	// If the name "latest" is used - attempt to calculate the latest snapshot the opertor took.
+	// If specified, create the PVC from the volume snapshot specified in the name.
+	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
 	// +kubebuilder:validation:Optional
 	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 
@@ -118,7 +118,7 @@ type DirectoryBackup struct {
 // DirectoryRestore defines how to restore a new directory from a backup
 type DirectoryRestore struct {
 	Enabled bool `json:"enabled,required"`
-	// Path to the backup location (could be an gcp or s3 bucket)
+	// Path to the backup location (could be a gcp or s3 bucket)
 	Path string `json:"path,required"`
 	// +kubebuilder:default:=cloud-storage-credentials
 	SecretName string `json:"secretName,omitempty"`
