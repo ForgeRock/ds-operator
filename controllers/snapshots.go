@@ -2,7 +2,7 @@
 	Copyright 2021 ForgeRock AS.
 */
 
-/// Manage Volume Snapshot creation
+/// Manage Volume Snapshot Creation
 package controllers
 
 import (
@@ -16,13 +16,14 @@ import (
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v3/apis/volumesnapshot/v1beta1"
+	"github.com/prometheus/common/log"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Create snapshots if enabled..
-// Compare status to last snapshot
+// The spec.status records the last snapshot time.
 func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 
 	r.Log.Info("snapshot recon")
@@ -45,30 +46,26 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		return nil
 	}
 
-	// Update the status sooner vs. later so we record the last snap time
-
 	last := ds.Status.SnapshotStatus.LastSnapshotTimeStamp
-
 	deadline := last + int64(ds.Spec.Snapshots.PeriodMinutes*60)
 
-	r.Log.Info("snapshot deadine", "deadline", deadline, "lastSnapTimestamp", ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
+	r.Log.V(5).Info("snapshot deadine", "deadline", deadline, "lastSnapTimestamp", ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
 	// fmt.Printf("deadine %d  last %d", deadline, ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
 
 	if now < deadline {
-		r.Log.V(8).Info("Snapshot deadline not passed yet.")
+		r.Log.V(5).Info("Snapshot deadline not passed yet.")
 		return nil
 	}
 
+	// We always snapshot the first disk
 	pvcClaimToSnap := fmt.Sprintf("data-%s-0", ds.GetName())
-
+	// snaphsot name suffix is the current timestamp
 	snapName := fmt.Sprintf("%s-%d", ds.GetName(), now)
-
-	labels := createLabels(ds.GetName(), nil)
 
 	// TODO: add labels, etc..
 	var s = &snapshot.VolumeSnapshot{
 		ObjectMeta: v1.ObjectMeta{Name: snapName, Namespace: ds.GetNamespace(),
-			Labels:      labels,
+			Labels:      createLabels(ds.GetName(), nil),
 			Annotations: map[string]string{"directory.forgerock.io/lastSnapshotTime": strconv.Itoa(int(now))},
 		},
 		Spec: snapshot.VolumeSnapshotSpec{
@@ -96,10 +93,15 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		}
 		return nil
 	})
+
+	if err != nil {
+		log.Error(err, "Warning, Create/Update of VolumeSnapshot failed. Will continue processing")
+	}
+
 	r.recorder.Event(ds, corev1.EventTypeNormal, "Created Snapshot", snap.Name)
 
-	// update the status. Snapshots are expensive - and could pile up
-	// Update the status sooner vs. later so we record the last snap time
+	// Update the status ASAP. Snapshots are expensive, so
+	// we record the last snap time so we dont accidently try to create a bunch of snapshots in rapid succession.
 	ds.Status.SnapshotStatus.LastSnapshotTimeStamp = now
 	if err := r.Status().Update(ctx, ds); err != nil {
 		r.Log.Error(err, "Could not update status")
@@ -111,14 +113,14 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		return err
 	}
 
+	// Delete older snapshots
 	numToDelete := len(snapList.Items) - int(ds.Spec.Snapshots.SnapshotsRetained)
 
-	// If there are more snapshots than we are supposed to keep, delete the older ones
 	if numToDelete > 0 {
 		for i := 0; i < numToDelete; i++ {
 			s := &snapList.Items[i]
-			r.Log.Info("Pruning older snapshop", "snapshot", s.GetName())
-			// Ignore any errors - attempt to complete all deletes
+			r.Log.Info("Pruning older snapshot", "snapshot", s.GetName())
+			// Ignore errors - attempt to complete all deletes
 			if err := r.Client.Delete(ctx, s); err != nil {
 				r.Log.Error(err, "Warning - could not delete snapshot", "snapshot", s.GetName())
 			}
@@ -129,10 +131,8 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	return nil
 }
 
-// Lookup the list of snapshots. The list will be returned in sorted order of time
+// Lookup the list of snapshots. The list is sorted by snapshot time
 func (r *DirectoryServiceReconciler) getSnapshotList(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (*snapshot.VolumeSnapshotList, error) {
-	// Now purge any older snapshots..
-	// list snapshots
 	var snapshotList snapshot.VolumeSnapshotList
 	labels := createLabels(ds.GetName(), nil)
 

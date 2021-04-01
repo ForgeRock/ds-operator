@@ -22,8 +22,26 @@ spec:
   # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
   # If the class is not specified, "default" is used. Your cluster
   # must have the default storageClass admission controller enabled to use "default".
-  # "standard-rwo" is a default storage class created by GKE for use by the CSI driver
+  # The "standard" storageClass is available on minikube, GKE, and EKS
   storageClassName: standard-rwo
+
+  # Optional: If snapshot name is provided, the directory PVCs will be
+  # initialized from the contents of the snapshot. They will NOT be initialized from the
+  # "prototype" backends.
+  # The name "latest" is reserved. It signifies to the operator
+  # to find the name of the latest snapshot that was taken by the operator . If you
+  # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
+  # initializeFromSnapshotName: "latest"
+
+  # Optional - Configures the operator to automatically take snapshots
+  snapshots:
+    enabled: false
+    # Take a snapshot every 30 minutes
+    periodMinutes: 30
+    # Keep this many snapshots. Older snapshots will be deleted
+    snapshotsRetained: 4
+    # This defaults to ds-snapshot-class if not specified
+    volumeSnapshotClassName: ds-snapshot-class
 
   ### Passwords ###
   # Passwords: maps DS accounts to new or existing secrets.
