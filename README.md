@@ -170,7 +170,7 @@ Use cases that are enabled by snapshots include:
 
 * Rapid rollback and recovery from the last snapshot point.
 * For testing, initializing the directory with a large amount of sample data saved in a previous snapshot.
-* In the future, snapshots can enable another pod to perform backup while the main pods continnue to serve traffic.
+* In the future, snapshots can enable backups in a pod that is not serving traffic.
 
 ### Snapshot Prerequisites
 
@@ -178,19 +178,20 @@ Use cases that are enabled by snapshots include:
 * Snapshots require the `csi` volume driver. Consult your providers documentation. On GKE enable
   the `GcePersistentDiskCsiDriver` addon when creating or updating the cluster. The forgeops `cluster-up.sh` script
   for GKE has been updated to include this addon.
-* Create a VolumeSnapshotClass. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` script also creates
+* Create a `VolumeSnapshotClass`. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` script also creates
   this class using the following definition
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1beta1
-tionPolicy: Deletekind: VolumeSnapshotClass
+kind: VolumeSnapshotClass
 metadata:
   name: ds-snapshot-class
 driver: pd.csi.storage.gke.io
 deletionPolicy: Delete
+EOF
 ```
 
 * The StorageClass in the ds-operator deployment yaml must also use the CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
-  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). Uses one of these classes. The examples in the hack/ directory have been updated.
+  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). The example `hack/ds.yaml`  has been updated.
 
 ### Initalizing the Directory server from a previous Volume Snapshot
 
@@ -214,7 +215,7 @@ setting works by updating the volume claim template for the Kubernetes StatefulS
 does not allow the template to be updated after deployment.
 
 
-A "rollback" procedure is be done as follows
+A "rollback" procedure is as follows:
 
 * Validate that you have a good snapshot to rollback to. `kubectl get volumesnapshots`.
 * Delete the directory deployment *and* the PVC claims.  `kubectl delete directoryservice/ds-idrepo-0 && kubectl delete pvc ds-idrepo-0` (repeat for all PVCs).
@@ -244,18 +245,18 @@ Snapshot settings can be dynamically changed while the directory is running.
 
 Notes:
 
-* Only the first pvc (data-ds-idrepo-0 for example) is snapshotted. When initializing from a snapshot,
-  all directory replicas are initialized from the same data set (see above)
+* Only the first pvc (data-ds-idrepo-0 for example) is used for the snapshot. When initializing from a snapshot,
+  all directory replicas are start with the same data (see above)
 * Snapshots can be expensive. Do not snapshot overly frequently, and retain only the number of
   snapshots that you need for availability.
 * Snapshots are not a replacement for offline backups. If the data on disk is corrupt, the snapshot will also
   be corrupt.
 * The very first snapshot will not happen until after the first `periodMinutes` (20 minutes in the example above).
-  This is to give the directory time to start up - so the operator does not snapshot an empty disk.
+  This is to give the directory time to start up before taking the first snapshot.
 
 ### Advanced Snapshot Scenarios
 
-You can manually take snapshots at anytime assuming you are using the CSI driver. For example
+You can manually take snapshots at any time assuming you are using the CSI driver. For example
 
 ```
 kubectl apply -f - <<EOF
