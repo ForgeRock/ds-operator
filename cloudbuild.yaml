@@ -16,10 +16,8 @@ steps:
     secretEnv: ['GITHUB_TOKEN']
 images:
   - 'gcr.io/$PROJECT_ID/ds-operator:pr-$_PR_NUMBER'
-secrets:
-  - kmsKeyName: projects/engineering-devops/locations/global/keyRings/engineering-devops/cryptoKeys/github-key
-    secretEnv:
-      GITHUB_TOKEN: |
-        CiQAWHysaumBCi7eM+fysjiJWzP2vFq50c6h78JyNyyS3RJSQlASUQBqP6GPGGhZy6CwJOwzTvLf
-        jhnEY3cT3uM0RunKcS1wXK+7q93BAmi3UsV7z2HWf3/ppWiwZTEepEd4X1S9NgVEQPTZuQ+ZJbdN
-        q2BJRn6SVA==
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/1067706085367/secrets/GH_API_CLOUDBUILD/versions/2
+      env: 'GH_TOKEN'
