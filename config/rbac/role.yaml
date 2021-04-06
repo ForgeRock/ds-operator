@@ -9,6 +9,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
   - secrets
   - services
   verbs:
@@ -81,3 +89,15 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - snapshot.storage.k8s.io
+  resources:
+  - volumesnapshots
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
