@@ -74,6 +74,10 @@ spec:
     keyStoreSecretName: ds
     # Truststore - Do we need it?
     # trustStoreSecretName: foo
+  platformCA:
+    # The name of the secret that contains the platform CA
+    # Currently the operator can not generate this. Use Secret Agent.
+    secretName: platform-ca
 
   #### Backup and Restore ####
   backup:
