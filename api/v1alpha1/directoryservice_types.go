@@ -49,6 +49,9 @@ type DirectoryServiceSpec struct {
 	// Keystore references
 	Keystores DirectoryKeystores `json:"keystores,omitempty"`
 
+	// Platform CA references
+	PlatformCA PlatformCA `json:"platformCA,omitempty"`
+
 	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
 
@@ -100,6 +103,14 @@ type DirectoryKeystores struct {
 	// +kubebuilder:default:=ds
 	KeyStoreSecretName   string `json:"keyStoreSecretName,required"`
 	TrustStoreSecretName string `json:"trustStoreSecretName,omitempty"`
+}
+
+// PlatformCA defines a CA key pair
+type PlatformCA struct {
+	// The name of a secret
+	SecretName string `json:"secretName"`
+	// Create a random secret if true. Otherwise assumes the secret already exists
+	Create bool `json:"create,omitempty"`
 }
 
 // DirectoryBackup defines how and where to backup DS to

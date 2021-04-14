@@ -111,6 +111,19 @@ spec:
                 description: The account secrets. The key is the DN of the secret
                   (example, uid=admin)
                 type: object
+              platformCA:
+                description: Platform CA references
+                properties:
+                  create:
+                    description: Create a random secret if true. Otherwise assumes
+                      the secret already exists
+                    type: boolean
+                  secretName:
+                    description: The name of a secret
+                    type: string
+                required:
+                - secretName
+                type: object
               proxy:
                 description: Proxy configurations
                 properties:

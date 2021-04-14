@@ -213,6 +213,10 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									Name:      "cloud-backup-credentials",
 									MountPath: "/var/run/secrets/cloud-credentials-cache/",
 								},
+								{
+									Name:      "pem-trust-certs",
+									MountPath: "/opt/opendj/pem-trust-certs",
+								},
 							},
 							Resources: ds.DeepCopy().Spec.Resources,
 							Env: []v1.EnvVar{
@@ -285,6 +289,14 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
 									SecretName: ds.Spec.Restore.SecretName,
+								},
+							},
+						},
+						{
+							Name: "pem-trust-certs",
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: ds.Spec.PlatformCA.SecretName,
 								},
 							},
 						},
