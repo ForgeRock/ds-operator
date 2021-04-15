@@ -256,7 +256,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name: "secrets", // keystore and pin
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Keystores.KeyStoreSecretName,
+									SecretName: ds.Spec.Keystore.SecretName,
 								},
 							},
 						},
