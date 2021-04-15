@@ -207,7 +207,7 @@ func (in *DirectoryServiceSpec) DeepCopyInto(out *DirectoryServiceSpec) {
 			(*out)[key] = val
 		}
 	}
-	out.Keystores = in.Keystores
+	out.Keystore = in.Keystore
 	out.TrustStore = in.TrustStore
 	out.Snapshots = in.Snapshots
 	out.Backup = in.Backup

@@ -47,7 +47,7 @@ type DirectoryServiceSpec struct {
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
 	// Keystore references
-	Keystores DirectoryKeystores `json:"keystores,omitempty"`
+	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 
 	// Truststore - for mTLS connections
 	TrustStore TrustStore `json:"truststore,omitempty"`
@@ -101,7 +101,7 @@ type DirectoryPasswords struct {
 type DirectoryKeystores struct {
 	// The name of a secret containing the keystore
 	// +kubebuilder:default:=ds
-	KeyStoreSecretName string `json:"keyStoreSecretName,required"`
+	SecretName string `json:"SecretName,required"`
 }
 
 // TrustStore defines a CA key pair
