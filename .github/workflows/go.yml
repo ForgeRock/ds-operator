@@ -52,11 +52,3 @@ jobs:
         kubectl rollout status sts/ds-idrepo --timeout 90s
         kubectl scale directoryservice/ds-idrepo --replicas=2
         kubectl rollout status sts/ds-idrepo --timeout 90s
-
-
-
-    # - name: Build
-    #   run: go build -v ./...
-
-    # - name: Test
-    #   run: go test -v ./...
