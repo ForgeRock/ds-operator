@@ -18,10 +18,17 @@ jobs:
       with:
         go-version: 1.15
 
-    - name: build docker image
+    - name: Generate source
       shell: bash
       run: |
-        make docker
+        make generate
+
+    - name: create docker image
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        args: --snapshot --rm-dist
+      env:
+        IMG: gcr.io/engineering-devops/ds-operator:latest
 
     - name: setup kind
       shell: bash
