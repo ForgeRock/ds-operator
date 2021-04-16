@@ -64,9 +64,12 @@ generate: controller-gen
 build:
 	IMG=${IMG} goreleaser --snapshot --rm-dist
 
+docker: test
+	docker build -t ${IMG} .
+
 # Test and Build container
 docker-build: test build
-	@echo "${IMG} built"
+ 	@echo "${IMG} built"
 
 # Build, push, and create GitHub release
 release: install-tools

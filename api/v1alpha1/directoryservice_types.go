@@ -47,10 +47,10 @@ type DirectoryServiceSpec struct {
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
 	// Keystore references
-	Keystores DirectoryKeystores `json:"keystores,omitempty"`
+	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 
-	// Platform CA references
-	PlatformCA PlatformCA `json:"platformCA,omitempty"`
+	// Truststore - for mTLS connections
+	TrustStore TrustStore `json:"truststore,omitempty"`
 
 	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
@@ -101,15 +101,16 @@ type DirectoryPasswords struct {
 type DirectoryKeystores struct {
 	// The name of a secret containing the keystore
 	// +kubebuilder:default:=ds
-	KeyStoreSecretName   string `json:"keyStoreSecretName,required"`
-	TrustStoreSecretName string `json:"trustStoreSecretName,omitempty"`
+	SecretName string `json:"secretName,required"`
 }
 
-// PlatformCA defines a CA key pair
-type PlatformCA struct {
+// TrustStore defines a CA key pair
+type TrustStore struct {
 	// The name of a secret
-	SecretName string `json:"secretName"`
+	SecretName string `json:"secretName,required"`
+	KeyName    string `json:"keyName,omitempty"`
 	// Create a random secret if true. Otherwise assumes the secret already exists
+	// Not currently supported
 	Create bool `json:"create,omitempty"`
 }
 

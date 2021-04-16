@@ -1,8 +1,8 @@
-name: Go
+name: PullRequest
 
 on:
-  push:
-    branches: [ master ]
+  # push:
+  #   branches: [ master ]
   pull_request:
     branches: [ master ]
 
@@ -18,8 +18,45 @@ jobs:
       with:
         go-version: 1.15
 
-    - name: Build
-      run: go build -v ./...
+    - name: Generate source
+      shell: bash
+      run: |
+        make generate
 
-    - name: Test
-      run: go test -v ./...
+    - name: create docker image
+      uses: goreleaser/goreleaser-action@v2
+      with:
+        args: --snapshot --rm-dist
+      env:
+        IMG: gcr.io/engineering-devops/ds-operator:latest
+
+    - name: setup kind
+      shell: bash
+      run: |
+        kind create cluster
+        kind load docker-image gcr.io/engineering-devops/ds-operator:latest
+        kubectl version
+
+    - name: deploy operator
+      shell: bash
+      run: |
+        make install
+        make deploy
+        kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 90s
+
+    - name: deploy directory service
+      shell: bash
+      run: |
+        kubectl apply -f hack/secrets.yaml
+        kubectl apply -f hack/ds.yaml
+        kubectl rollout status sts/ds-idrepo --timeout 90s
+        kubectl scale directoryservice/ds-idrepo --replicas=2
+        kubectl rollout status sts/ds-idrepo --timeout 90s
+
+
+
+    # - name: Build
+    #   run: go build -v ./...
+
+    # - name: Test
+    #   run: go test -v ./...

@@ -15,7 +15,7 @@ dockers:
     goos: linux
     goarch: amd64
     goarm: ''
-    builds:
+    ids:
       - manager
     image_templates:
       - "{{.Env.IMG}}"
