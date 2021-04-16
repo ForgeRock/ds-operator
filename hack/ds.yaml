@@ -23,9 +23,9 @@ spec:
   # If the class is not specified, "default" is used. Your cluster
   # must have the default storageClass admission controller enabled to use "standard".
   # The "standard" storageClass is available on minikube, GKE, and EKS
-  storageClassName: standard-rwo
+  # storageClassName: standard-rwo
   # For kind testing:
-  # storageClassName: standard
+  storageClassName: standard
 
 
   # Optional: If snapshot name is provided, the directory PVCs will be

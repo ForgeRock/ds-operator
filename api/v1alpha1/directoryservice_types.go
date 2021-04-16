@@ -101,7 +101,7 @@ type DirectoryPasswords struct {
 type DirectoryKeystores struct {
 	// The name of a secret containing the keystore
 	// +kubebuilder:default:=ds
-	SecretName string `json:"SecretName,required"`
+	SecretName string `json:"secretName,required"`
 }
 
 // TrustStore defines a CA key pair

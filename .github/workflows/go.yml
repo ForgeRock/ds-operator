@@ -35,8 +35,18 @@ jobs:
       run: |
         make install
         make deploy
-        sleep 10
-        kubectl -n fr-system get deployment,pods
+        kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 90s
+
+    - name: deploy directory service
+      shell: bash
+      run: |
+        kubectl apply -f hack/secrets.yaml
+        kubectl apply -f hack/ds.yaml
+        kubectl rollout status sts/ds-idrepo --timeout 90s
+        kubectl scale directoryservice/ds-idrepo --replicas=2
+        kubectl rollout status sts/ds-idrepo --timeout 90s
+
+
 
     # - name: Build
     #   run: go build -v ./...

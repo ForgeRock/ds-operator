@@ -78,12 +78,12 @@ spec:
               keystore:
                 description: Keystore references
                 properties:
-                  SecretName:
+                  secretName:
                     default: ds
                     description: The name of a secret containing the keystore
                     type: string
                 required:
-                - SecretName
+                - secretName
                 type: object
               passwords:
                 additionalProperties:
