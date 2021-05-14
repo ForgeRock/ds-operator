@@ -1,5 +1,5 @@
 # Sample DirectoryService deployment
-apiVersion: directory.forgerock.io/v1alpha1
+apiVersion: directory.forgerock.io/v1alpha2
 kind: DirectoryService
 metadata:
   name: ds-idrepo
