@@ -107,6 +107,7 @@ type DirectoryKeystores struct {
 // TrustStore defines a CA key pair
 type TrustStore struct {
 	// The name of a secret
+	// +kubebuilder:default:=platform-ca
 	SecretName string `json:"secretName,required"`
 	KeyName    string `json:"keyName,omitempty"`
 	// Create a random secret if true. Otherwise assumes the secret already exists
