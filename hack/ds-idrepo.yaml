@@ -50,7 +50,9 @@ spec:
       secretName: ds-env-secrets
       key: AM_STORES_APPLICATION_PASSWORD
 
-  keystores:
+  keystore:
+
+  # keystores:
     # The name of the secret that contains the DS keystore
     # The secret must contain at least two keys: keystore and keystore.pin
     # keystore is a pkcs12 Java keystore.
