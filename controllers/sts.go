@@ -6,7 +6,8 @@ package controllers
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
+	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -22,7 +23,7 @@ const (
 	SnapshotApiGroup = "snapshot.storage.k8s.io"
 )
 
-func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
+func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string) error {
 	var sts apps.StatefulSet
 	sts.Name = ds.Name
 	sts.Namespace = ds.Namespace
@@ -34,7 +35,7 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 		// does the sts not exist yet?
 		if sts.CreationTimestamp.IsZero() {
 			// create the STS template
-			createDSStatefulSet(ds, &sts)
+			createDSStatefulSet(ds, &sts, svcName)
 			_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
 
 			// If a snapshot is provided - initialize the PVC from that
@@ -75,7 +76,7 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 }
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
-func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
+func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet, svcName string) {
 
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
@@ -103,7 +104,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					"app.kubernetes.io/instance": ds.Name,
 				},
 			},
-			ServiceName: ds.Name,
+			ServiceName: svcName,
 			Replicas:    ds.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -148,6 +149,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Effect:   "NoSchedule",
 						},
 					},
+					// Required for kubedns multi-cluster deployments
+					Subdomain: svcName,
 					InitContainers: []v1.Container{
 						{
 							Name:            "init",
@@ -229,12 +232,16 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									},
 								},
 								{
-									Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
-									Value: fmt.Sprintf("$(POD_NAME).%s", ds.Name),
-								},
-								{
 									Name:  "DS_GROUP_ID",
 									Value: ds.Spec.GroupID,
+								},
+								{
+									Name:  "DS_CLUSTER_TOPOLOGY",
+									Value: ds.Spec.MultiCluster.ClusterTopology,
+								},
+								{
+									Name:  "MCS_ENABLED",
+									Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
 								},
 							},
 							EnvFrom: []v1.EnvFromSource{

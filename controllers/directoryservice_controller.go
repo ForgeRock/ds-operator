@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
@@ -80,6 +81,13 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	var clusterIdentifier string = ""
+	svcName := ds.Name
+
+	if ds.Spec.MultiCluster.ClusterTopology != "" {
+		clusterIdentifier = "-" + ds.Spec.MultiCluster.ClusterIdentifier
+		svcName = svcName + clusterIdentifier
+	}
 
 	// fmt.Printf("Debug: ds %+v\n", ds)
 
@@ -93,7 +101,7 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	//// StatefulSets ////
-	if err := r.reconcileSTS(ctx, &ds); err != nil {
+	if err := r.reconcileSTS(ctx, &ds, svcName); err != nil {
 		return requeue, err
 	}
 	//// Proxy Deployment ////
@@ -102,9 +110,24 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	//// Services ////
-	svc, err := r.reconcileService(ctx, &ds)
+	svc, err := r.reconcileService(ctx, &ds, svcName)
 	if err != nil {
 		return requeue, err
+	}
+
+	// Create replication services for multi-cluster clusters
+	if ds.Spec.MultiCluster.ClusterTopology != "" {
+		var i int32
+		// temporary loop due to MCS limitation with statefulsets where we need a service per pod.
+		for i = 0; i < *ds.Spec.Replicas; i++ {
+			id := strconv.Itoa(int(i))
+			podName := ds.Name + "-" + id // required for pod-name selector
+			repSvcName := "rep-" + podName + clusterIdentifier // replication service name
+			err := r.reconcileReplicationService(ctx, &ds, repSvcName, podName)
+			if err != nil {
+				return requeue, err
+			}
+		}
 	}
 
 	//// Snapshots ////
@@ -121,7 +144,7 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	//// LDAP Updates
 	ldap, err := r.getAdminLDAPConnection(ctx, &ds, &svc)
-	// server may be down or coming up. Reque
+	// server may be down or coming up. Requeue
 	if err != nil {
 		return requeue, nil
 	}

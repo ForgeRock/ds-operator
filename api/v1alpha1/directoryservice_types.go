@@ -71,6 +71,10 @@ type DirectoryServiceSpec struct {
 	Restore DirectoryRestore `json:"restore,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
+
+	// Multi-cluster
+	// +kubebuilder:validation:Optional
+	MultiCluster MultiCluster `json:"multiCluster,omitempty"`
 }
 
 // DirectorySnapshotSpec defines how to take Volume Snapshots
@@ -203,6 +207,17 @@ type DirectoryServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DirectoryService `json:"items"`
+}
+
+// MultiCluster enables MCS and configures identifiers for multiple multi-cluster solutions
+type MultiCluster struct {
+	// +kubebuilder:default:=false
+	McsEnabled bool `json:"mcsEnabled,omitempty"`
+	// ClusterTopology is a comma separate string of identifiers for each cluster e.g. "europe,us"
+	// +kubebuilder:validation:required
+	ClusterTopology string `json:"clusterTopology"`
+	// +kubebuilder:validation:required
+	ClusterIdentifier string `json:"clusterIdentifier"`
 }
 
 func init() {

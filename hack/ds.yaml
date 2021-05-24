@@ -1,5 +1,5 @@
 # Sample DirectoryService deployment
-apiVersion: directory.forgerock.io/v1alpha2
+apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
   name: ds-idrepo
@@ -111,3 +111,16 @@ spec:
     enabled: false
     path: gs://ds-operator-engineering-devops/ds-backup-test
     secretName: cloud-storage-credentials
+
+  #### Multi-cluster ####
+  # multiCluster:
+    # clusterTopology and clusterIdentifier can be used for multiple multi-cluster solutions specifically the
+    # kubedns and MCS solutions documented in forgeops.
+    # clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers. 
+    # Bootstrap servers example output in a multi-region MCS environment:
+    # Bootstrap replication server(s) : rep-ds-idrepo-0-eu.prod.svc.clusterset.local:8989,rep-ds-idrepo-0-us.prod.svc.clusterset.local:8989
+    # clusterTopology: "eu,us"
+    # clusterIdentifier - current clusters identifier.  Must match 1 of the identifiers in clusterTopology
+    # clusterIdentifier: "us"
+    # Enable MCS(Googles Multi-cluster Services).  
+    # mcsEnabled: true

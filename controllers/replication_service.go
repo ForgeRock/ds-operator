@@ -14,19 +14,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string) (v1.Service, error) {
-	// create or update the service
+func (r *DirectoryServiceReconciler) reconcileReplicationService(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string, podName string) error {
 	var svc v1.Service
 	svc.Name = svcName
 	svc.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &svc, func() error {
-		r.Log.V(8).Info("CreateorUpdate service", "svc", svc)
-
 		var err error
 		// does the service not exist yet?
 		if svc.CreationTimestamp.IsZero() {
-			err = createService(ds, &svc)
+			err = createReplicationServices(ds, &svc, podName)
 			r.Log.V(8).Info("Setting ownerref for service", "svc", svc.Name)
 			_ = controllerutil.SetControllerReference(ds, &svc, r.Scheme)
 		} else {
@@ -39,12 +36,12 @@ func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *d
 		r.Log.V(8).Info("svc after update/create", "svc", svc)
 		return err
 	})
-	return svc, err
+	return err
 
 }
 
 // Create the service for ds
-func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
+func createReplicationServices(ds *directoryv1alpha1.DirectoryService, svc *v1.Service, podName string) error {
 	svcTemplate := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels:      createLabels(ds.Name, nil),
@@ -55,29 +52,14 @@ func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) erro
 		Spec: v1.ServiceSpec{
 			ClusterIP: "None", // headless service
 			Selector: map[string]string{
-				"app.kubernetes.io/name":     LabelApplicationName,
-				"app.kubernetes.io/instance": ds.Name,
+				"app.kubernetes.io/name":             LabelApplicationName,
+				"app.kubernetes.io/instance":         ds.Name,
+				"statefulset.kubernetes.io/pod-name": podName,
 			},
 			Ports: []v1.ServicePort{
 				{
-					Name: "tcp-admin",
-					Port: 4444,
-				},
-				{
-					Name: "tcp-ldap",
-					Port: 1389,
-				},
-				{
-					Name: "tcp-ldaps",
-					Port: 1636,
-				},
-				{
 					Name: "tcp-replication",
 					Port: 8989,
-				},
-				{
-					Name: "http",
-					Port: 8080,
 				},
 			},
 		},
