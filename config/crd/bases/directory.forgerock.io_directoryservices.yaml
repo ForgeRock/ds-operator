@@ -85,6 +85,22 @@ spec:
                 required:
                 - secretName
                 type: object
+              multiCluster:
+                description: Multi-cluster
+                properties:
+                  clusterIdentifier:
+                    type: string
+                  clusterTopology:
+                    description: ClusterTopology is a comma separate string of identifiers
+                      for each cluster e.g. "europe,us"
+                    type: string
+                  mcsEnabled:
+                    default: false
+                    type: boolean
+                required:
+                - clusterIdentifier
+                - clusterTopology
+                type: object
               passwords:
                 additionalProperties:
                   description: DirectoryPasswords is a reference to account secrets

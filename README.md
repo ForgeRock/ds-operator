@@ -295,3 +295,30 @@ spec:
     kind: VolumeSnapshot
     name: my-cool-snap-1
 ```
+
+## Multi-cluster
+
+DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes. DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:  
+
+[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)  
+[kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)  
+
+
+To enable multi-cluster, configure a list of unique identifiers(`clusterTopology`) for each cluster.  These can either be the region name(if multi-region) or any other unique identifier. These help to define the bootstrap servers which on a european cluster in a multi-region MCS environment would look like:  
+
+```
+Bootstrap replication server(s) : rep-ds-idrepo-0-eu.prod.svc.clusterset.local:8989,rep-ds-idrepo-0-us.prod.svc.clusterset.local:8989
+```
+
+Where the `rep-` refers to the replication service configured for MCS.
+
+Also, you must provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 or the names in `clusterTopology`.  If you are using [GKE MCS](https://cloud.google.com/kubernetes-engine/docs/concepts/multi-cluster-services), set `mcsEnable` to `true`
+
+
+```yaml
+  #### Multi-cluster ####
+  multiCluster:
+    clusterTopology: "eu,us"
+    clusterIdentifier: "us"
+    mcsEnable: true
+```
