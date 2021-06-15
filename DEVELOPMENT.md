@@ -45,7 +45,7 @@ pod hostname (default.ds-idrepo-0.ds-idrepo.cluster.local, for example) In dev m
 kubectl port-forward ds-idrepo-0 1636
 ```
 
-This allows the opertor running on your desktop to communicate with the directory server. This is needed
+This allows the operator running on your desktop to communicate with the directory server. This is needed
 for any LDAP functionality.
 
 

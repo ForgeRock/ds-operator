@@ -6,7 +6,7 @@ package controllers
 
 import (
 	"context"
-	// "fmt"
+	"fmt"
 	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
@@ -84,6 +84,12 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	var forgerockUser int64 = 11111
 
 	var initArgs []string // args provided to the init container
+	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
+
+	if ds.Spec.MultiCluster.ClusterTopology != "" {
+		// Remove AdvertisedListenAddress default value so it can be configured by multi-cluster settings
+		advertisedListenAddress = ""
+	}
 
 	// Init container args.  If restore is enabled, provide the path as the container arg
 	if ds.Spec.Restore.Enabled {
@@ -230,6 +236,10 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 											FieldPath: "metadata.name",
 										},
 									},
+								},
+								{
+									Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
+									Value: advertisedListenAddress,
 								},
 								{
 									Name:  "DS_GROUP_ID",

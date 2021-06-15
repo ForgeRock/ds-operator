@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
@@ -113,21 +112,6 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	svc, err := r.reconcileService(ctx, &ds, svcName)
 	if err != nil {
 		return requeue, err
-	}
-
-	// Create replication services for multi-cluster clusters
-	if ds.Spec.MultiCluster.ClusterTopology != "" {
-		var i int32
-		// temporary loop due to MCS limitation with statefulsets where we need a service per pod.
-		for i = 0; i < *ds.Spec.Replicas; i++ {
-			id := strconv.Itoa(int(i))
-			podName := ds.Name + "-" + id // required for pod-name selector
-			repSvcName := "rep-" + podName + clusterIdentifier // replication service name
-			err := r.reconcileReplicationService(ctx, &ds, repSvcName, podName)
-			if err != nil {
-				return requeue, err
-			}
-		}
 	}
 
 	//// Snapshots ////
