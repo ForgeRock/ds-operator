@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  image: gcr.io/forgeops-public/ds-idrepo:7.1-pem
+  image: gcr.io/forgeops-public/ds-idrepo:dev
   # The number of DS servers in the topology
   replicas: 1
   # The resources assigned to each DS pod
@@ -114,13 +114,12 @@ spec:
 
   #### Multi-cluster ####
   # multiCluster:
-    # clusterTopology and clusterIdentifier can be used for multiple multi-cluster solutions specifically the
-    # kubedns and MCS solutions documented in forgeops.
-    # clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers. 
-    # Bootstrap servers example output in a multi-region MCS environment:
-    # Bootstrap replication server(s) : rep-ds-idrepo-0-eu.prod.svc.clusterset.local:8989,rep-ds-idrepo-0-us.prod.svc.clusterset.local:8989
+    ## clusterTopology and clusterIdentifier are required in multi-cluster solutions make DS unique across clusters.
+    ## clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers.
+    ## Bootstrap servers example output in a multi-region MCS environment:
+    ## Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo-eu.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
     # clusterTopology: "eu,us"
-    # clusterIdentifier - current clusters identifier.  Must match 1 of the identifiers in clusterTopology
-    # clusterIdentifier: "us"
-    # Enable MCS(Googles Multi-cluster Services).  
+    ## clusterIdentifier - current clusters identifier.  Must match 1 of the identifiers in clusterTopology
+    # clusterIdentifier: "eu"
+    ## Enable MCS(Googles Multi-cluster Services).  Not required for kubedns solution
     # mcsEnabled: true
