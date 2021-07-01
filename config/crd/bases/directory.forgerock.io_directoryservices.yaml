@@ -267,6 +267,7 @@ spec:
                     description: The name of a secret
                     type: string
                 required:
+                - keyName
                 - secretName
                 type: object
             required:

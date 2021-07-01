@@ -112,7 +112,7 @@ type DirectoryKeystores struct {
 type TrustStore struct {
 	// The name of a secret
 	SecretName string `json:"secretName,required"`
-	KeyName    string `json:"keyName,omitempty"`
+	KeyName    string `json:"keyName,required"`
 	// Create a random secret if true. Otherwise assumes the secret already exists
 	// Not currently supported
 	Create bool `json:"create,omitempty"`

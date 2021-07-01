@@ -82,6 +82,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// not a constant
 	var fsGroup int64 = 0
 	var forgerockUser int64 = 11111
+	var defaultMode600 int32 = 0600
 
 	var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
@@ -159,7 +160,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
 						{
-							Name:            "init",
+							Name:            "initialize",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Command:         []string{"/opt/opendj/scripts/operator-init.sh"},
@@ -170,8 +171,19 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 									MountPath: "/opt/opendj/data",
 								},
 								{
-									Name:      "secrets", // keystores
-									MountPath: "/opt/opendj/secrets",
+									Name:      "secrets",
+									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+									SubPath:   "ssl-key-pair-combined.pem",
+								},
+								{
+									Name:      "secrets",
+									MountPath: "/opt/opendj/pem-keys-directory/master-key",
+									SubPath:   "master-key-pair-combined.pem",
+								},
+								{
+									Name:      "pem-trust-certs",
+									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
+									SubPath:   ds.Spec.TrustStore.KeyName,
 								},
 								{
 									Name:      "admin-password",
@@ -216,7 +228,13 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 								},
 								{
 									Name:      "secrets",
-									MountPath: "/opt/opendj/secrets",
+									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+									SubPath:   "ssl-key-pair-combined.pem",
+								},
+								{
+									Name:      "secrets",
+									MountPath: "/opt/opendj/pem-keys-directory/master-key",
+									SubPath:   "master-key-pair-combined.pem",
 								},
 								{
 									Name:      "cloud-backup-credentials",
@@ -224,7 +242,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 								},
 								{
 									Name:      "pem-trust-certs",
-									MountPath: "/opt/opendj/pem-trust-certs",
+									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
+									SubPath:   ds.Spec.TrustStore.KeyName,
 								},
 							},
 							Resources: ds.DeepCopy().Spec.Resources,
@@ -313,7 +332,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name: "pem-trust-certs",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.TrustStore.SecretName,
+									SecretName:  ds.Spec.TrustStore.SecretName,
+									DefaultMode: &defaultMode600,
 								},
 							},
 						},
