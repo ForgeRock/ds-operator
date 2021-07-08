@@ -1,0 +1,20 @@
+# permissions for end users to view directorybackups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: directorybackup-viewer-role
+rules:
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directorybackups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directorybackups/status
+  verbs:
+  - get

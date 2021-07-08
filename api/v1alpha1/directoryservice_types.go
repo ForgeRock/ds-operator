@@ -119,7 +119,7 @@ type TrustStore struct {
 }
 
 // DirectoryBackup defines how and where to backup DS to
-type DirectoryBackup struct {
+type DirectoryBackupX struct {
 	Enabled bool   `json:"enabled,required"`
 	Path    string `json:"path,required"`
 	Cron    string `json:"cron,required"`
@@ -141,7 +141,7 @@ type DirectoryRestore struct {
 }
 
 // DirectoryServiceStatus defines the observed state of DirectoryService
-type DirectoryServiceStatus struct {
+type DirectoryServiceStatusX struct {
 	// +optional
 	Active                             []corev1.ObjectReference `json:"active,omitempty"`
 	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
@@ -153,7 +153,7 @@ type DirectoryServiceStatus struct {
 }
 
 // DirectoryBackupStatus provides the status of the backup
-type DirectoryBackupStatus struct {
+type DirectoryBackupStatusX struct {
 	// note DS returns these as string values. For status is ok
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
@@ -196,8 +196,8 @@ type DirectoryService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DirectoryServiceSpec   `json:"spec,omitempty"`
-	Status DirectoryServiceStatus `json:"status,omitempty"`
+	Spec   DirectoryServiceSpec    `json:"spec,omitempty"`
+	Status DirectoryServiceStatusX `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

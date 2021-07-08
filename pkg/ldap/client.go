@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	dir "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-logr/logr"
 )
@@ -87,92 +86,12 @@ func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
 	return err
 }
 
-// GetBackupTaskStatus queries for the completed backup tasks for the given id
-func (ds *DSConnection) GetBackupTaskStatus(id string) ([]dir.DirectoryBackupStatus, error) {
-
-	// TODO: Search needs to order by recent date. We need server side sort controls for this
-	// https://github.com/go-ldap/ldap/issues/290
-
-	// current time minus 2 days
-	t := time2DirectoryTimeString(time.Now().AddDate(0, 0, -2))
-	query := fmt.Sprintf("(&(ds-recurring-task-id=%s-backup)(ds-task-scheduled-start-time>=%s))", id, t)
-
-	// return 24 results. Too many results will clutter the status update
-	req := ldap.NewSearchRequest("cn=Scheduled Tasks,cn=tasks",
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 24, 0, false, query,
-		//[]string{"ds-task-scheduled-start-time", "ds-task-completion-time", "ds-task-state"},
-		[]string{},
-		nil)
-
-	var dstat []dir.DirectoryBackupStatus
-
-	res, err := ds.ldap.Search(req)
-
-	// An error 4 (sizes result exceeded) is expected - so ignore it
-	if err != nil && !ldap.IsErrorAnyOf(err, ldap.LDAPResultSizeLimitExceeded) {
-		return dstat, err
-	}
-	if len(res.Entries) == 0 {
-		return dstat, nil
-	}
-
-	for _, e := range res.Entries {
-		var item dir.DirectoryBackupStatus
-
-		for _, attr := range e.Attributes {
-			switch attr.Name {
-			case "ds-task-scheduled-start-time":
-				item.StartTime = attr.Values[0]
-			case "ds-task-completion-time":
-				item.EndTime = attr.Values[0]
-			case "ds-task-state":
-				item.Status = attr.Values[0]
-			// todo: Capture status messages from ds
-			// case "ds-task-log-messages":
-			// 	item.Messages = append(item.Messages, attr.Values...)
-			default:
-				//fmt.Printf("att = %s", attr.Name)
-			}
-		}
-		dstat = append(dstat, item)
-	}
-	return dstat, nil
-}
-
-// DeleteBackupTask deletes a scheduled backup and purge tasks in DS.
-// deletes the backup and the purge tasks in DS
-// TODO: Check for Not found error code- which we can ignore and not consider an error
-func (ds *DSConnection) DeleteBackupTask(id string) error {
-	req := ldap.NewDelRequest(purgeTaskDN(id), []ldap.Control{})
-	err1 := ds.ldap.Del(req)
-
-	req2 := ldap.NewDelRequest(backupTaskDN(id), []ldap.Control{})
-	err2 := ds.ldap.Del(req2)
-
-	if err1 != nil || err2 != nil {
-		return fmt.Errorf("%v %v", err1, err2)
-	}
-	return nil
-}
-
 func purgeTaskDN(id string) string {
 	return "ds-recurring-task-id=" + id + "-purge,cn=Recurring Tasks,cn=Tasks"
 }
 
 func backupTaskDN(id string) string {
 	return "ds-recurring-task-id=" + id + "-backup,cn=Recurring Tasks,cn=Tasks"
-}
-
-// ScheduleBackup - create or update a backup and purge tasks
-func (ds *DSConnection) ScheduleBackup(id string, d *dir.DirectoryBackup) error {
-	// delete the existing task id.. Ignore any failed deletes..
-	_ = ds.DeleteBackupTask(id)
-	// schedule the backup task
-	if err := ds.createTask(id, backupTaskDN(id), d.Cron, d.Path, "ds-task-backup", 0); err != nil {
-		return err
-	}
-	// schedule the purge task
-	return ds.createTask(id, purgeTaskDN(id), d.PurgeCron, d.Path, "ds-task-purge", d.PurgeHours)
 }
 
 // Create a task in DS. Currently suports only purge and backup. If we need more tasks, consider refactoring this to be
@@ -204,48 +123,6 @@ func (ds *DSConnection) createTask(taskID string, taskDN string, cron string, ba
 	})
 
 	return ds.ldap.Add(req)
-}
-
-// GetBackupTask reads the directory and gets the current state of the backup task.
-func (ds *DSConnection) GetBackupTask(id string) (*dir.DirectoryBackup, error) {
-
-	// filter for OR of either task DN
-	filter := fmt.Sprintf("(|(ds-recurring-task-id=%s-backup)(ds-recurring-task-id=%s-purge))", id, id)
-
-	req := ldap.NewSearchRequest("cn=Recurring Tasks,cn=Tasks",
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		filter,
-		[]string{}, // return the default set of entries
-		nil)
-	res, err := ds.ldap.Search(req)
-	//res.PrettyPrint(2)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(res.Entries) <= 0 {
-		return nil, fmt.Errorf("No Backup task found")
-	}
-
-	var d dir.DirectoryBackup
-
-	d.Enabled = true // if there are backup tasks, it must be enabled
-
-	for _, entry := range res.Entries {
-		if entry.DN == purgeTaskDN(id) {
-			d.PurgeCron = entry.GetAttributeValue("ds-recurring-task-schedule")
-			hours := entry.GetAttributeValue("ds-task-purge-older-than")
-			fmt.Sscanf(hours, "%d", &d.PurgeHours)
-		} else if entry.DN == backupTaskDN(id) {
-			d.Cron = entry.GetAttributeValue("ds-recurring-task-schedule")
-			d.Path = entry.GetAttributeValue("ds-backup-location")
-		} else {
-			return &d, fmt.Errorf("Unexpected DN found %s", entry.DN)
-		}
-
-	}
-	return &d, nil
-
 }
 
 // GetMonitorData returns cn=monitor data. We use thi for status updates.
