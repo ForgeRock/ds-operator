@@ -17,7 +17,6 @@ import (
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	"github.com/go-logr/logr"
-	"github.com/prometheus/common/log"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
@@ -139,17 +139,6 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return requeue, nil
 	}
 
-	// Update backup / restore options
-	if err := r.updateBackup(ctx, &ds, ldap); err != nil {
-		return requeue, nil
-	}
-
-	// Get the LDAP backup status
-	if err := r.updateBackupStatus(ctx, &ds, ldap); err != nil {
-		log.Info("Could not get backup status", "err", err)
-		// todo: We still want to update the remaining status....
-	}
-
 	// Update the status of our ds object
 	if err := r.Status().Update(ctx, &ds); err != nil {
 		log.Error(err, "unable to update Directory status")
@@ -214,7 +203,7 @@ func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context,
 	name := types.NamespacedName{Namespace: ds.Namespace, Name: account.SecretName}
 
 	if err := r.Get(ctx, name, &adminSecret); err != nil {
-		log.Error(err, "Can't find secret for the admin password", "secret", name)
+		log.Log.Error(err, "Can't find secret for the admin password", "secret", name)
 		return nil, fmt.Errorf("Can't find the admin ldap secret")
 	}
 

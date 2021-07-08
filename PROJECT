@@ -13,4 +13,12 @@ resources:
   kind: DirectoryService
   path: forgerock.io/ds-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: forgerock.io
+  group: directory
+  kind: DirectoryBackup
+  path: forgerock.io/ds-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

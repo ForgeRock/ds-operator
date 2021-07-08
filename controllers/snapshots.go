@@ -15,8 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
-	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v3/apis/volumesnapshot/v1beta1"
-	"github.com/prometheus/common/log"
+	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,7 +95,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	})
 
 	if err != nil {
-		log.Error(err, "Warning, Create/Update of VolumeSnapshot failed. Will continue processing")
+		r.Log.Error(err, "Warning, Create/Update of VolumeSnapshot failed. Will continue processing")
 	}
 
 	r.recorder.Event(ds, corev1.EventTypeNormal, "Created Snapshot", snap.Name)

@@ -313,14 +313,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							},
 						},
 						{
-							Name: "cloud-backup-credentials",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Backup.SecretName,
-								},
-							},
-						},
-						{
 							Name: "cloud-restore-credentials",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{

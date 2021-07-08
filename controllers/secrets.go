@@ -39,11 +39,6 @@ func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *d
 		}
 	}
 
-	// Check for the cloud-storage-credentials
-	// Create a dummy cloud credentual secret if the user does not provide one.
-	_ = r.checkCloudStorageSecret(ctx, ds, ds.Spec.Backup.SecretName)
-	_ = r.checkCloudStorageSecret(ctx, ds, ds.Spec.Restore.SecretName)
-
 	return nil
 }
 

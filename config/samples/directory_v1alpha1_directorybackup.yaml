@@ -1,0 +1,7 @@
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryBackup
+metadata:
+  name: directorybackup-sample
+spec:
+  # Add fields here
+  foo: bar
