@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+  # If debug is true (default false) an init and sidecar ds containers will be injected that you can exec into.
+  # The debug container can be used for example to run ldap commands (make users, etc.) without impacting the ds container.
+  debug: true
   image: gcr.io/forgeops-public/ds-idrepo:dev
   # The number of DS servers in the topology
   replicas: 1
@@ -28,21 +31,28 @@ spec:
   storageClassName: csi-hostpath-sc
 
 
-  # Optional: If snapshot name is provided, the directory PVCs will be
-  # initialized from the contents of the snapshot. They will NOT be initialized from the
-  # "prototype" backends.
-  # The name "latest" is reserved. It signifies to the operator
-  # to find the name of the latest snapshot that was taken by the operator . If you
-  # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
-  # initializeFromSnapshotName: "latest"
+
 
   # Optional - Configures the operator to automatically take snapshots
   snapshots:
-    enabled: false
+    # Controls whether taking of snapshots is enabled or not
+    # This is independent the intializeFromSnapshotName below.
+    enabled: true
+
+    # Optional: If snapshot name is provided, the directory PVCs will be
+    # initialized from the contents of the snapshot. They will NOT be initialized from the
+    # "prototype" backends. An existing PVC will not be overwritten. Delete the pvc if you wish to initialize from
+    # the snapshot
+    # The name "latest" is reserved. It signifies to the operator
+    # to find the name of the latest snapshot that was taken by the operator . If you
+    # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
+
+    initializeFromSnapshotName: "latest"
+
     # Take a snapshot every 30 minutes
-    periodMinutes: 30
+    periodMinutes: 5
     # Keep this many snapshots. Older snapshots will be deleted
-    snapshotsRetained: 4
+    snapshotsRetained: 2
     # This defaults to ds-snapshot-class if not specified
     volumeSnapshotClassName: ds-snapshot-class
 

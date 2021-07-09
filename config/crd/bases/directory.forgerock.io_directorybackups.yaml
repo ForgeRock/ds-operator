@@ -36,13 +36,68 @@ spec:
           spec:
             description: DirectoryBackupSpec defines the desired state of DirectoryBackup
             properties:
-              foo:
-                description: Foo is an example field of DirectoryBackup. Edit directorybackup_types.go
-                  to remove/update
+              directoryPVCClaim:
+                description: DirectoryPVCClaim is the PVC that contains the directory
+                  data.
                 type: string
+            required:
+            - directoryPVCClaim
             type: object
           status:
-            description: DirectoryBackupStatus defines the observed state of DirectoryBackup
+            description: BackupStatus captures the current status of a backup.
+            properties:
+              completionTimestamp:
+                description: CompletionTimestamp records the time a backup was completed.
+                  Completion time is recorded even on failed backups. Completion time
+                  is recorded before uploading the backup object. The server's time
+                  is used for CompletionTimestamps
+                format: date-time
+                nullable: true
+                type: string
+              errors:
+                description: Errors is a count of all error messages that were generated
+                  during execution of the backup.  The actual errors are in the backup's
+                  log file in object storage.
+                type: integer
+              expiration:
+                description: Expiration is when this Backup is eligible for garbage-collection.
+                format: date-time
+                nullable: true
+                type: string
+              formatVersion:
+                description: FormatVersion is the backup format version, including
+                  major, minor, and patch version.
+                type: string
+              phase:
+                description: Phase is the current state of the Backup.
+                enum:
+                - New
+                - FailedValidation
+                - InProgress
+                - Completed
+                - PartiallyFailed
+                - Failed
+                - Deleting
+                type: string
+              startTimestamp:
+                description: StartTimestamp records the time a backup was started.
+                  Separate from CreationTimestamp, since that value changes on restores.
+                  The server's time is used for StartTimestamps
+                format: date-time
+                nullable: true
+                type: string
+              validationErrors:
+                description: ValidationErrors is a slice of all validation errors
+                  (if applicable).
+                items:
+                  type: string
+                nullable: true
+                type: array
+              warnings:
+                description: Warnings is a count of all warning messages that were
+                  generated during execution of the backup. The actual warnings are
+                  in the backup's log file in object storage.
+                type: integer
             type: object
         type: object
     served: true

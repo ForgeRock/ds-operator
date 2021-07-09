@@ -81,7 +81,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
 	var fsGroup int64 = 0
-	var rootUser int64 = 0
 	var forgerockUser int64 = 11111
 	var defaultMode600 int32 = 0600
 
@@ -228,16 +227,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
 						{
-							Name:            "debug",
-							Image:           "busybox",
-							ImagePullPolicy: v1.PullIfNotPresent,
-							Command:         []string{"sh", "-c", "echo debug pod running && chmod a+rwx /opt/opendj/data && sleep 5"},
-							// Args: []string{"sleep 1000"},
-							VolumeMounts:    volumeMounts,
-							SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
-						},
-
-						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
@@ -252,8 +241,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name:            "ds",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
-							// Args:            []string{"start-ds"},
-							Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
+							Args:            []string{"start-ds"},
+							// Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
 							VolumeMounts: volumeMounts,
 							Resources:    ds.DeepCopy().Spec.Resources,
 							Env:          envVars,
@@ -325,12 +314,16 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 
+	if ds.Spec.Debug {
+		injectDebugContainers(stemplate, volumeMounts, ds.Spec.Image)
+	}
+
 	stemplate.DeepCopyInto(sts)
 }
 
 // If the user supplies a snapshot update the PVC volume claim to initialize from it
 func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
-	snapName := ds.Spec.InitializeFromSnapshotName
+	snapName := ds.Spec.Snapshots.InitializeFromSnapshotName
 	if snapName != "" {
 		apiGroup := SnapshotApiGroup // assign so we can take the address
 
@@ -353,4 +346,41 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 				APIGroup: &apiGroup,
 			}
 	}
+}
+
+// Adds a debug init and sidecar containers.
+func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount, image string) {
+
+	var rootUser int64 = 0
+
+	// add the debug init container. This just sleeps for a bit.. Adjust the sleep for your requriements
+	var debugInit = []v1.Container{
+		{
+			Name:            "debug-init",
+			Image:           image,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Command:         []string{"sh", "-c", "echo debug pod running && chmod a+rwx /opt/opendj/data && sleep 5"},
+			// Args: []string{"sleep 1000"},
+			VolumeMounts: volumeMounts,
+			// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
+			SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
+		},
+	}
+
+	// The debug sidecar has all the ds tools. It just sleeps waiting for the user to exec into the pod
+	var debugSidecar = []v1.Container{
+		{
+			Name:            "debug",
+			Image:           image,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Command:         []string{"bash", "-c", "echo debug pod running && while true; do sleep 300; done"},
+			VolumeMounts:    volumeMounts,
+		},
+	}
+
+	// todo: Inject sidecar
+
+	sts.Spec.Template.Spec.InitContainers = append(debugInit, sts.Spec.Template.Spec.InitContainers...)
+	sts.Spec.Template.Spec.Containers = append(debugSidecar, sts.Spec.Template.Spec.Containers...)
+
 }

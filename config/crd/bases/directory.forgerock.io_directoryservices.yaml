@@ -38,37 +38,11 @@ spec:
           spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
-              backup:
-                description: Backup
-                properties:
-                  apiVersion:
-                    description: 'APIVersion defines the versioned schema of this
-                      representation of an object. Servers should convert recognized
-                      schemas to the latest internal value, and may reject unrecognized
-                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                    type: string
-                  kind:
-                    description: 'Kind is a string value representing the REST resource
-                      this object represents. Servers may infer this from the endpoint
-                      the client submits requests to. Cannot be updated. In CamelCase.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                    type: string
-                  metadata:
-                    type: object
-                  spec:
-                    description: DirectoryBackupSpec defines the desired state of
-                      DirectoryBackup
-                    properties:
-                      foo:
-                        description: Foo is an example field of DirectoryBackup. Edit
-                          directorybackup_types.go to remove/update
-                        type: string
-                    type: object
-                  status:
-                    description: DirectoryBackupStatus defines the observed state
-                      of DirectoryBackup
-                    type: object
-                type: object
+              debug:
+                default: false
+                description: If debug is true, debug sidecar containers will be injected
+                  into the pod.
+                type: boolean
               groupID:
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
@@ -76,11 +50,6 @@ spec:
                 type: string
               image:
                 description: Docker Image for the directory server.
-                type: string
-              initializeFromSnapshotName:
-                description: If specified, create the PVC from the volume snapshot
-                  specified in the name. If the name "latest" is used - attempt to
-                  calculate the latest snapshot the operator took.
                 type: string
               keystore:
                 description: Keystore references
@@ -217,28 +186,17 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     type: object
                 type: object
-              restore:
-                description: Restore
-                properties:
-                  enabled:
-                    type: boolean
-                  path:
-                    description: Path to the backup location (could be a gcp or s3
-                      bucket)
-                    type: string
-                  secretName:
-                    default: cloud-storage-credentials
-                    type: string
-                required:
-                - enabled
-                - path
-                type: object
               snapshots:
                 description: Snapshots
                 properties:
                   enabled:
                     default: false
                     type: boolean
+                  initializeFromSnapshotName:
+                    description: If specified, create the PVC from the volume snapshot
+                      specified in the name. If the name "latest" is used - attempt
+                      to calculate the latest snapshot the operator took.
+                    type: string
                   periodMinutes:
                     default: 30
                     format: int32
@@ -346,12 +304,6 @@ spec:
                     uid:
                       description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                       type: string
-                  type: object
-                type: array
-              backupStatus:
-                items:
-                  description: DirectoryBackupStatus defines the observed state of
-                    DirectoryBackup
                   type: object
                 type: array
               currentReplicas:
