@@ -43,6 +43,10 @@ type DirectoryServiceSpec struct {
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
 	GroupID string `json:"groupID,omitempty"`
 
+	// If debug is true, debug sidecar containers will be injected into the pod.
+	// +kubebuilder:default=false
+	Debug bool `json:"debug,omitempty"`
+
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
@@ -54,11 +58,6 @@ type DirectoryServiceSpec struct {
 
 	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
-
-	// If specified, create the PVC from the volume snapshot specified in the name.
-	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
-	// +kubebuilder:validation:Optional
-	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 
 	// +kubebuilder:validation:Optional
 	StorageClassName string `json:"storageClassName,omitempty"`
@@ -84,6 +83,11 @@ type DirectorySnapshotSpec struct {
 	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
 	// +kubebuilder:default:=ds-snapshot-class
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
+
+	// If specified, create the PVC from the volume snapshot specified in the name.
+	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
+	// +kubebuilder:validation:Optional
+	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.
