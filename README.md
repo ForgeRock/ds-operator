@@ -115,31 +115,6 @@ the secrets created for the existing directory service are compatible with the o
 The operator can generate random secrets for the `uid=admin` account, `cn=monitor` and application service accounts (for
 example - the AM CTS account). Refer to the annotated sample.
 
-## Cloud Storage Credentials
-
-The operator can backup and restore from cloud storage on GCP, AWS and Azure. A secret must be
-provided that contains the credentials required to backup or restore to the cloud.
-
-The secret must contain one or more of the following key/value pairs:
-
-```yaml
-AZURE_ACCOUNT_KEY:       # Update if using Azure cloud storage for DS Backups
-AZURE_ACCOUNT_NAME:      # Update if using Azure cloud storage for DS Backups
-AWS_ACCESS_KEY_ID:       # Update if using AWS cloud storage for DS Backups
-AWS_SECRET_ACCESS_KEY:   # Update if using AWS cloud storage for DS Backups
-GOOGLE_CREDENTIALS:      #  google credentials.json format - Update if using GCP cloud storage for DS Backups
-```
-
-If you do not wish to use this feature, the operator will create a dummy  `cloud-storage-credentials` secret which
-you can ignore. It will be deleted when the custom resource is deleted.
-
-For GCP, a sample script [create-gcp-creds.sh](hack/create-gcp-creds.sh) is provided that will create a storage bucket and a
-service account that can access that bucket. It also creates the Kubernetes  `cloud-storage-credentials` secret.
-
-Note to ForgeRock developers: A GCP bucket has been created for you. Reach out on slack.
-
-See the annotated custom resource for more information
-
 ## Scheduling
 
 The operator provides the following control over scheduling:
@@ -298,20 +273,20 @@ spec:
 
 ## Multi-cluster
 
-DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.  
-DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:  
+DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
+DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:
 
-[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)  
-[kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)  
+[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)
+[kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)
 
 
 To enable multi-cluster:
-* configure a list of unique identifiers(`clusterTopology`) for each cluster.  
+* configure a list of unique identifiers(`clusterTopology`) for each cluster.
 * provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 of the names in `clusterTopology`.
 
-**MCS**  
-If using MCS set `mcsEnable` to `true`.  The `clusterTopology` names need to match the cluster membership names used when  
-registering the cluster to the hub as specified in the docs. These help to define the bootstrap servers.  E.g. deploying idrepo to cluster 'eu' would look like:  
+**MCS**
+If using MCS set `mcsEnable` to `true`.  The `clusterTopology` names need to match the cluster membership names used when
+registering the cluster to the hub as specified in the docs. These help to define the bootstrap servers.  E.g. deploying idrepo to cluster 'eu' would look like:
 
 `<hostname>.<uniqueidentifier/membershipname>.<servicename>.svc.clusterset.local:8989`
 ```
