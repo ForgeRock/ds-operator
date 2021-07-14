@@ -36,12 +36,27 @@ spec:
           spec:
             description: DirectoryBackupSpec defines the desired state of DirectoryBackup
             properties:
-              directoryPVCClaim:
+              backupPVC:
+                properties:
+                  name:
+                    type: string
+                  size:
+                    type: string
+                  storageClassName:
+                    type: string
+                required:
+                - name
+                - size
+                - storageClassName
+                type: object
+              claimsToBackup:
                 description: DirectoryPVCClaim is the PVC that contains the directory
-                  data.
-                type: string
+                  data. Make an array???
+                items:
+                  type: string
+                type: array
             required:
-            - directoryPVCClaim
+            - claimsToBackup
             type: object
           status:
             description: BackupStatus captures the current status of a backup.

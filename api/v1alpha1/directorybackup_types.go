@@ -18,6 +18,9 @@ limitations under the License.
 /*
  This is modeled after the Velero API.
 
+ kubebuilder create api --group directory --version v1alpha1 --kind DirectoryBackup
+
+
 */
 
 package v1alpha1
@@ -26,13 +29,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type BackupPVC struct {
+	Name             string `json:"name"`
+	Size             string `json:"size"`
+	StorageClassName string `json:"storageClassName"`
+}
+
 // DirectoryBackupSpec defines the desired state of DirectoryBackup
 type DirectoryBackupSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// DirectoryPVCClaim is the PVC that contains the directory data.
-	DirectoryPVCClaim string `json:"directoryPVCClaim"`
+	BackupPVC BackupPVC `json:"backupPVC,omitempty"`
+
+	// DirectoryPVCClaim is the PVC that contains the directory data. Make an array???
+	ClaimsToBackup []string `json:"claimsToBackup"`
 }
 
 //+kubebuilder:object:root=true

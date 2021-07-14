@@ -1,0 +1,12 @@
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryRestore
+metadata:
+  name: ds-restore
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/part-of: forgerock
+spec:
+# The name of a DirectoryBackup to restore:
+  backup: ds-backup
+
+  volumeSnapshotsToRestoreTo: data-snapshot-0

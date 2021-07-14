@@ -1,0 +1,18 @@
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryBackup
+metadata:
+  name: ds-backup
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/part-of: forgerock
+spec:
+  backupPVC:
+    name: ds-backup-pvc
+    storageClassName: csi-hostpath-sc
+    size: 1Gi
+
+  # Backup in ldif format if true. If false, use ds binary backup.
+  ldif: true
+
+  claimsToBackup:
+  - data-ds-idrepo-0
