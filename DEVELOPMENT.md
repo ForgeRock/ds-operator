@@ -89,13 +89,11 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 
 ## DS JIRAs to track
 
-* https://bugster.forgerock.org/jira/browse/OPENDJ-7582  This will allow dynamic enable/disable of backups
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7502
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7501
 * https://bugster.forgerock.org/jira/browse/OPENDJ-7352
 * https://bugster.forgerock.org/jira/browse/CLOUD-2666
 * https://bugster.forgerock.org/jira/browse/OPENDJ-5308 -  Task backend via REST
-*
 
 ## Implementation Notes
 
@@ -103,12 +101,6 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 
 Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
 "One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status."
-
-
-Backup / restore commands
-
-https://backstage.forgerock.com/docs/ds/7/maintenance-guide/backup-restore.html#cloud-storage
-
 
 cn=monitor - status we might want to use for the operator status:
 
