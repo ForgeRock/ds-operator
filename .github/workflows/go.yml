@@ -50,6 +50,8 @@ jobs:
         kubectl apply -f hack/secrets.yaml
         kubectl apply -f hack/ds.yaml
         sleep 10
-        kubectl rollout status sts/ds-idrepo --timeout 90s
+        kubectl describe sts/ds-idrepo
+        kubectl describe pod/ds-idrepo-0
+        kubectl rollout status sts/ds-idrepo --watch --timeout 120s
         kubectl scale directoryservice/ds-idrepo --replicas=2
-        kubectl rollout status sts/ds-idrepo --timeout 90s
+        kubectl rollout status sts/ds-idrepo --watch --timeout 120s
