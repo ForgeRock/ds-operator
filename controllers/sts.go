@@ -323,7 +323,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 // If the user supplies a snapshot update the PVC volume claim to initialize from it
 func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
-	snapName := ds.Spec.Snapshots.InitializeFromSnapshotName
+	snapName := ds.Spec.InitializeFromSnapshotName
 	if snapName != "" {
 		apiGroup := SnapshotApiGroup // assign so we can take the address
 

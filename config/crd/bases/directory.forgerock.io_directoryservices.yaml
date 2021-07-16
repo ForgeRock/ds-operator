@@ -51,6 +51,11 @@ spec:
               image:
                 description: Docker Image for the directory server.
                 type: string
+              initializeFromSnapshotName:
+                description: If specified, create the PVC from the volume snapshot
+                  specified in the name. If the name "latest" is used - attempt to
+                  calculate the latest snapshot the operator took.
+                type: string
               keystore:
                 description: Keystore references
                 properties:
@@ -192,11 +197,6 @@ spec:
                   enabled:
                     default: false
                     type: boolean
-                  initializeFromSnapshotName:
-                    description: If specified, create the PVC from the volume snapshot
-                      specified in the name. If the name "latest" is used - attempt
-                      to calculate the latest snapshot the operator took.
-                    type: string
                   periodMinutes:
                     default: 30
                     format: int32

@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+
+  debug: true
+
+  # TODO; This test image is for PEM keystore support
   image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
   # The number of DS servers in the topology
   replicas: 1
@@ -25,7 +29,9 @@ spec:
   # The "standard" storageClass is available on minikube, GKE, and EKS
   # storageClassName: standard-rwo
   # For kind testing:
-  storageClassName: standard
+  # storageClassName: standard
+  # For minikube
+  storageClassName: csi-hostpath-sc
 
 
   # Optional: If snapshot name is provided, the directory PVCs will be
@@ -81,35 +87,8 @@ spec:
     # The secret MUST contain a key "ca.pem" that is the PEM formatted public cert to trust.
     secretName: "platform-ca"
     keyName: "ca.pem"
-    
-  #### Backup and Restore ####
-  # backup:
-  #   enabled: false
-  #   # Path starts with s3://, gs:// , az:// or a path to the filesystem
-  #   #path: /var/tmp/backup
-  #   path: gs://ds-operator-engineering-devops/ds-backup-test
-  #   # Crontab(5) format for the schedule
-  #   # Examples:
-  #   # "*/5 * * * *""  - every 5 minutes (good for testing)
-  #   # "35 * * * *" backup at 35 minutes past the hour, every hour
-  #   cron: "35 * * * *"
-  #   # The secret below must have one of the following keys:
-  #   # AZURE_ACCOUNT_KEY:       # Update if using Azure cloud storage for DS Backups
-  #   # AZURE_ACCOUNT_NAME:      # Update if using Azure cloud storage for DS Backups
-  #   # AWS_ACCESS_KEY_ID:       # Update if using AWS cloud storage for DS Backups
-  #   # AWS_SECRET_ACCESS_KEY:   # Update if using AWS cloud storage for DS Backups
-  #   # GOOGLE_CREDENTIALS: # Update if using GCP cloud storage for DS Backups
-  #   # If you do not supply this secret, a dummy secret will be created
-  #   secretName: cloud-storage-credentials
-  #   # purgeHours - backups older than this many hours will be purged. Defaults to 100 days (2400 hours)
-  #   purgeHours: 100
-  #   # purgeCron - how often to run the purge task to purge old backups. Defaults to "40 0 * * *"
-  #   purgeCron: "40 0 * * *"
-  # # Restore from the last backup if the data directory is empty
-  # restore:
-  #   enabled: false
-  #   path: gs://ds-operator-engineering-devops/ds-backup-test
-  #   secretName: cloud-storage-credentials
+
+
 
   #### Multi-cluster ####
   # multiCluster:

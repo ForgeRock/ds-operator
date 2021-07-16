@@ -53,6 +53,11 @@ type DirectoryServiceSpec struct {
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 
+	// If specified, create the PVC from the volume snapshot specified in the name.
+	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
+	// +kubebuilder:validation:Optional
+	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
+
 	// Truststore - for mTLS connections
 	TrustStore TrustStore `json:"truststore,omitempty"`
 
@@ -83,11 +88,6 @@ type DirectorySnapshotSpec struct {
 	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
 	// +kubebuilder:default:=ds-snapshot-class
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
-
-	// If specified, create the PVC from the volume snapshot specified in the name.
-	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
-	// +kubebuilder:validation:Optional
-	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.

@@ -20,9 +20,6 @@ package controllers
 import (
 	"context"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
+	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 )
 
 // DirectoryBackupReconciler reconciles a DirectoryBackup object
@@ -70,64 +68,45 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	/// Recon the backup target PVC that holds the backup
-
-	var pvc v1.PersistentVolumeClaim
-	pvc.Name = db.Spec.BackupPVC.Name
-	pvc.Namespace = db.GetNamespace()
-
-	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &pvc, func() error {
-		logger.Info("CreateorUpdate backup pvc", "pvc", pvc)
-
-		var err error
-		// does the sts not exist yet?
-		if pvc.CreationTimestamp.IsZero() {
-			logger.Info("Creating Backup PVC", "backupPVC", pvc.Name)
-			var x *v1.PersistentVolumeClaim = &v1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: db.GetName(),
-					// todo: Labels, etc.
-					Namespace: db.GetNamespace(),
-					Labels:    createLabels(db.GetName(), nil),
-					Annotations: map[string]string{
-						"pv.beta.kubernetes.io/gid": "0",
-					},
-				},
-				Spec: v1.PersistentVolumeClaimSpec{
-					AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
-					Resources: v1.ResourceRequirements{
-						Requests: v1.ResourceList{
-							v1.ResourceName(v1.ResourceStorage): resource.MustParse(db.Spec.BackupPVC.Size),
-						},
-					},
-					StorageClassName: &db.Spec.BackupPVC.StorageClassName,
-				},
-			}
-
-			x.DeepCopyInto(&pvc)
-
-			_ = controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
-			//
-		} else {
-			// If the sts exists already - we want to update any fields to bring its state into
-			// alignment with the Custom Resource
-			logger.Info("Updating backup pvc", "pvc", pvc)
-		}
-
-		logger.V(8).Info("sts after update/create", "pvc", pvc)
-		return err
-	})
+	/// Create/update the backup target PVC that holds the backup
+	pvc, err := createPVC(ctx, r.Client, db.Spec.BackupPVC.Name, db.GetNamespace(), db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "")
 
 	if err != nil {
+		logger.Error(err, "PVC claim creation failed", "pvcName", db.Spec.BackupPVC.Name)
 		return ctrl.Result{}, err
 	}
 
-	//  Snapshot the target PVC
-	
+	_ = controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
+
+	//  Create a Snapshot of the target PVC
+	var snap snapshot.VolumeSnapshot
+	snap.Name = "db-" + db.Spec.ClaimToBackup
+	snap.Namespace = db.GetNamespace()
+
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
+		logger.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
+
+		// does the snap not exist yet?
+		if snap.CreationTimestamp.IsZero() {
+			snap.ObjectMeta.Labels = createLabels(snap.GetName(), nil)
+			//snap.Annotations = map[string]string{"directory.forgerock.io/lastSnapshotTime": strconv.Itoa(int(now))}
+			snap.Spec = snapshot.VolumeSnapshotSpec{
+				VolumeSnapshotClassName: &db.Spec.VolumeSnapshotClassName,
+				Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &db.Spec.ClaimToBackup}}
+
+			_ = controllerutil.SetControllerReference(&db, &snap, r.Scheme)
+		} else {
+			logger.Info("Snapshot should not already exist. Report this error", "snapshot", snap)
+		}
+
+		return nil
+	})
+
+	// Create the Pod/Job that runs the LDIF export
 
 	logger.Info("Done")
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, err
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -49,14 +49,16 @@ spec:
                 - size
                 - storageClassName
                 type: object
-              claimsToBackup:
+              claimToBackup:
                 description: DirectoryPVCClaim is the PVC that contains the directory
                   data. Make an array???
-                items:
-                  type: string
-                type: array
+                type: string
+              volumeSnapshotClassName:
+                description: Snapshot class name to use for all snapshots.
+                type: string
             required:
-            - claimsToBackup
+            - claimToBackup
+            - volumeSnapshotClassName
             type: object
           status:
             description: BackupStatus captures the current status of a backup.

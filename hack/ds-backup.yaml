@@ -12,7 +12,16 @@ spec:
     size: 1Gi
 
   # Backup in ldif format if true. If false, use ds binary backup.
-  ldif: true
+  # ldif: true
 
-  claimsToBackup:
-  - data-ds-idrepo-0
+  claimToBackup: data-ds-idrepo-0
+
+  # volumeSnapshotClassName: ds-snapshot-class
+  volumeSnapshotClassName: csi-hostpath-snapclass
+
+  # The directory server binary that contains commands to export ldif or run dsbackup
+  image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+
+  # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.
+  keystore:
+    secretName: ds

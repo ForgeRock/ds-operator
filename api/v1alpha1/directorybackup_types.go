@@ -43,7 +43,10 @@ type DirectoryBackupSpec struct {
 	BackupPVC BackupPVC `json:"backupPVC,omitempty"`
 
 	// DirectoryPVCClaim is the PVC that contains the directory data. Make an array???
-	ClaimsToBackup []string `json:"claimsToBackup"`
+	ClaimToBackup string `json:"claimToBackup"`
+
+	// Snapshot class name to use for all snapshots.
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
 }
 
 //+kubebuilder:object:root=true
