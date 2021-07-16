@@ -41,26 +41,33 @@ spec:
               backup:
                 description: Backup
                 properties:
-                  cron:
+                  apiVersion:
+                    description: 'APIVersion defines the versioned schema of this
+                      representation of an object. Servers should convert recognized
+                      schemas to the latest internal value, and may reject unrecognized
+                      values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                     type: string
-                  enabled:
-                    type: boolean
-                  path:
+                  kind:
+                    description: 'Kind is a string value representing the REST resource
+                      this object represents. Servers may infer this from the endpoint
+                      the client submits requests to. Cannot be updated. In CamelCase.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                     type: string
-                  purgeCron:
-                    default: 40 0 * * *
-                    type: string
-                  purgeHours:
-                    default: 2400
-                    format: int32
-                    type: integer
-                  secretName:
-                    default: cloud-storage-credentials
-                    type: string
-                required:
-                - cron
-                - enabled
-                - path
+                  metadata:
+                    type: object
+                  spec:
+                    description: DirectoryBackupSpec defines the desired state of
+                      DirectoryBackup
+                    properties:
+                      foo:
+                        description: Foo is an example field of DirectoryBackup. Edit
+                          directorybackup_types.go to remove/update
+                        type: string
+                    type: object
+                  status:
+                    description: DirectoryBackupStatus defines the observed state
+                      of DirectoryBackup
+                    type: object
                 type: object
               groupID:
                 description: 'GroupID is the value used to identify this group of
@@ -343,20 +350,8 @@ spec:
                 type: array
               backupStatus:
                 items:
-                  description: DirectoryBackupStatus provides the status of the backup
-                  properties:
-                    endTime:
-                      type: string
-                    startTime:
-                      description: note DS returns these as string values. For status
-                        is ok
-                      type: string
-                    status:
-                      type: string
-                  required:
-                  - endTime
-                  - startTime
-                  - status
+                  description: DirectoryBackupStatus defines the observed state of
+                    DirectoryBackup
                   type: object
                 type: array
               currentReplicas:

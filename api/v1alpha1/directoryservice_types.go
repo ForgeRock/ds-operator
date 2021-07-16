@@ -65,10 +65,6 @@ type DirectoryServiceSpec struct {
 
 	// Snapshots
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
-	// Backup
-	Backup DirectoryBackup `json:"backup,omitempty"`
-	// Restore
-	Restore DirectoryRestore `json:"restore,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
 
@@ -118,46 +114,15 @@ type TrustStore struct {
 	Create bool `json:"create,omitempty"`
 }
 
-// DirectoryBackup defines how and where to backup DS to
-type DirectoryBackupX struct {
-	Enabled bool   `json:"enabled,required"`
-	Path    string `json:"path,required"`
-	Cron    string `json:"cron,required"`
-	// +kubebuilder:default:=cloud-storage-credentials
-	SecretName string `json:"secretName,omitempty"`
-	//  +kubebuilder:default:=2400
-	PurgeHours int32 `json:"purgeHours,omitempty"`
-	// +kubebuilder:default:="40 0 * * *"
-	PurgeCron string `json:"purgeCron,omitempty"`
-}
-
-// DirectoryRestore defines how to restore a new directory from a backup
-type DirectoryRestore struct {
-	Enabled bool `json:"enabled,required"`
-	// Path to the backup location (could be a gcp or s3 bucket)
-	Path string `json:"path,required"`
-	// +kubebuilder:default:=cloud-storage-credentials
-	SecretName string `json:"secretName,omitempty"`
-}
-
 // DirectoryServiceStatus defines the observed state of DirectoryService
-type DirectoryServiceStatusX struct {
+type DirectoryServiceStatus struct {
 	// +optional
 	Active                             []corev1.ObjectReference `json:"active,omitempty"`
 	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
 	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
-	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
 	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`
-}
-
-// DirectoryBackupStatus provides the status of the backup
-type DirectoryBackupStatusX struct {
-	// note DS returns these as string values. For status is ok
-	StartTime string `json:"startTime"`
-	EndTime   string `json:"endTime"`
-	Status    string `json:"status"`
 }
 
 type SnapshotStatus struct {
@@ -196,8 +161,8 @@ type DirectoryService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DirectoryServiceSpec    `json:"spec,omitempty"`
-	Status DirectoryServiceStatusX `json:"status,omitempty"`
+	Spec   DirectoryServiceSpec   `json:"spec,omitempty"`
+	Status DirectoryServiceStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

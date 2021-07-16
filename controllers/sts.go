@@ -81,10 +81,11 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
 	var fsGroup int64 = 0
+	var rootUser int64 = 0
 	var forgerockUser int64 = 11111
 	var defaultMode600 int32 = 0600
 
-	var initArgs []string // args provided to the init container
+	// var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
 	if ds.Spec.MultiCluster.ClusterTopology != "" {
@@ -92,9 +93,76 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		advertisedListenAddress = ""
 	}
 
-	// Init container args.  If restore is enabled, provide the path as the container arg
-	if ds.Spec.Restore.Enabled {
-		initArgs = append(initArgs, ds.Spec.Restore.Path)
+	var volumeMounts = []v1.VolumeMount{
+		{
+			Name:      "data",
+			MountPath: "/opt/opendj/data",
+		},
+		{
+			Name:      "secrets", // keystores
+			MountPath: "/opt/opendj/secrets",
+		},
+		{
+			Name:      "admin-password",
+			MountPath: "/var/run/secrets/admin",
+		},
+		{
+			Name:      "monitor-password",
+			MountPath: "/var/run/secrets/monitor",
+		},
+		{
+			Name:      "pem-trust-certs",
+			MountPath: "/opt/opendj/pem-trust-certs",
+		},
+		{
+			Name:      "secrets",
+			MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+			SubPath:   "ssl-key-pair-combined.pem",
+		},
+		{
+			Name:      "secrets",
+			MountPath: "/opt/opendj/pem-keys-directory/master-key",
+			SubPath:   "master-key-pair-combined.pem",
+		},
+	}
+
+	var envVars = []v1.EnvVar{
+		{
+			Name: "POD_NAME",
+			ValueFrom: &v1.EnvVarSource{
+				FieldRef: &v1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		{
+			Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
+			Value: advertisedListenAddress,
+		},
+		{
+			Name:  "DS_GROUP_ID",
+			Value: ds.Spec.GroupID,
+		},
+		{
+			Name:  "DS_CLUSTER_TOPOLOGY",
+			Value: ds.Spec.MultiCluster.ClusterTopology,
+		},
+		{
+			Name:  "MCS_ENABLED",
+			Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
+		},
+		{
+			Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
+			Value: "true",
+		},
+		{
+			Name:  "DS_UID_MONITOR_PASSWORD_FILE",
+			Value: "/var/run/secrets/monitor/" + ds.Spec.Passwords["uid=monitor"].Key,
+		},
+		{
+			Name:  "DS_UID_ADMIN_PASSWORD_FILE",
+			Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
+		},
 	}
 
 	// Create a template
@@ -160,59 +228,23 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
 						{
-							Name:            "initialize",
+							Name:            "debug",
+							Image:           "busybox",
+							ImagePullPolicy: v1.PullIfNotPresent,
+							Command:         []string{"sh", "-c", "echo debug pod running && chmod a+rwx /opt/opendj/data && sleep 5"},
+							// Args: []string{"sleep 1000"},
+							VolumeMounts:    volumeMounts,
+							SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
+						},
+
+						{
+							Name:            "init",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Command:         []string{"/opt/opendj/scripts/operator-init.sh"},
-							Args:            initArgs,
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/opt/opendj/data",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-									SubPath:   "ssl-key-pair-combined.pem",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/master-key",
-									SubPath:   "master-key-pair-combined.pem",
-								},
-								{
-									Name:      "pem-trust-certs",
-									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-									SubPath:   ds.Spec.TrustStore.KeyName,
-								},
-								{
-									Name:      "admin-password",
-									MountPath: "/var/run/secrets/admin",
-								},
-								{
-									Name:      "monitor-password",
-									MountPath: "/var/run/secrets/monitor",
-								},
-								{
-									Name:      "cloud-restore-credentials",
-									MountPath: "/var/run/secrets/cloud-credentials-cache/",
-								},
-							},
-							Resources: ds.DeepCopy().Spec.Resources,
-							Env: []v1.EnvVar{
-								{
-									Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
-									Value: "true",
-								},
-								{
-									Name:  "DS_UID_MONITOR_PASSWORD_FILE",
-									Value: "/var/run/secrets/monitor/" + ds.Spec.Passwords["uid=monitor"].Key,
-								},
-								{
-									Name:  "DS_UID_ADMIN_PASSWORD_FILE",
-									Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
-								},
-							},
+							Args:            []string{"initialize-only"},
+							VolumeMounts:    volumeMounts,
+							Resources:       ds.DeepCopy().Spec.Resources,
+							Env:             envVars,
 						},
 					},
 					Containers: []v1.Container{
@@ -220,67 +252,11 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Name:            "ds",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Args:            []string{"start-ds"},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/opt/opendj/data",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-									SubPath:   "ssl-key-pair-combined.pem",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/master-key",
-									SubPath:   "master-key-pair-combined.pem",
-								},
-								{
-									Name:      "cloud-backup-credentials",
-									MountPath: "/var/run/secrets/cloud-credentials-cache/",
-								},
-								{
-									Name:      "pem-trust-certs",
-									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-									SubPath:   ds.Spec.TrustStore.KeyName,
-								},
-							},
-							Resources: ds.DeepCopy().Spec.Resources,
-							Env: []v1.EnvVar{
-								{
-									Name: "POD_NAME",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
-									Value: advertisedListenAddress,
-								},
-								{
-									Name:  "DS_GROUP_ID",
-									Value: ds.Spec.GroupID,
-								},
-								{
-									Name:  "DS_CLUSTER_TOPOLOGY",
-									Value: ds.Spec.MultiCluster.ClusterTopology,
-								},
-								{
-									Name:  "MCS_ENABLED",
-									Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
-								},
-							},
-							EnvFrom: []v1.EnvFromSource{
-								{
-									SecretRef: &v1.SecretEnvSource{
-										LocalObjectReference: v1.LocalObjectReference{Name: "cloud-storage-credentials"},
-										//Optional:             new(false),
-									},
-								},
-							},
+							// Args:            []string{"start-ds"},
+							Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
+							VolumeMounts: volumeMounts,
+							Resources:    ds.DeepCopy().Spec.Resources,
+							Env:          envVars,
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
@@ -309,14 +285,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
 									SecretName: ds.Spec.Passwords["uid=monitor"].SecretName,
-								},
-							},
-						},
-						{
-							Name: "cloud-restore-credentials",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Restore.SecretName,
 								},
 							},
 						},

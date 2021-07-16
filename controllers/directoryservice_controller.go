@@ -120,17 +120,19 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return requeue, err
 	}
 
-	// Update the status of our ds object
-	if err := r.Status().Update(ctx, &ds); err != nil {
-		log.Error(err, "unable to update Directory status")
-		return ctrl.Result{}, err
-	}
+	// // Update the status of our ds object
+	// if err := r.Status().Update(ctx, &ds); err != nil {
+	// 	log.Error(err, "unable to update Directory status")
+	// 	return ctrl.Result{}, err
+	// }
 
 	//// LDAP Updates
 	ldap, err := r.getAdminLDAPConnection(ctx, &ds, &svc)
 	// server may be down or coming up. Requeue
 	if err != nil {
-		return requeue, nil
+		log.Info("cant get ldap connection, will retry later")
+		return ctrl.Result{RequeueAfter: time.Second * 90}, nil
+		// return requeue, nil
 	}
 	defer ldap.Close()
 
