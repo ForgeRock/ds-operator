@@ -95,6 +95,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DirectoryBackup")
 		os.Exit(1)
 	}
+	if err = (&controllers.DirectoryRestoreReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DirectoryRestore")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
