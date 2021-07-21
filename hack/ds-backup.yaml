@@ -9,7 +9,7 @@ spec:
   backupPVC:
     name: ds-backup-pvc
     storageClassName: csi-hostpath-sc
-    size: 1Gi
+    size: 512Mi
 
   # Backup in ldif format if true. If false, use ds binary backup.
   # ldif: true
@@ -20,7 +20,9 @@ spec:
   volumeSnapshotClassName: csi-hostpath-snapclass
 
   # The directory server binary that contains commands to export ldif or run dsbackup
-  image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+  # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+  image:  gcr.io/forgeops-public/ds-idrepo:pem-backup-test
+
 
   # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.
   keystore:

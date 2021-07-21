@@ -15,21 +15,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // loop over all the secrets that we own, and create or update
 // Note there may be DirectoryPasswords that are referenced (bring your own secrets use case), but we don't own them
 func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
+	log := k8slog.FromContext(ctx)
 
 	// Loop through the spec.passwords - creating secrets as required
 	for _, secret := range createSecretTemplates(ds) {
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, &secret, func() error {
 			if secret.CreationTimestamp.IsZero() {
-				r.Log.V(8).Info("Created Secret", "secret", secret)
+				log.V(8).Info("Created Secret", "secret", secret)
 				_ = controllerutil.SetControllerReference(ds, &secret, r.Scheme)
 			} else {
 				// The secret already exists... Do we want to update it?
-				r.Log.V(8).Info("TODO: Update secret", "secret", secret)
+				log.V(8).Info("TODO: Update secret", "secret", secret)
 			}
 			return nil
 		})

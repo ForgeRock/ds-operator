@@ -47,6 +47,12 @@ type DirectoryBackupSpec struct {
 
 	// Snapshot class name to use for all snapshots.
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
+
+	// Docker Image for the directory server.
+	Image string `json:"image"`
+
+	// Keystore references
+	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -16,7 +16,6 @@ import (
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
-	"github.com/go-logr/logr"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
@@ -42,7 +41,6 @@ func init() {
 // DirectoryServiceReconciler reconciles a DirectoryService object
 type DirectoryServiceReconciler struct {
 	client.Client
-	Log      logr.Logger
 	Scheme   *runtime.Scheme
 	recorder record.EventRecorder
 }
@@ -66,7 +64,7 @@ var (
 // Reconcile loop for DS controller
 func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// This adds the log data to every log line
-	var log = r.Log.WithValues("directoryservice", req.NamespacedName)
+	var log = k8slog.FromContext(ctx)
 
 	log.Info("Reconcile")
 
@@ -175,6 +173,8 @@ func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
 	// Target the first pod (-0) because tasks are specfic to a pod
 	url := fmt.Sprintf("ldaps://%s-0.%s.%s.svc.cluster.local:1636", svc.Name, svc.Name, svc.Namespace)
+	var log = k8slog.FromContext(ctx)
+
 	// For local testing we need to run kube port-forward and localhost...
 	if DevMode {
 		url = fmt.Sprintf("ldaps://localhost:1636")
@@ -185,16 +185,16 @@ func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context,
 	name := types.NamespacedName{Namespace: ds.Namespace, Name: account.SecretName}
 
 	if err := r.Get(ctx, name, &adminSecret); err != nil {
-		log.Log.Error(err, "Can't find secret for the admin password", "secret", name)
+		log.Error(err, "Can't find secret for the admin password", "secret", name)
 		return nil, fmt.Errorf("Can't find the admin ldap secret")
 	}
 
 	password := string(adminSecret.Data[account.Key][:])
 
-	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password, Log: r.Log}
+	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password, Log: log}
 
 	if err := ldap.Connect(); err != nil {
-		r.Log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)
+		log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)
 		return nil, err
 	}
 

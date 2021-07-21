@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -24,12 +25,13 @@ const (
 )
 
 func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string) error {
+	log := k8slog.FromContext(ctx)
 	var sts apps.StatefulSet
 	sts.Name = ds.Name
 	sts.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &sts, func() error {
-		r.Log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
+		log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
 
 		var err error
 		// does the sts not exist yet?
@@ -48,7 +50,7 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 			err = updateDSStatefulSet(ds, &sts)
 		}
 
-		r.Log.V(8).Info("sts after update/create", "sts", sts)
+		log.V(8).Info("sts after update/create", "sts", sts)
 		return err
 
 	})
@@ -323,6 +325,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 // If the user supplies a snapshot update the PVC volume claim to initialize from it
 func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
+	log := k8slog.FromContext(ctx)
+
 	snapName := ds.Spec.InitializeFromSnapshotName
 	if snapName != "" {
 		apiGroup := SnapshotApiGroup // assign so we can take the address
@@ -332,7 +336,7 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 		if snapName == "latest" {
 			snapList, err := r.getSnapshotList(ctx, ds)
 			if err != nil || len(snapList.Items) == 0 {
-				r.Log.Error(err, "Unable to get list of snapshots! Will continue")
+				log.Error(err, "Unable to get list of snapshots! Will continue")
 			} else {
 				// The snapList is sorted - the last entry is the most recent
 				snapName = snapList.Items[len(snapList.Items)-1].GetName()

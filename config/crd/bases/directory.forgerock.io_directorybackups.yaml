@@ -53,11 +53,25 @@ spec:
                 description: DirectoryPVCClaim is the PVC that contains the directory
                   data. Make an array???
                 type: string
+              image:
+                description: Docker Image for the directory server.
+                type: string
+              keystore:
+                description: Keystore references
+                properties:
+                  secretName:
+                    default: ds
+                    description: The name of a secret containing the keystore
+                    type: string
+                required:
+                - secretName
+                type: object
               volumeSnapshotClassName:
                 description: Snapshot class name to use for all snapshots.
                 type: string
             required:
             - claimToBackup
+            - image
             - volumeSnapshotClassName
             type: object
           status:

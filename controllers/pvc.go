@@ -54,7 +54,7 @@ func createPVC(ctx context.Context, client client.Client, name string, namespace
 			x.DeepCopyInto(&pvc)
 
 			// Set the reference outside of this function
-			// _ = controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
+			// _ = controllerutil.SetOwnerReference(&db, &pvc, r.Scheme)
 			//
 		} else {
 			// If the sts exists already - we want to update any fields to bring its state into

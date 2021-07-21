@@ -51,6 +51,27 @@ rules:
 - apiGroups:
   - apps
   resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - jobs/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
   - statefulsets
   verbs:
   - create

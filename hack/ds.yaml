@@ -22,7 +22,8 @@ spec:
     limits:
       memory: 1024Mi
   # The amount of disk space for directory data
-  storage: 5Gi
+  # Small for testing purposes
+  storage: 512Mi
   # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
   # If the class is not specified, "default" is used. Your cluster
   # must have the default storageClass admission controller enabled to use "standard".
