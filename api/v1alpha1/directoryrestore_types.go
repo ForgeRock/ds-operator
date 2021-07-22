@@ -29,14 +29,39 @@ type DirectoryRestoreSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of DirectoryRestore. Edit directoryrestore_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	SourcePVCName string `json:"sourcePvcName,required"`
+	// Docker Image for the directory server.
+	Image string `json:"image"`
+
+	// Keystore references
+	Keystore DirectoryKeystores `json:"keystore,required"`
+
+	RestorePVC RestorePVC `json:"restorePVC,required"`
+}
+
+type RestorePVC struct {
+	Name                    string `json:"name"`
+	Size                    string `json:"size"`
+	StorageClassName        string `json:"storageClassName"`
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
 }
 
 // DirectoryRestoreStatus defines the observed state of DirectoryRestore
 type DirectoryRestoreStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+
+	// StartTimestamp records the time a restore job was started.
+	// The server's time is used for StartTimestamps
+	// +optional
+	// +nullable
+	StartTimestamp *metav1.Time `json:"startTimestamp,omitempty"`
+
+	// CompletionTimestamp records the time a restore was completed.
+	// Completion time is recorded even on failed backups.
+	// Completion time is recorded before uploading the backup object.
+	// The server's time is used for CompletionTimestamps
+	// +optional
+	// +nullable
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 }
 
 //+kubebuilder:object:root=true

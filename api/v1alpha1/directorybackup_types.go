@@ -80,64 +80,10 @@ func init() {
 	SchemeBuilder.Register(&DirectoryBackup{}, &DirectoryBackupList{})
 }
 
-// BackupPhase is a string representation of the lifecycle phase
-// of a Velero backup.
-// +kubebuilder:validation:Enum=New;FailedValidation;InProgress;Completed;PartiallyFailed;Failed;Deleting
-type BackupPhase string
-
-const (
-	// BackupPhaseNew means the backup has been created but not
-	// yet processed by the BackupController.
-	BackupPhaseNew BackupPhase = "New"
-
-	// BackupPhaseFailedValidation means the backup has failed
-	// the controller's validations and therefore will not run.
-	BackupPhaseFailedValidation BackupPhase = "FailedValidation"
-
-	// BackupPhaseInProgress means the backup is currently executing.
-	BackupPhaseInProgress BackupPhase = "InProgress"
-
-	// BackupPhaseCompleted means the backup has run successfully without
-	// errors.
-	BackupPhaseCompleted BackupPhase = "Completed"
-
-	// BackupPhasePartiallyFailed means the backup has run to completion
-	// but encountered 1+ errors backing up individual items.
-	BackupPhasePartiallyFailed BackupPhase = "PartiallyFailed"
-
-	// BackupPhaseFailed means the backup ran but encountered an error that
-	// prevented it from completing successfully.
-	BackupPhaseFailed BackupPhase = "Failed"
-
-	// BackupPhaseDeleting means the backup and all its associated data are being deleted.
-	BackupPhaseDeleting BackupPhase = "Deleting"
-)
-
 // BackupStatus captures the current status of a backup.
 type BackupStatus struct {
 
-	// FormatVersion is the backup format version, including major, minor, and patch version.
-	// +optional
-	FormatVersion string `json:"formatVersion,omitempty"`
-
-	// Expiration is when this Backup is eligible for garbage-collection.
-	// +optional
-	// +nullable
-	Expiration *metav1.Time `json:"expiration,omitempty"`
-
-	// Phase is the current state of the Backup.
-	// +optional
-	Phase BackupPhase `json:"phase,omitempty"`
-
-	// ValidationErrors is a slice of all validation errors (if
-	// applicable).
-	// +optional
-	// +nullable
-	ValidationErrors []string `json:"validationErrors,omitempty"`
-
 	// StartTimestamp records the time a backup was started.
-	// Separate from CreationTimestamp, since that value changes
-	// on restores.
 	// The server's time is used for StartTimestamps
 	// +optional
 	// +nullable
@@ -150,18 +96,6 @@ type BackupStatus struct {
 	// +optional
 	// +nullable
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
-
-	// Warnings is a count of all warning messages that were generated during
-	// execution of the backup. The actual warnings are in the backup's log
-	// file in object storage.
-	// +optional
-	Warnings int `json:"warnings,omitempty"`
-
-	// Errors is a count of all error messages that were generated during
-	// execution of the backup.  The actual errors are in the backup's log
-	// file in object storage.
-	// +optional
-	Errors int `json:"errors,omitempty"`
 
 	// Progress contains information about the backup's execution progress. Note
 	// that this information is best-effort only -- if Velero fails to update it

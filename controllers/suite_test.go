@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
-
 	//+kubebuilder:scaffold:imports
 )
 

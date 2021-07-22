@@ -18,6 +18,8 @@ import (
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -43,6 +45,13 @@ type DirectoryServiceReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	recorder record.EventRecorder
+}
+
+// We create a structural types here so we can pass the Reconciler types to generic functions for
+// all three controllers
+type DirectoryReconciler struct {
+	client.Client
+	Scheme *runtime.Scheme
 }
 
 var (

@@ -6,16 +6,23 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+  # The pvc that will hold backup data. This will not be deleted when
+  # this DirectoryBackup is deleted. You can use this pvc to restore
+  # LDIF data, or mount for further processing (example - export to S3, GCS, etc)
   backupPVC:
     name: ds-backup-pvc
     storageClassName: csi-hostpath-sc
     size: 512Mi
 
   # Backup in ldif format if true. If false, use ds binary backup.
+  # Currently only ldif is supported.
   # ldif: true
 
+  # The directory pvc to backup. This can be a "live" ds instance,
+  # asuming your snapshot provider can take "crash consistent" snapshots
   claimToBackup: data-ds-idrepo-0
 
+  # The snapshot class that will be used when snapshotting the above.
   # volumeSnapshotClassName: ds-snapshot-class
   volumeSnapshotClassName: csi-hostpath-snapclass
 

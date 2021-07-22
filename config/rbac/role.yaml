@@ -119,6 +119,32 @@ rules:
 - apiGroups:
   - directory.forgerock.io
   resources:
+  - directoryrestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directoryrestores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directoryrestores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - directory.forgerock.io
+  resources:
   - directoryservices
   verbs:
   - create

@@ -27,7 +27,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	klog "sigs.k8s.io/controller-runtime/pkg/log"
+
+	kbatch "k8s.io/api/batch/v1"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
@@ -46,43 +48,59 @@ type DirectoryBackupReconciler struct {
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=jobs/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the DirectoryBackup object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var logger = log.FromContext(ctx)
+	var log = klog.FromContext(ctx)
 
-	logger.Info("Reconciling directorybackup")
+	log.Info("Reconciling directorybackup")
 
 	// fetch the DirectoryBackup object
 	var db directoryv1alpha1.DirectoryBackup
 
 	// Load the DirectoryBackup object
 	if err := r.Get(ctx, req.NamespacedName, &db); err != nil {
-		logger.Info("Unable to fetch DirectoryBackup - it is in the process of being deleted. This is OK")
+		log.Info("Unable to fetch DirectoryBackup - it is in the process of being deleted. This is OK")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// List in progress backup job to update status. The backup job has the same name as this object
+	var backupJob kbatch.Job
+
+	// Ignore if job is not found - it might not yet be created.
+	if err := r.Get(ctx, req.NamespacedName, &backupJob); client.IgnoreNotFound(err) != nil {
+		log.Error(err, "cant fetch job status")
+		return ctrl.Result{}, err
+	}
+
+	if !backupJob.ObjectMeta.CreationTimestamp.IsZero() {
+		// update CRD status
+		db.Status.StartTimestamp = &backupJob.ObjectMeta.CreationTimestamp
+		if backupJob.Status.CompletionTime != nil {
+			db.Status.CompletionTimestamp = backupJob.Status.CompletionTime
+		}
+	}
+
+	// update status
+	if err := r.Status().Update(ctx, &db); err != nil {
+		log.Error(err, "unable to update DirectoryBackup status")
+		return ctrl.Result{}, err
+	}
+
 	/// Create/update the backup target PVC that holds the backup
 	pvc, err := createPVC(ctx, r.Client, db.Spec.BackupPVC.Name, db.GetNamespace(), db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "")
 
 	if err != nil {
-		logger.Error(err, "PVC claim creation failed", "pvcName", db.Spec.BackupPVC.Name)
+		log.Error(err, "PVC claim creation failed", "pvcName", db.Spec.BackupPVC.Name)
 		return ctrl.Result{}, err
 	}
 	// make the pvc owned by us
 	if err = controllerutil.SetOwnerReference(&db, &pvc, r.Scheme); err != nil {
-		logger.Error(err, "Unable to set controller reference on pvc", "pvcName", db.Spec.BackupPVC.Name)
+		log.Error(err, "Unable to set controller reference on pvc", "pvcName", db.Spec.BackupPVC.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -92,7 +110,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	snap.Namespace = db.GetNamespace()
 
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
-		logger.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
+		log.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
 
 		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
@@ -103,14 +121,14 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			return controllerutil.SetOwnerReference(&db, &snap, r.Scheme)
 		} else {
-			logger.Info("Snapshot should not already exist. Report this error", "snapshot", snap)
+			log.Info("Snapshot should not already exist. Report this error", "snapshot", snap)
 		}
 
 		return nil
 	})
 
 	if err != nil {
-		logger.Error(err, "Snapshot creation failed", "claimToBackup", snap.Name)
+		log.Error(err, "Snapshot creation failed", "claimToBackup", snap.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -121,28 +139,23 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	dataPVC, err := createPVC(ctx, r.Client, snap.Name, db.GetNamespace(), db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, snap.Name)
 
 	if err != nil {
-		logger.Error(err, "PVC creation failed", "pvcName", snap.Name, "dataPVC", dataPVC)
+		log.Error(err, "PVC creation failed", "pvcName", snap.Name, "dataPVC", dataPVC)
 		return ctrl.Result{}, err
 	}
-	// if err = controllerutil.SetOwnerReference(&db, &dataPVC, r.Scheme); err != nil {
-	// 	logger.Error(err, "Unable to set controller reference on pvc", "pvcName", snap.Name, "dataPVC", dataPVC)
-	// 	return ctrl.Result{}, err
-	// }
-
 	// Create the Pod/Job that runs the LDIF export
 	job, err := r.createBackupJob(&db, ctx)
 
 	if err != nil {
-		logger.Error(err, "Backup Job creation failed", "job", job)
+		log.Error(err, "Backup Job creation failed", "job", job)
 		return ctrl.Result{}, err
 	}
 
 	// set the data pvc to be owned by the Job
 	err = controllerutil.SetOwnerReference(&db, &dataPVC, r.Scheme)
 
-	logger.Info("Created job", "job", job.GetName())
+	log.Info("Created job", "job", job.GetName())
 
-	logger.Info("Done")
+	log.Info("Done")
 
 	return ctrl.Result{}, err
 }
