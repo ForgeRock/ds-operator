@@ -49,10 +49,8 @@ spec:
                 required:
                 - secretName
                 type: object
-              restorePVC:
+              restore:
                 properties:
-                  name:
-                    type: string
                   size:
                     type: string
                   storageClassName:
@@ -60,7 +58,6 @@ spec:
                   volumeSnapshotClassName:
                     type: string
                 required:
-                - name
                 - size
                 - storageClassName
                 - volumeSnapshotClassName
@@ -70,11 +67,26 @@ spec:
             required:
             - image
             - keystore
-            - restorePVC
+            - restore
             - sourcePvcName
             type: object
           status:
             description: DirectoryRestoreStatus defines the observed state of DirectoryRestore
+            properties:
+              completionTimestamp:
+                description: CompletionTimestamp records the time a restore was completed.
+                  Completion time is recorded even on failed backups. Completion time
+                  is recorded before uploading the backup object. The server's time
+                  is used for CompletionTimestamps
+                format: date-time
+                nullable: true
+                type: string
+              startTimestamp:
+                description: StartTimestamp records the time a restore job was started.
+                  The server's time is used for StartTimestamps
+                format: date-time
+                nullable: true
+                type: string
             type: object
         type: object
     served: true

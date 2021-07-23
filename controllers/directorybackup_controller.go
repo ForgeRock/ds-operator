@@ -41,13 +41,12 @@ type DirectoryBackupReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// Note the rbac rules for secrets and volumesnapshots are covered by the DirectoryService controller
+// Note the rbac rules are consolidated on the directoryservice_controller.go. These are for reference only
 //
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=jobs/status,verbs=get;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
@@ -77,6 +76,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
+	// If the job has started (and possibly finished) update our status sub resource
 	if !backupJob.ObjectMeta.CreationTimestamp.IsZero() {
 		// update CRD status
 		db.Status.StartTimestamp = &backupJob.ObjectMeta.CreationTimestamp
@@ -92,15 +92,10 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	/// Create/update the backup target PVC that holds the backup
-	pvc, err := createPVC(ctx, r.Client, db.Spec.BackupPVC.Name, db.GetNamespace(), db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "")
+	pvc, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "", r.Scheme)
 
 	if err != nil {
 		log.Error(err, "PVC claim creation failed", "pvcName", db.Spec.BackupPVC.Name)
-		return ctrl.Result{}, err
-	}
-	// make the pvc owned by us
-	if err = controllerutil.SetOwnerReference(&db, &pvc, r.Scheme); err != nil {
-		log.Error(err, "Unable to set controller reference on pvc", "pvcName", db.Spec.BackupPVC.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -121,10 +116,8 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 			return controllerutil.SetOwnerReference(&db, &snap, r.Scheme)
 		} else {
-			log.Info("Snapshot should not already exist. Report this error", "snapshot", snap)
+			return controllerutil.SetOwnerReference(&db, &snap, r.Scheme)
 		}
-
-		return nil
 	})
 
 	if err != nil {
@@ -136,26 +129,22 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// The Data pvc is named the same as the VolumeSnaphshot.
 	// TODO: Backup Size should be calulated from the size target PVC
 	// The datasource of the PVC is set to be the snapshot we just created above.
-	dataPVC, err := createPVC(ctx, r.Client, snap.Name, db.GetNamespace(), db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, snap.Name)
+	dataPVC, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, snap.Name, r.Scheme)
 
 	if err != nil {
 		log.Error(err, "PVC creation failed", "pvcName", snap.Name, "dataPVC", dataPVC)
 		return ctrl.Result{}, err
 	}
 	// Create the Pod/Job that runs the LDIF export
-	job, err := r.createBackupJob(&db, ctx)
+	args := []string{"/opt/opendj/scripts/ds-backup.sh"}
+	command := []string{}
+
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, command, args, db.Spec.Image, &db)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)
 		return ctrl.Result{}, err
 	}
-
-	// set the data pvc to be owned by the Job
-	err = controllerutil.SetOwnerReference(&db, &dataPVC, r.Scheme)
-
-	log.Info("Created job", "job", job.GetName())
-
-	log.Info("Done")
 
 	return ctrl.Result{}, err
 }

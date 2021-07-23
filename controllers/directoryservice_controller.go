@@ -31,6 +31,11 @@ import (
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
 var DevMode = false
 
+// These need to be vars (not constants) as we use them in Pod Security Context templates, and
+// Go wants a pointer to the var, not a const.
+var ForgeRockUser int64 = 11111
+var RootGroup int64 = 0
+
 // LabelApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 const LabelApplicationName = "ds"
 
@@ -47,28 +52,23 @@ type DirectoryServiceReconciler struct {
 	recorder record.EventRecorder
 }
 
-// We create a structural types here so we can pass the Reconciler types to generic functions for
-// all three controllers
-type DirectoryReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
-}
-
 var (
 	// requeue the request after xx seconds.
 	requeue = ctrl.Result{RequeueAfter: time.Second * 60}
 )
 
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
-// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets;services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices;directorybackup;directoryrestore,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status;directorybackup/status;directoryrestore/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets;services;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;create
 // +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile loop for DS controller
 func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

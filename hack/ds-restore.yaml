@@ -7,22 +7,21 @@ metadata:
     app.kubernetes.io/part-of: forgerock
 spec:
   # The source pvc that holds the ldif backup data to be restored.
-  # This is the "spec.backupPVC.name" created by a DirectoryBackup job
-  sourcePVCName: ds-backup-pvc
+  # This is usually the "spec.backupPVC.name" created by a DirectoryBackup job
+  sourcePvcName: ds-backup
 
   # The directory server binary that contains commands to import ldif or run dsbackup
   image:  gcr.io/forgeops-public/ds-idrepo:pem-backup-test
 
-  # The pvc that will hold the restored data in DS JE format. This pvc
-  # can be mounted by a ds pod and is "ready to run"
-  # Note that a VolumeSnapshot of the same name is also created
+  # Parameters for the pvc and snapshot that will hold the restored data in DS JE format.
   # The snapshot can be used as a source for initializing the DS cluster
+  # The PVC and the VolumeSnapshsot will both have the same name as this object (ds-restore in this case).
 
-  restorePVC:
-    name: ds-restore-pvc
+  restore:
     storageClassName: csi-hostpath-sc
     size: 512Mi
     volumeSnapshotClassName: csi-hostpath-snapclass
+
 
   # Secret that contains the ds pem keystore. This is needed to import data into JE
   # This keystore must match the keystore used to deploy the DirectoryService

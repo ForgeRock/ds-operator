@@ -45,11 +45,11 @@ spec:
 
   # Optional - Configures the operator to automatically take snapshots
   snapshots:
-    enabled: false
+    enabled: true
     # Take a snapshot every 30 minutes
-    periodMinutes: 30
+    periodMinutes: 2
     # Keep this many snapshots. Older snapshots will be deleted
-    snapshotsRetained: 4
+    snapshotsRetained: 2
     # This defaults to ds-snapshot-class if not specified
     volumeSnapshotClassName: ds-snapshot-class
 

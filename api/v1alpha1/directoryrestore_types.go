@@ -36,14 +36,13 @@ type DirectoryRestoreSpec struct {
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,required"`
 
-	RestorePVC RestorePVC `json:"restorePVC,required"`
+	RestorePVC RestorePVC `json:"restore,required"`
 }
 
 type RestorePVC struct {
-	Name                    string `json:"name"`
 	Size                    string `json:"size"`
 	StorageClassName        string `json:"storageClassName"`
-	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
 
 // DirectoryRestoreStatus defines the observed state of DirectoryRestore

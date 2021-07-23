@@ -1,5 +1,5 @@
 
-# Apply this on GKE to create the VolumeSnapshotClass
+# Apply this on Minikube to create the VolumeSnapshotClass
 apiVersion: snapshot.storage.k8s.io/v1beta1
 kind: VolumeSnapshotClass
 metadata:

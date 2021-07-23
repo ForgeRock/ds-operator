@@ -17,6 +17,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - persistentvolumeclaims
   - secrets
   - services
   verbs:
@@ -51,27 +52,6 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - jobs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
-  - jobs/status
-  verbs:
-  - delete
-  - get
-  - patch
-  - update
-- apiGroups:
-  - apps
-  resources:
   - statefulsets
   verbs:
   - create
@@ -87,6 +67,51 @@ rules:
   - statefulsets/status
   verbs:
   - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directorybackup
+  - directoryrestore
+  - directoryservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directorybackup/status
+  - directoryrestore/status
+  - directoryservices/status
+  verbs:
   - get
   - patch
   - update
@@ -138,26 +163,6 @@ rules:
   - directory.forgerock.io
   resources:
   - directoryrestores/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - directory.forgerock.io
-  resources:
-  - directoryservices
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - directory.forgerock.io
-  resources:
-  - directoryservices/status
   verbs:
   - get
   - patch

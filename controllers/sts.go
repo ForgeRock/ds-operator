@@ -83,7 +83,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
 	var fsGroup int64 = 0
-	var forgerockUser int64 = 11111
 	var defaultMode600 int32 = 0600
 
 	// var initArgs []string // args provided to the init container
@@ -99,10 +98,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 			Name:      "data",
 			MountPath: "/opt/opendj/data",
 		},
-		{
-			Name:      "secrets", // keystores
-			MountPath: "/opt/opendj/secrets",
-		},
+
 		{
 			Name:      "admin-password",
 			MountPath: "/var/run/secrets/admin",
@@ -113,7 +109,8 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 		{
 			Name:      "pem-trust-certs",
-			MountPath: "/opt/opendj/pem-trust-certs",
+			MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
+			SubPath:   ds.Spec.TrustStore.KeyName,
 		},
 		{
 			Name:      "secrets",
@@ -252,7 +249,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					},
 					SecurityContext: &v1.PodSecurityContext{
 						FSGroup:   &fsGroup,
-						RunAsUser: &forgerockUser,
+						RunAsUser: &ForgeRockUser,
 					},
 					Volumes: []v1.Volume{
 						{
@@ -357,13 +354,14 @@ func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount,
 
 	var rootUser int64 = 0
 
-	// add the debug init container. This just sleeps for a bit.. Adjust the sleep for your requriements
+	// add the debug init container. You can a sleep here.
+	// This is needed when the hostpath provisioner is used as it does not chown volumes to the pod user.
 	var debugInit = []v1.Container{
 		{
 			Name:            "debug-init",
 			Image:           image,
 			ImagePullPolicy: v1.PullIfNotPresent,
-			Command:         []string{"sh", "-c", "echo debug pod running && chmod a+rwx /opt/opendj/data && sleep 5"},
+			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/data"},
 			// Args: []string{"sleep 1000"},
 			VolumeMounts: volumeMounts,
 			// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
@@ -381,8 +379,6 @@ func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount,
 			VolumeMounts:    volumeMounts,
 		},
 	}
-
-	// todo: Inject sidecar
 
 	sts.Spec.Template.Spec.InitContainers = append(debugInit, sts.Spec.Template.Spec.InitContainers...)
 	sts.Spec.Template.Spec.Containers = append(debugSidecar, sts.Spec.Template.Spec.Containers...)

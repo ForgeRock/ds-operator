@@ -19,7 +19,7 @@ spec:
   # ldif: true
 
   # The directory pvc to backup. This can be a "live" ds instance,
-  # asuming your snapshot provider can take "crash consistent" snapshots
+  # assuming your snapshot provider can take "crash consistent" snapshots
   claimToBackup: data-ds-idrepo-0
 
   # The snapshot class that will be used when snapshotting the above.
