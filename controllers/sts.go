@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -24,12 +25,13 @@ const (
 )
 
 func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string) error {
+	log := k8slog.FromContext(ctx)
 	var sts apps.StatefulSet
 	sts.Name = ds.Name
 	sts.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &sts, func() error {
-		r.Log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
+		log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
 
 		var err error
 		// does the sts not exist yet?
@@ -48,7 +50,7 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 			err = updateDSStatefulSet(ds, &sts)
 		}
 
-		r.Log.V(8).Info("sts after update/create", "sts", sts)
+		log.V(8).Info("sts after update/create", "sts", sts)
 		return err
 
 	})
@@ -81,10 +83,9 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
 	// not a constant
 	var fsGroup int64 = 0
-	var forgerockUser int64 = 11111
 	var defaultMode600 int32 = 0600
 
-	var initArgs []string // args provided to the init container
+	// var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
 	if ds.Spec.MultiCluster.ClusterTopology != "" {
@@ -92,9 +93,74 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		advertisedListenAddress = ""
 	}
 
-	// Init container args.  If restore is enabled, provide the path as the container arg
-	if ds.Spec.Restore.Enabled {
-		initArgs = append(initArgs, ds.Spec.Restore.Path)
+	var volumeMounts = []v1.VolumeMount{
+		{
+			Name:      "data",
+			MountPath: "/opt/opendj/data",
+		},
+
+		{
+			Name:      "admin-password",
+			MountPath: "/var/run/secrets/admin",
+		},
+		{
+			Name:      "monitor-password",
+			MountPath: "/var/run/secrets/monitor",
+		},
+		{
+			Name:      "pem-trust-certs",
+			MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
+			SubPath:   ds.Spec.TrustStore.KeyName,
+		},
+		{
+			Name:      "secrets",
+			MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+			SubPath:   "ssl-key-pair-combined.pem",
+		},
+		{
+			Name:      "secrets",
+			MountPath: "/opt/opendj/pem-keys-directory/master-key",
+			SubPath:   "master-key-pair-combined.pem",
+		},
+	}
+
+	var envVars = []v1.EnvVar{
+		{
+			Name: "POD_NAME",
+			ValueFrom: &v1.EnvVarSource{
+				FieldRef: &v1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+		{
+			Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
+			Value: advertisedListenAddress,
+		},
+		{
+			Name:  "DS_GROUP_ID",
+			Value: ds.Spec.GroupID,
+		},
+		{
+			Name:  "DS_CLUSTER_TOPOLOGY",
+			Value: ds.Spec.MultiCluster.ClusterTopology,
+		},
+		{
+			Name:  "MCS_ENABLED",
+			Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
+		},
+		{
+			Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
+			Value: "true",
+		},
+		{
+			Name:  "DS_UID_MONITOR_PASSWORD_FILE",
+			Value: "/var/run/secrets/monitor/" + ds.Spec.Passwords["uid=monitor"].Key,
+		},
+		{
+			Name:  "DS_UID_ADMIN_PASSWORD_FILE",
+			Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
+		},
 	}
 
 	// Create a template
@@ -160,59 +226,13 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
 						{
-							Name:            "initialize",
+							Name:            "init",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
-							Command:         []string{"/opt/opendj/scripts/operator-init.sh"},
-							Args:            initArgs,
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/opt/opendj/data",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-									SubPath:   "ssl-key-pair-combined.pem",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/master-key",
-									SubPath:   "master-key-pair-combined.pem",
-								},
-								{
-									Name:      "pem-trust-certs",
-									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-									SubPath:   ds.Spec.TrustStore.KeyName,
-								},
-								{
-									Name:      "admin-password",
-									MountPath: "/var/run/secrets/admin",
-								},
-								{
-									Name:      "monitor-password",
-									MountPath: "/var/run/secrets/monitor",
-								},
-								{
-									Name:      "cloud-restore-credentials",
-									MountPath: "/var/run/secrets/cloud-credentials-cache/",
-								},
-							},
-							Resources: ds.DeepCopy().Spec.Resources,
-							Env: []v1.EnvVar{
-								{
-									Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
-									Value: "true",
-								},
-								{
-									Name:  "DS_UID_MONITOR_PASSWORD_FILE",
-									Value: "/var/run/secrets/monitor/" + ds.Spec.Passwords["uid=monitor"].Key,
-								},
-								{
-									Name:  "DS_UID_ADMIN_PASSWORD_FILE",
-									Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
-								},
-							},
+							Args:            []string{"initialize-only"},
+							VolumeMounts:    volumeMounts,
+							Resources:       ds.DeepCopy().Spec.Resources,
+							Env:             envVars,
 						},
 					},
 					Containers: []v1.Container{
@@ -221,71 +241,15 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
 							Args:            []string{"start-ds"},
-							VolumeMounts: []v1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/opt/opendj/data",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-									SubPath:   "ssl-key-pair-combined.pem",
-								},
-								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/pem-keys-directory/master-key",
-									SubPath:   "master-key-pair-combined.pem",
-								},
-								{
-									Name:      "cloud-backup-credentials",
-									MountPath: "/var/run/secrets/cloud-credentials-cache/",
-								},
-								{
-									Name:      "pem-trust-certs",
-									MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-									SubPath:   ds.Spec.TrustStore.KeyName,
-								},
-							},
-							Resources: ds.DeepCopy().Spec.Resources,
-							Env: []v1.EnvVar{
-								{
-									Name: "POD_NAME",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "metadata.name",
-										},
-									},
-								},
-								{
-									Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
-									Value: advertisedListenAddress,
-								},
-								{
-									Name:  "DS_GROUP_ID",
-									Value: ds.Spec.GroupID,
-								},
-								{
-									Name:  "DS_CLUSTER_TOPOLOGY",
-									Value: ds.Spec.MultiCluster.ClusterTopology,
-								},
-								{
-									Name:  "MCS_ENABLED",
-									Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
-								},
-							},
-							EnvFrom: []v1.EnvFromSource{
-								{
-									SecretRef: &v1.SecretEnvSource{
-										LocalObjectReference: v1.LocalObjectReference{Name: "cloud-storage-credentials"},
-										//Optional:             new(false),
-									},
-								},
-							},
+							// Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
+							VolumeMounts: volumeMounts,
+							Resources:    ds.DeepCopy().Spec.Resources,
+							Env:          envVars,
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
 						FSGroup:   &fsGroup,
-						RunAsUser: &forgerockUser,
+						RunAsUser: &ForgeRockUser,
 					},
 					Volumes: []v1.Volume{
 						{
@@ -309,22 +273,6 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
 									SecretName: ds.Spec.Passwords["uid=monitor"].SecretName,
-								},
-							},
-						},
-						{
-							Name: "cloud-backup-credentials",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Backup.SecretName,
-								},
-							},
-						},
-						{
-							Name: "cloud-restore-credentials",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Restore.SecretName,
 								},
 							},
 						},
@@ -365,11 +313,17 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 
+	if ds.Spec.Debug {
+		injectDebugContainers(stemplate, volumeMounts, ds.Spec.Image)
+	}
+
 	stemplate.DeepCopyInto(sts)
 }
 
 // If the user supplies a snapshot update the PVC volume claim to initialize from it
 func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) {
+	log := k8slog.FromContext(ctx)
+
 	snapName := ds.Spec.InitializeFromSnapshotName
 	if snapName != "" {
 		apiGroup := SnapshotApiGroup // assign so we can take the address
@@ -379,7 +333,7 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 		if snapName == "latest" {
 			snapList, err := r.getSnapshotList(ctx, ds)
 			if err != nil || len(snapList.Items) == 0 {
-				r.Log.Error(err, "Unable to get list of snapshots! Will continue")
+				log.Error(err, "Unable to get list of snapshots! Will continue")
 			} else {
 				// The snapList is sorted - the last entry is the most recent
 				snapName = snapList.Items[len(snapList.Items)-1].GetName()
@@ -393,4 +347,40 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 				APIGroup: &apiGroup,
 			}
 	}
+}
+
+// Adds a debug init and sidecar containers.
+func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount, image string) {
+
+	var rootUser int64 = 0
+
+	// add the debug init container. You can a sleep here.
+	// This is needed when the hostpath provisioner is used as it does not chown volumes to the pod user.
+	var debugInit = []v1.Container{
+		{
+			Name:            "debug-init",
+			Image:           image,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/data"},
+			// Args: []string{"sleep 1000"},
+			VolumeMounts: volumeMounts,
+			// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
+			SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
+		},
+	}
+
+	// The debug sidecar has all the ds tools. It just sleeps waiting for the user to exec into the pod
+	var debugSidecar = []v1.Container{
+		{
+			Name:            "debug",
+			Image:           image,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Command:         []string{"bash", "-c", "echo debug pod running && while true; do sleep 300; done"},
+			VolumeMounts:    volumeMounts,
+		},
+	}
+
+	sts.Spec.Template.Spec.InitContainers = append(debugInit, sts.Spec.Template.Spec.InitContainers...)
+	sts.Spec.Template.Spec.Containers = append(debugSidecar, sts.Spec.Template.Spec.Containers...)
+
 }

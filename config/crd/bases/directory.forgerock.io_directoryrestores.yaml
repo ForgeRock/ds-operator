@@ -1,0 +1,101 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: directoryrestores.directory.forgerock.io
+spec:
+  group: directory.forgerock.io
+  names:
+    kind: DirectoryRestore
+    listKind: DirectoryRestoreList
+    plural: directoryrestores
+    singular: directoryrestore
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DirectoryRestore is the Schema for the directoryrestores API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DirectoryRestoreSpec defines the desired state of DirectoryRestore
+            properties:
+              image:
+                description: Docker Image for the directory server.
+                type: string
+              keystore:
+                description: Keystore references
+                properties:
+                  secretName:
+                    default: ds
+                    description: The name of a secret containing the keystore
+                    type: string
+                required:
+                - secretName
+                type: object
+              restore:
+                properties:
+                  size:
+                    type: string
+                  storageClassName:
+                    type: string
+                  volumeSnapshotClassName:
+                    type: string
+                required:
+                - size
+                - storageClassName
+                - volumeSnapshotClassName
+                type: object
+              sourcePvcName:
+                type: string
+            required:
+            - image
+            - keystore
+            - restore
+            - sourcePvcName
+            type: object
+          status:
+            description: DirectoryRestoreStatus defines the observed state of DirectoryRestore
+            properties:
+              completionTimestamp:
+                description: CompletionTimestamp records the time a restore was completed.
+                  Completion time is recorded even on failed backups. Completion time
+                  is recorded before uploading the backup object. The server's time
+                  is used for CompletionTimestamps
+                format: date-time
+                nullable: true
+                type: string
+              startTimestamp:
+                description: StartTimestamp records the time a restore job was started.
+                  The server's time is used for StartTimestamps
+                format: date-time
+                nullable: true
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

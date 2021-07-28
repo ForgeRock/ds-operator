@@ -17,12 +17,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (r *DirectoryServiceReconciler) reconcileProxy(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 	var deployment apps.Deployment
 	proxyName := ds.Name + "-proxy"
+	var log = k8slog.FromContext(ctx)
 
 	if !ds.Spec.Proxy.Enabled {
 		err := r.Client.Get(ctx, types.NamespacedName{Name: proxyName, Namespace: ds.Namespace}, &deployment)
@@ -45,21 +48,21 @@ func (r *DirectoryServiceReconciler) reconcileProxy(ctx context.Context, ds *dir
 	deployment.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &deployment, func() error {
-		r.Log.V(8).Info("CreateorUpdate deployment", "deployment", deployment)
+		log.V(8).Info("CreateorUpdate deployment", "deployment", deployment)
 
 		var err error
 		// does the deployment not exist yet?
 		if deployment.CreationTimestamp.IsZero() {
 			err = createDSProxyDeployment(ds, &deployment)
 			_ = controllerutil.SetControllerReference(ds, &deployment, r.Scheme)
-			r.Log.V(8).Info("Created New deployment from template", "deployment", deployment)
+			log.V(8).Info("Created New deployment from template", "deployment", deployment)
 		} else {
 			// If the deployment exists already - we want to update any fields to bring its state into
 			// alignment with the Custom Resource
 			err = updateDSProxyDeployment(ds, &deployment)
 		}
 
-		r.Log.V(8).Info("deployment after update/create", "deployment", deployment)
+		log.V(8).Info("deployment after update/create", "deployment", deployment)
 		return err
 
 	})

@@ -16,19 +16,25 @@ import (
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
-	"github.com/go-logr/logr"
-	"github.com/prometheus/common/log"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
 var DevMode = false
+
+// These need to be vars (not constants) as we use them in Pod Security Context templates, and
+// Go wants a pointer to the var, not a const.
+var ForgeRockUser int64 = 11111
+var RootGroup int64 = 0
 
 // LabelApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 const LabelApplicationName = "ds"
@@ -42,7 +48,6 @@ func init() {
 // DirectoryServiceReconciler reconciles a DirectoryService object
 type DirectoryServiceReconciler struct {
 	client.Client
-	Log      logr.Logger
 	Scheme   *runtime.Scheme
 	recorder record.EventRecorder
 }
@@ -53,20 +58,22 @@ var (
 )
 
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
-// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets;services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices;directorybackup;directoryrestore,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status;directorybackup/status;directoryrestore/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets;services;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;create
 // +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile loop for DS controller
 func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// This adds the log data to every log line
-	var log = r.Log.WithValues("directoryservice", req.NamespacedName)
+	var log = k8slog.FromContext(ctx)
 
 	log.Info("Reconcile")
 
@@ -120,34 +127,25 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return requeue, err
 	}
 
-	// Update the status of our ds object
-	if err := r.Status().Update(ctx, &ds); err != nil {
-		log.Error(err, "unable to update Directory status")
-		return ctrl.Result{}, err
-	}
+	// // Update the status of our ds object
+	// if err := r.Status().Update(ctx, &ds); err != nil {
+	// 	log.Error(err, "unable to update Directory status")
+	// 	return ctrl.Result{}, err
+	// }
 
 	//// LDAP Updates
 	ldap, err := r.getAdminLDAPConnection(ctx, &ds, &svc)
 	// server may be down or coming up. Requeue
 	if err != nil {
-		return requeue, nil
+		log.Info("cant get ldap connection, will retry later")
+		return ctrl.Result{RequeueAfter: time.Second * 90}, nil
+		// return requeue, nil
 	}
 	defer ldap.Close()
 
 	// update ldap service account passwords
 	if err := r.updatePasswords(ctx, &ds, ldap); err != nil {
 		return requeue, nil
-	}
-
-	// Update backup / restore options
-	if err := r.updateBackup(ctx, &ds, ldap); err != nil {
-		return requeue, nil
-	}
-
-	// Get the LDAP backup status
-	if err := r.updateBackupStatus(ctx, &ds, ldap); err != nil {
-		log.Info("Could not get backup status", "err", err)
-		// todo: We still want to update the remaining status....
 	}
 
 	// Update the status of our ds object
@@ -172,38 +170,20 @@ func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *DirectoryServiceReconciler) deleteExternalResources(ds *directoryv1alpha1.DirectoryService) error {
-	//
-	// delete any external resources associated with the ds set
-	//
-	// Ensure that delete implementation is idempotent and safe to invoke
-	// multiple times for same object.
-	return nil
-}
-
-// Helper functions to check and remove string from a slice of strings.
-func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
-}
-
-func removeString(slice []string, s string) (result []string) {
-	for _, item := range slice {
-		if item == s {
-			continue
-		}
-		result = append(result, item)
-	}
-	return
-}
+// func (r *DirectoryServiceReconciler) deleteExternalResources(ds *directoryv1alpha1.DirectoryService) error {
+// 	//
+// 	// delete any external resources associated with the ds set
+// 	//
+// 	// Ensure that delete implementation is idempotent and safe to invoke
+// 	// multiple times for same object.
+// 	return nil
+// }
 
 func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
 	// Target the first pod (-0) because tasks are specfic to a pod
 	url := fmt.Sprintf("ldaps://%s-0.%s.%s.svc.cluster.local:1636", svc.Name, svc.Name, svc.Namespace)
+	var log = k8slog.FromContext(ctx)
+
 	// For local testing we need to run kube port-forward and localhost...
 	if DevMode {
 		url = fmt.Sprintf("ldaps://localhost:1636")
@@ -220,10 +200,10 @@ func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context,
 
 	password := string(adminSecret.Data[account.Key][:])
 
-	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password, Log: r.Log}
+	ldap := ldap.DSConnection{DN: "uid=admin", URL: url, Password: password, Log: log}
 
 	if err := ldap.Connect(); err != nil {
-		r.Log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)
+		log.Info("Can't connect to ldap server, will try again later", "url", url, "err", err)
 		return nil, err
 	}
 

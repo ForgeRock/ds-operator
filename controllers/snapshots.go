@@ -15,18 +15,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
-	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v3/apis/volumesnapshot/v1beta1"
-	"github.com/prometheus/common/log"
+	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
+
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Create snapshots if enabled..
 // The spec.status records the last snapshot time.
 func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
+	log := k8slog.FromContext(ctx)
 
-	r.Log.V(5).Info("snapshot reconcile")
+	log.V(5).Info("snapshot reconcile")
 
 	if !ds.Spec.Snapshots.Enabled {
 		return nil
@@ -39,21 +41,21 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	if ds.Status.SnapshotStatus.LastSnapshotTimeStamp == 0 {
 		ds.Status.SnapshotStatus.LastSnapshotTimeStamp = now
 		if err := r.Status().Update(ctx, ds); err != nil {
-			r.Log.Error(err, "Could not update status")
+			log.Error(err, "Could not update status")
 			return err
 		}
-		r.Log.Info("Skipping first snapshot to allow the directory to come up")
+		log.Info("Skipping first snapshot to allow the directory to come up")
 		return nil
 	}
 
 	last := ds.Status.SnapshotStatus.LastSnapshotTimeStamp
 	deadline := last + int64(ds.Spec.Snapshots.PeriodMinutes*60)
 
-	r.Log.V(5).Info("snapshot deadine", "deadline", deadline, "lastSnapTimestamp", ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
+	log.V(5).Info("snapshot deadine", "deadline", deadline, "lastSnapTimestamp", ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
 	// fmt.Printf("deadine %d  last %d", deadline, ds.Status.SnapshotStatus.LastSnapshotTimeStamp)
 
 	if now < deadline {
-		r.Log.V(5).Info("Snapshot deadline not passed yet.")
+		log.V(5).Info("Snapshot deadline not passed yet.")
 		return nil
 	}
 
@@ -72,24 +74,24 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 			VolumeSnapshotClassName: &ds.Spec.Snapshots.VolumeSnapshotClassName,
 			Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &pvcClaimToSnap}}}
 
-	r.Log.Info("taking snapshot ", "snasphot", snapName, "pvc", pvcClaimToSnap)
+	log.Info("taking snapshot ", "snasphot", snapName, "pvc", pvcClaimToSnap)
 
 	var snap snapshot.VolumeSnapshot
 	snap.Name = s.GetName()
 	snap.Namespace = s.GetNamespace()
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
-		r.Log.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
+		log.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
 
 		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
 			s.DeepCopyInto(&snap)
 			// Note: We dont set the ownerref - we want to snapshot to persist even if the
 			// directory instance is deleted
-			// r.Log.V(8).Info("Setting ownerref for snapshot", "name", snap.Name)
-			// _ = controllerutil.SetControllerReference(ds, &snap, r.Scheme)
+			// log.V(8).Info("Setting ownerref for snapshot", "name", snap.Name)
+			// _ = controllerutil.SetOwnerReference(ds, &snap, r.Scheme)
 		} else {
-			r.Log.V(8).Info("Snapshot should not already exist. Report this error", "snapshot", snap)
+			log.V(8).Info("Snapshot should not already exist. Report this error", "snapshot", snap)
 		}
 		return nil
 	})
@@ -104,7 +106,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	// we record the last snap time so we dont accidently try to create a bunch of snapshots in rapid succession.
 	ds.Status.SnapshotStatus.LastSnapshotTimeStamp = now
 	if err := r.Status().Update(ctx, ds); err != nil {
-		r.Log.Error(err, "Could not update status")
+		log.Error(err, "Could not update status")
 		return err
 	}
 
@@ -119,10 +121,10 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 	if numToDelete > 0 {
 		for i := 0; i < numToDelete; i++ {
 			s := &snapList.Items[i]
-			r.Log.Info("Pruning older snapshot", "snapshot", s.GetName())
+			log.Info("Pruning older snapshot", "snapshot", s.GetName())
 			// Ignore errors - attempt to complete all deletes
 			if err := r.Client.Delete(ctx, s); err != nil {
-				r.Log.Error(err, "Warning - could not delete snapshot", "snapshot", s.GetName())
+				log.Error(err, "Warning - could not delete snapshot", "snapshot", s.GetName())
 			}
 			r.recorder.Event(ds, corev1.EventTypeNormal, "Purged Snapshot", s.GetName())
 		}
@@ -133,13 +135,15 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 
 // Lookup the list of snapshots. The list is sorted by snapshot time
 func (r *DirectoryServiceReconciler) getSnapshotList(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (*snapshot.VolumeSnapshotList, error) {
+
+	log := k8slog.FromContext(ctx)
 	var snapshotList snapshot.VolumeSnapshotList
 	labels := createLabels(ds.GetName(), nil)
 
 	// todo: Filter client.MatchingFields{jobOwnerKey: req.Name}
 	err := r.Client.List(ctx, &snapshotList, client.InNamespace(ds.GetNamespace()), client.MatchingLabels(labels))
 	if err != nil {
-		r.Log.Error(err, "Could not list snapshots")
+		log.Error(err, "Could not list snapshots")
 		return nil, err
 	}
 

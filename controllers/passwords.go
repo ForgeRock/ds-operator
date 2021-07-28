@@ -12,6 +12,7 @@ import (
 	ldap "github.com/ForgeRock/ds-operator/pkg/ldap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // PasswordCheckTimeSeconds is the number of seconds between password checks. The first time through will trigger an immediate check.
@@ -20,7 +21,7 @@ const PasswordCheckTimeSeconds = 300
 
 /// Manages ldap service account passwords in Spec.Passwords
 func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *directoryv1alpha1.DirectoryService, ldap *ldap.DSConnection) error {
-	log := r.Log
+	log := k8slog.FromContext(ctx)
 
 	now := time.Now().Unix()
 	elapsed := now - ds.Status.ServiceAccountPasswordsUpdatedTime

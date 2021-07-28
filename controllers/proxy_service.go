@@ -15,9 +15,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func (r *DirectoryServiceReconciler) reconcileProxyService(ctx context.Context, ds *directoryv1alpha1.DirectoryService) (v1.Service, error) {
+	log := k8slog.FromContext(ctx)
 	// create or update the service
 	var svc v1.Service
 	proxyName := ds.Name + "-proxy"
@@ -43,22 +45,22 @@ func (r *DirectoryServiceReconciler) reconcileProxyService(ctx context.Context, 
 	svc.Namespace = ds.Namespace
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &svc, func() error {
-		r.Log.V(8).Info("CreateorUpdate proxy service", "svc", svc)
+		log.V(8).Info("CreateorUpdate proxy service", "svc", svc)
 
 		var err error
 		// does the service not exist yet?
 		if svc.CreationTimestamp.IsZero() {
 			err = createProxyService(ds, &svc)
-			r.Log.V(8).Info("Setting ownerref for proxy service", "svc", svc.Name)
+			log.V(8).Info("Setting ownerref for proxy service", "svc", svc.Name)
 			_ = controllerutil.SetControllerReference(ds, &svc, r.Scheme)
 		} else {
 			// If the service exists already - we want to update any fields to bring its state into
 			// alignment with the Custom Resource
 			//err = updateService(&ds, &sts)
-			r.Log.V(8).Info("TODO: Handle update of ds proxy service")
+			log.V(8).Info("TODO: Handle update of ds proxy service")
 		}
 
-		r.Log.V(8).Info("proxy svc after update/create", "svc", svc)
+		log.V(8).Info("proxy svc after update/create", "svc", svc)
 		return err
 	})
 	return svc, err

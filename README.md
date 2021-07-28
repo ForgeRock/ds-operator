@@ -53,6 +53,9 @@ Secret agent can be installed using the [secret-agent.sh](https://raw.githubuser
 
 * Note to ForgeRock developers: secret-agent is already installed on the eng-shared cluster.*
 
+For development you can deploy [hack/secrets.yaml](hack/secrets.yaml) instead of running secret agent. These are static secrets
+and should never be used in production.
+
 ## Deploy a Directory Instance
 
 Once the ds-operator has been installed, you can deploy an instance of the directory service using the custom
@@ -94,15 +97,12 @@ The directory service deployment creates a statefulset to run the directory serv
 
 ## Directory Docker Image
 
-The deployed spec.image must support the `operator-init.sh` entrypoint. There is a sample skaffold file in `forgeops` that will build
-and push an image:
+The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project.
 
-```bash
-cd forgeops/docker/7.0/ds
-skaffold --default-repo gcr.io/engineering-devops build
-```
 
 Evaluation images have been built for you on gcr.io/forgeops-public/ds-idrepo. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
+
+Note that the operator is tranistioning from Java keystores to the use of PEM secrets. This work has not yet been merged into ForgeOps.
 
 The operator assume the referenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
 
@@ -128,7 +128,7 @@ The operator provides the following control over scheduling:
   "soft" anti-affinity.  DS pods will be scheduled on the same node if the scheduler is not able to fulfill the request.
 
 
-## Volume Snapshots (Preview)
+## Volume Snapshots (Preview ONLY)
 
 Beginning in Kubernetes 1.20, [Volume Snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) are generally
 available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image. This feature
@@ -271,7 +271,7 @@ spec:
     name: my-cool-snap-1
 ```
 
-## Multi-cluster
+## Multi-cluster (Preview)
 
 DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
 DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:
@@ -301,3 +301,38 @@ Spec:
     clusterIdentifier: "eu"
     mcsEnable: true
 ```
+
+## Backup and Restore to LDIF (Preview)
+
+The operator now supports two new Custom  Resources:
+
+* [DirectoryBackup])(hack/ds-backup.yaml)
+* [DirectoryRestore](hack/ds-restore.yaml)
+
+
+These CRs are used to create LDIF exports and restore them again.
+
+Taking a DirectoryBackup does the following:
+
+* Snapshots and then clones a PVC with the contents of the directory data.
+* Runs a directory server binary pod, mounting that PVC
+* Exports the data in LDIF format to another pvc
+
+When the process concludes, the pvc with the LDIF data can be further processed. For example
+you can mount that pvc on a pod that will export the data to GCS or S3.
+
+Deletiing the `DirectoryBackup` CR will the job and volumesnapshot, but will leave the backup pvc untouched.
+
+Taking a DirectoryRestore does the following:
+* Creates a new 'data' pvc to hold the restored directory data
+* Runs a job that mounts an existing ldif backup PVC (likely the one created by a DirectoryBackup run) and
+ performs an LDIF import into the directory data pvc.
+* Creates a volume snapshot of the directory data pvc
+
+On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance.
+Set the `spec.initializeFromSnapshotName` to the snapshot name to create a new DS cluster from the recovered data.
+
+For day to day backup of directory data, prefer to use tools such as velero.io. Ldif export and import
+is useful to validate the integrity of the database, and for long term archival storage where a text based
+format is preferred.
+

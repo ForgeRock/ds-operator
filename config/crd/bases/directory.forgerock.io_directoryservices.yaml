@@ -38,30 +38,11 @@ spec:
           spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
-              backup:
-                description: Backup
-                properties:
-                  cron:
-                    type: string
-                  enabled:
-                    type: boolean
-                  path:
-                    type: string
-                  purgeCron:
-                    default: 40 0 * * *
-                    type: string
-                  purgeHours:
-                    default: 2400
-                    format: int32
-                    type: integer
-                  secretName:
-                    default: cloud-storage-credentials
-                    type: string
-                required:
-                - cron
-                - enabled
-                - path
-                type: object
+              debug:
+                default: false
+                description: If debug is true, debug sidecar containers will be injected
+                  into the pod.
+                type: boolean
               groupID:
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
@@ -157,7 +138,7 @@ spec:
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
                         description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                       requests:
                         additionalProperties:
@@ -169,7 +150,7 @@ spec:
                         description: 'Requests describes the minimum amount of compute
                           resources required. If Requests is omitted for a container,
                           it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                 required:
@@ -195,7 +176,7 @@ spec:
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
                     description: 'Limits describes the maximum amount of compute resources
-                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                   requests:
                     additionalProperties:
@@ -207,24 +188,8 @@ spec:
                     description: 'Requests describes the minimum amount of compute
                       resources required. If Requests is omitted for a container,
                       it defaults to Limits if that is explicitly specified, otherwise
-                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
-                type: object
-              restore:
-                description: Restore
-                properties:
-                  enabled:
-                    type: boolean
-                  path:
-                    description: Path to the backup location (could be a gcp or s3
-                      bucket)
-                    type: string
-                  secretName:
-                    default: cloud-storage-credentials
-                    type: string
-                required:
-                - enabled
-                - path
                 type: object
               snapshots:
                 description: Snapshots
@@ -339,24 +304,6 @@ spec:
                     uid:
                       description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                       type: string
-                  type: object
-                type: array
-              backupStatus:
-                items:
-                  description: DirectoryBackupStatus provides the status of the backup
-                  properties:
-                    endTime:
-                      type: string
-                    startTime:
-                      description: note DS returns these as string values. For status
-                        is ok
-                      type: string
-                    status:
-                      type: string
-                  required:
-                  - endTime
-                  - startTime
-                  - status
                   type: object
                 type: array
               currentReplicas:

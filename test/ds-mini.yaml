@@ -41,13 +41,13 @@ spec:
   # The name "latest" is reserved. It signifies to the operator
   # to find the name of the latest snapshot that was taken by the operator . If you
   # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
-  # initializeFromSnapshotName: "latest"
+  # initializeFromSnapshotName: "ds-restore"
 
   # Optional - Configures the operator to automatically take snapshots
   snapshots:
     enabled: true
-    # Take a snapshot every 30 minutes
-    periodMinutes: 2
+    # Take a snapshot every N minutes
+    periodMinutes: 1
     # Keep this many snapshots. Older snapshots will be deleted
     snapshotsRetained: 2
     # This defaults to ds-snapshot-class if not specified

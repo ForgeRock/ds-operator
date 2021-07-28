@@ -43,11 +43,20 @@ type DirectoryServiceSpec struct {
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
 	GroupID string `json:"groupID,omitempty"`
 
+	// If debug is true, debug sidecar containers will be injected into the pod.
+	// +kubebuilder:default=false
+	Debug bool `json:"debug,omitempty"`
+
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,omitempty"`
+
+	// If specified, create the PVC from the volume snapshot specified in the name.
+	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
+	// +kubebuilder:validation:Optional
+	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
 
 	// Truststore - for mTLS connections
 	TrustStore TrustStore `json:"truststore,omitempty"`
@@ -55,20 +64,11 @@ type DirectoryServiceSpec struct {
 	// +kubebuilder:default:="100Gi"
 	Storage string `json:"storage"`
 
-	// If specified, create the PVC from the volume snapshot specified in the name.
-	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
-	// +kubebuilder:validation:Optional
-	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
-
 	// +kubebuilder:validation:Optional
 	StorageClassName string `json:"storageClassName,omitempty"`
 
 	// Snapshots
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
-	// Backup
-	Backup DirectoryBackup `json:"backup,omitempty"`
-	// Restore
-	Restore DirectoryRestore `json:"restore,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
 
@@ -118,46 +118,15 @@ type TrustStore struct {
 	Create bool `json:"create,omitempty"`
 }
 
-// DirectoryBackup defines how and where to backup DS to
-type DirectoryBackup struct {
-	Enabled bool   `json:"enabled,required"`
-	Path    string `json:"path,required"`
-	Cron    string `json:"cron,required"`
-	// +kubebuilder:default:=cloud-storage-credentials
-	SecretName string `json:"secretName,omitempty"`
-	//  +kubebuilder:default:=2400
-	PurgeHours int32 `json:"purgeHours,omitempty"`
-	// +kubebuilder:default:="40 0 * * *"
-	PurgeCron string `json:"purgeCron,omitempty"`
-}
-
-// DirectoryRestore defines how to restore a new directory from a backup
-type DirectoryRestore struct {
-	Enabled bool `json:"enabled,required"`
-	// Path to the backup location (could be a gcp or s3 bucket)
-	Path string `json:"path,required"`
-	// +kubebuilder:default:=cloud-storage-credentials
-	SecretName string `json:"secretName,omitempty"`
-}
-
 // DirectoryServiceStatus defines the observed state of DirectoryService
 type DirectoryServiceStatus struct {
 	// +optional
 	Active                             []corev1.ObjectReference `json:"active,omitempty"`
 	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
 	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
-	BackupStatus                       []DirectoryBackupStatus  `json:"backupStatus,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
 	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`
-}
-
-// DirectoryBackupStatus provides the status of the backup
-type DirectoryBackupStatus struct {
-	// note DS returns these as string values. For status is ok
-	StartTime string `json:"startTime"`
-	EndTime   string `json:"endTime"`
-	Status    string `json:"status"`
 }
 
 type SnapshotStatus struct {
