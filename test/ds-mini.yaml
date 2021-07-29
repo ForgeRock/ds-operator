@@ -6,6 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
+spec:
   # TODO; This test image is for PEM keystore support
   image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
   # The number of DS servers in the topology

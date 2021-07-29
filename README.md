@@ -69,7 +69,7 @@ Below is a sample deployment session
 kubectl apply -f hack/secret_agent.yaml
 
 # Alternatively, using static secrets:
-# kuebectl apply -f hack/secrets.yaml
+# kubectl apply -f hack/secrets.yaml
 
 kubectl get secrets
 
