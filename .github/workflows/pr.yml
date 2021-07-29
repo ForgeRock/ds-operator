@@ -58,10 +58,7 @@ jobs:
       run: |
         make install
         make deploy-debug
-        sleep 20
-        kubectl -n fr-system describe pod
         kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 120s
-
 
     - name: deploy directory service
       shell: bash
