@@ -28,6 +28,7 @@ While the directory needs to run in Kubernetes, it is much easier to develop the
 ```bash
 # See below for dev mode explanation
 export DEV_MODE=true
+export DEBUG_CONTAINERS=true
 make install
 make run
 # In another window...
@@ -36,13 +37,13 @@ kubectl scale directoryservice/ds --replicas=2
 kubectl delete -f hack/ds.yaml
 ```
 
-### Development mode
+### Development and Debug modes
 
 
-Development mode enables two features:
+Development /Debug mode enables two features:
 
-* The ldap connection to the pod uses localhost
-* Debug containers will be injected into the DS pods
+* export DEV_MODE=true: The ldap connection to the pod uses localhost
+* export DEBUG_CONTAINER=true: Debug containers will be injected into the DS pods
 
 
 When testing out of cluster, the controller on your desktop needs to open ldap connections to the directory that is
@@ -57,7 +58,7 @@ kubectl port-forward ds-idrepo-0 1636
 This allows the operator running on your desktop to communicate with the directory server. This is needed
 for any LDAP functionality such as setting application passwords.
 
-DEV_MODE also injects debug containers into the DS pods. Minikube uses the hostpath csi provisioner to test
+DEBUG_CONTAINERS injects debug containers into the DS pods. Minikube uses the hostpath csi provisioner to test
 volume snapshots. The hostpath provisioner does not `chmod`  volumes to the `forgerock` user, resulting
 in permission error when trying to write to the data volume. In dev mode, a debug init container
 performs a `chown -R forgerock:0` to the data volume to correct this. This workaround is only needed when using

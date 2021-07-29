@@ -7,11 +7,13 @@ on:
     branches: [ master ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: satackey/action-docker-layer-caching@v0.0.11
+      # Ignore the failure of a step and avoid terminating the job.
+      continue-on-error: true
 
     - name: Set up Go
       uses: actions/setup-go@v2
@@ -33,14 +35,15 @@ jobs:
         minikube addons enable volumesnapshots
         kubectl apply -f hack/minikube-volume-snap-class.yaml
 
-    # TODO: Debug this. This is faster at creating the docker image, but it does not load it
-    # into the docker cache used by minikube
-    # - name: create docker image
-    #   uses: goreleaser/goreleaser-action@v2
-    #   with:
-    #     args: --snapshot --rm-dist
-    #   env:
-    #     IMG: gcr.io/engineering-devops/ds-operator:latest
+
+    #  With the docker-layer caching this is quite fast
+    - name: build docker image
+      shell: bash
+      run: |
+          # eval $(minikube -p minikube docker-env)
+          docker build -f ./Dockerfile -t gcr.io/engineering-devops/ds-operator:latest .
+          minikube image load gcr.io/engineering-devops/ds-operator:latest
+
 
     # kind does not have the csi driver, so we need to use the minikube one for now
     # - name: setup kind
@@ -50,22 +53,13 @@ jobs:
     #     kind load docker-image gcr.io/engineering-devops/ds-operator:latest
     #     kubectl version
 
-
-    # This is slower, but it works.
-    - name: build docker image
-      shell: bash
-      run: |
-          eval $(minikube -p minikube docker-env)
-          docker build -f ./Dockerfile -t gcr.io/engineering-devops/ds-operator:latest .
-          docker images
-
-
     - name: deploy operator
       shell: bash
       run: |
         make install
-        make deploy
-        sleep 10
+        make deploy-debug
+        sleep 20
+        kubectl -n fr-system describe pod
         kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 120s
 
 
@@ -74,7 +68,7 @@ jobs:
       run: |
         kubectl apply -f hack/secrets.yaml
         kubectl apply -f test/ds-mini.yaml
-        sleep 30
+        # kubectl describe pod
         kubectl rollout status sts/ds-idrepo --watch --timeout 120s
         kubectl scale directoryservice/ds-idrepo --replicas=2
         kubectl rollout status sts/ds-idrepo --watch --timeout 120s
@@ -85,6 +79,3 @@ jobs:
 
 
   # TODO; Add ldap test, backup test, restore test
-
-
-

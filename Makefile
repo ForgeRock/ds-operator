@@ -42,6 +42,10 @@ deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/default | kubectl apply -f -
 
+deploy-debug: manifests
+	cd config/debug && kustomize edit set image controller=${IMG}
+	kustomize build config/debug | kubectl apply -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifest manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=config/crd/bases
