@@ -38,14 +38,11 @@ spec:
             properties:
               backupPVC:
                 properties:
-                  name:
-                    type: string
                   size:
                     type: string
                   storageClassName:
                     type: string
                 required:
-                - name
                 - size
                 - storageClassName
                 type: object
@@ -55,6 +52,14 @@ spec:
                 type: string
               image:
                 description: Docker Image for the directory server.
+                type: string
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
+                enum:
+                - Never
+                - IfNotPresent
+                - Always
                 type: string
               keystore:
                 description: Keystore references

@@ -67,6 +67,10 @@ Below is a sample deployment session
 # Create the required secrets using secret agent. If you get an error here check
 # to see that you have deployed secret agent.
 kubectl apply -f hack/secret_agent.yaml
+
+# Alternatively, using static secrets:
+# kuebectl apply -f hack/secrets.yaml
+
 kubectl get secrets
 
 # Deploy the sample directory instance
@@ -82,7 +86,7 @@ kubectl get pod
 kubectl scale directoryservice/ds-idrepo --replicas=2
 
 # You can edit the resource, or edit the ds.yaml and kubectl apply changes
-# Things you can change at runtime include the number of replicas, enable/disable of backup/restore
+# Things you can change at runtime include the number of replicas
 kubectl edit directoryservice/ds-idrepo
 
 # Delete the directory instance.
@@ -99,10 +103,9 @@ The directory service deployment creates a statefulset to run the directory serv
 
 The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project.
 
-
 Evaluation images have been built for you on gcr.io/forgeops-public/ds-idrepo. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
 
-Note that the operator is tranistioning from Java keystores to the use of PEM secrets. This work has not yet been merged into ForgeOps.
+Note that the operator is transitioning from Java keystores to the use of PEM secrets. This work has not yet been merged into ForgeOps.
 
 The operator assume the referenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
 
@@ -168,7 +171,7 @@ EOF
 * The StorageClass in the ds-operator deployment yaml must also use the CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
   create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). The example `hack/ds.yaml`  has been updated.
 
-### Initalizing the Directory server from a previous Volume Snapshot
+### Initializing the Directory server from a previous Volume Snapshot
 
 Edit the Custom Resource Spec (CR), and under spec, add the following:
 
@@ -321,7 +324,7 @@ Taking a DirectoryBackup does the following:
 When the process concludes, the pvc with the LDIF data can be further processed. For example
 you can mount that pvc on a pod that will export the data to GCS or S3.
 
-Deletiing the `DirectoryBackup` CR will the job and volumesnapshot, but will leave the backup pvc untouched.
+Deleting the `DirectoryBackup` CR will the job and volumesnapshot, but will leave the backup pvc untouched.
 
 Taking a DirectoryRestore does the following:
 * Creates a new 'data' pvc to hold the restored directory data
@@ -332,7 +335,7 @@ Taking a DirectoryRestore does the following:
 On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance.
 Set the `spec.initializeFromSnapshotName` to the snapshot name to create a new DS cluster from the recovered data.
 
-For day to day backup of directory data, prefer to use tools such as velero.io. Ldif export and import
+For day to day backup of directory data, prefer to use tools such as [velero.io](https://velero.io). Ldif export and import
 is useful to validate the integrity of the database, and for long term archival storage where a text based
 format is preferred.
 

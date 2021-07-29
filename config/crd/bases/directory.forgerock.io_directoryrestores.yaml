@@ -39,6 +39,14 @@ spec:
               image:
                 description: Docker Image for the directory server.
                 type: string
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
+                enum:
+                - Never
+                - IfNotPresent
+                - Always
+                type: string
               keystore:
                 description: Keystore references
                 properties:

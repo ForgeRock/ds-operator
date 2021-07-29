@@ -10,7 +10,6 @@ spec:
   # this DirectoryBackup is deleted. You can use this pvc to restore
   # LDIF data, or mount for further processing (example - export to S3, GCS, etc)
   backupPVC:
-    name: ds-backup-pvc
     storageClassName: csi-hostpath-sc
     size: 512Mi
 

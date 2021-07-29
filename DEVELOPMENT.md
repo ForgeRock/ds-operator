@@ -36,9 +36,18 @@ kubectl scale directoryservice/ds --replicas=2
 kubectl delete -f hack/ds.yaml
 ```
 
-When testing out of cluster, the controller on your desktop needs to open an ldap connection to the directory that is
+### Development mode
+
+
+Development mode enables two features:
+
+* The ldap connection to the pod uses localhost
+* Debug containers will be injected into the DS pods
+
+
+When testing out of cluster, the controller on your desktop needs to open ldap connections to the directory that is
 running in Kubernetes.
-The DEV_MODE variable  (see above) sets the operator connection to localhost:1636, instead of the Kubernetes
+Setting DEV_MODE=true makes the operator connect to localhost:1636, instead of the Kubernetes
 pod hostname (default.ds-idrepo-0.ds-idrepo.cluster.local, for example) In dev mode, port forward to the ds container:
 
 ```bash
@@ -46,16 +55,13 @@ kubectl port-forward ds-idrepo-0 1636
 ```
 
 This allows the operator running on your desktop to communicate with the directory server. This is needed
-for any LDAP functionality.
+for any LDAP functionality such as setting application passwords.
 
-
-## Design notes / philosophy
-
-* Avoid just reimplementing the kustomize deployment as an operator. The operator should make some
-  opionated choices about how DS gets deployed. Ideally covering most use cases, but not attempting to cover all.
-* Support bring your own secrets (secret agent) as well as operator generated secrets.
-* automate backup and restore, and eventually other administrative actions
-
+DEV_MODE also injects debug containers into the DS pods. Minikube uses the hostpath csi provisioner to test
+volume snapshots. The hostpath provisioner does not `chmod`  volumes to the `forgerock` user, resulting
+in permission error when trying to write to the data volume. In dev mode, a debug init container
+performs a `chown -R forgerock:0` to the data volume to correct this. This workaround is only needed when using
+the hostpath CSI provisioner.
 
 ## What works now
 
@@ -63,8 +69,8 @@ for any LDAP functionality.
 * headless service created
 * Deleting the CR properly cleans up the statefulset and service (owner refs are working OK). PVC is left behind - which is a good thing
 * Scale subresource support (`kubectl scale directoryservice/ds --replicas=2`)
-* Service account passwords are now suported. The operator can change the account passwords for AM, IDM, etc..
-* backup / restore implemented
+* Service account passwords are now supported. The operator can change the account passwords for AM, IDM, etc..
+* backup / restore to LDIF implemented (preview)
 * experimental ds proxy
 
 Updating the spec.image will update the statefulset and perform a rolling update. For example:
@@ -75,9 +81,8 @@ kubectl patch directoryservice/ds --type='json' \
 ```
 
 
-## Optional Features (Future Roadmap)
+## Future Directions
 
-* Snapshots using k8s snapshots when supported on all clouds (Kubernetes 1.18)
 * Patching strategy on DS image updates
 * SSL / client authentication
 * STS updates? See https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/#updating-statefulsets
@@ -85,15 +90,7 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 * Alerts?
  * Disk full alerts?
 * Tuning. How do we tune backend params, or is that a function of the docker image?
-* cli tool that can run commands in ds. For example, running dsconfig / dsbackup commands.  cli can grab the admin creds to make this simpler.
 
-## DS JIRAs to track
-
-* https://bugster.forgerock.org/jira/browse/OPENDJ-7502
-* https://bugster.forgerock.org/jira/browse/OPENDJ-7501
-* https://bugster.forgerock.org/jira/browse/OPENDJ-7352
-* https://bugster.forgerock.org/jira/browse/CLOUD-2666
-* https://bugster.forgerock.org/jira/browse/OPENDJ-5308 -  Task backend via REST
 
 ## Implementation Notes
 
