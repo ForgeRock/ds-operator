@@ -95,7 +95,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	pvc, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "", r.Scheme)
 
 	if err != nil {
-		log.Error(err, "PVC claim creation failed", "pvcName", db.Spec.BackupPVC.Name)
+		log.Error(err, "PVC claim creation failed", "pvcName", db.GetName())
 		return ctrl.Result{}, err
 	}
 
@@ -139,7 +139,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	args := []string{"/opt/opendj/scripts/ds-backup.sh"}
 	command := []string{}
 
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, command, args, db.Spec.Image, &db)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, command, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)

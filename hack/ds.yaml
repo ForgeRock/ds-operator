@@ -7,11 +7,13 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-
-  debug: true
-
   # TODO; This test image is for PEM keystore support
   image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+
+  # Optional - uses K8S default behavior if not provided
+  # imagePullPolicy: IfNotPresent
+
+
   # The number of DS servers in the topology
   replicas: 1
   # The resources assigned to each DS pod

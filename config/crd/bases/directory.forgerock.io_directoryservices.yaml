@@ -38,11 +38,6 @@ spec:
           spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
-              debug:
-                default: false
-                description: If debug is true, debug sidecar containers will be injected
-                  into the pod.
-                type: boolean
               groupID:
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
@@ -50,6 +45,14 @@ spec:
                 type: string
               image:
                 description: Docker Image for the directory server.
+                type: string
+              imagePullPolicy:
+                description: PullPolicy describes a policy for if/when to pull a container
+                  image
+                enum:
+                - Never
+                - IfNotPresent
+                - Always
                 type: string
               initializeFromSnapshotName:
                 description: If specified, create the PVC from the volume snapshot

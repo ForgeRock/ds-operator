@@ -8,6 +8,8 @@ minikube addons enable  csi-hostpath-driver
 minikube addons enable volumesnapshots
 
 kubectl apply -f hack/minikube-volume-snap-class.yaml
+kubectl apply -f hack/secrets.yaml
+
 
 make install
 

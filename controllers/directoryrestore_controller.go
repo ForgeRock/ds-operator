@@ -141,7 +141,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	command := []string{"/opt/opendj/scripts/ds-restore.sh"}
 	args := []string{}
 	// Create the restore Job
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Keystore, command, args, ds.Spec.Image, &ds)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Keystore, command, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy)
 
 	if err != nil {
 		log.Error(err, "Job create failed", "jobName", job.Name)

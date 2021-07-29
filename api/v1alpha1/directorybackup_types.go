@@ -26,11 +26,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type BackupPVC struct {
-	Name             string `json:"name"`
 	Size             string `json:"size"`
 	StorageClassName string `json:"storageClassName"`
 }
@@ -50,6 +50,10 @@ type DirectoryBackupSpec struct {
 
 	// Docker Image for the directory server.
 	Image string `json:"image"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,omitempty"`

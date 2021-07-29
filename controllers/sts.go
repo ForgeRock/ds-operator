@@ -228,7 +228,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
-							ImagePullPolicy: v1.PullIfNotPresent,
+							ImagePullPolicy: ds.Spec.ImagePullPolicy,
 							Args:            []string{"initialize-only"},
 							VolumeMounts:    volumeMounts,
 							Resources:       ds.DeepCopy().Spec.Resources,
@@ -239,7 +239,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 						{
 							Name:            "ds",
 							Image:           ds.Spec.Image,
-							ImagePullPolicy: v1.PullIfNotPresent,
+							ImagePullPolicy: ds.Spec.ImagePullPolicy,
 							Args:            []string{"start-ds"},
 							// Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
 							VolumeMounts: volumeMounts,
@@ -313,7 +313,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 
-	if ds.Spec.Debug {
+	if DevMode {
 		injectDebugContainers(stemplate, volumeMounts, ds.Spec.Image)
 	}
 

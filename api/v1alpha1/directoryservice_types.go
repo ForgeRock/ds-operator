@@ -1,6 +1,6 @@
 /*
 
-Copyright 2020 ForgeRock AS.
+Copyright 2021 ForgeRock AS.
 
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,9 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // DirectoryServiceSpec defines the desired state of DirectoryService
 type DirectoryServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
@@ -39,13 +36,13 @@ type DirectoryServiceSpec struct {
 	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
 	// DSType string `json:"dsType,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
 	// GroupID is the value used to identify this group of directory servers (default: "default")
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
 	GroupID string `json:"groupID,omitempty"`
-
-	// If debug is true, debug sidecar containers will be injected into the pod.
-	// +kubebuilder:default=false
-	Debug bool `json:"debug,omitempty"`
 
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
