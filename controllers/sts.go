@@ -313,7 +313,7 @@ func createDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 		},
 	}
 
-	if DevMode {
+	if DebugContainer {
 		injectDebugContainers(stemplate, volumeMounts, ds.Spec.Image)
 	}
 

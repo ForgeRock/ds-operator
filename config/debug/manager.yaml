@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: ds-operator
+  name: fr-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-operator
+  namespace: fr-system
+  labels:
+    control-plane: ds-operator
+spec:
+  selector:
+    matchLabels:
+      control-plane: ds-operator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: ds-operator
+    spec:
+      containers:
+      - command:
+        - /ds-operator
+        args:
+        - --enable-leader-election
+        image: controller:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DEBUG_CONTAINER
+          value: "true"
+        name: ds-operator
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 150Mi
+      terminationGracePeriodSeconds: 10

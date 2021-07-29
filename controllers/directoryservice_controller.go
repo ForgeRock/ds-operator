@@ -31,6 +31,10 @@ import (
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
 var DevMode = false
 
+// If DebugContainer is true, we inject debug init and sidecars into the DS pod.
+// This is needed to chown the hostpath CSI volumes to the forgerock user.
+var DebugContainer = false
+
 // These need to be vars (not constants) as we use them in Pod Security Context templates, and
 // Go wants a pointer to the var, not a const.
 var ForgeRockUser int64 = 11111
@@ -42,6 +46,9 @@ const LabelApplicationName = "ds"
 func init() {
 	if os.Getenv("DEV_MODE") == "true" {
 		DevMode = true
+	}
+	if os.Getenv("DEBUG_CONTAINER") == "true" {
+		DebugContainer = true
 	}
 }
 
