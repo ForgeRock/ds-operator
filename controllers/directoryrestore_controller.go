@@ -74,6 +74,8 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	requeueWhileJobRunning := true
+
 	// if the job has started, or possibly finished, update our status
 	if !restoreJob.ObjectMeta.CreationTimestamp.IsZero() {
 		// update CRD status
@@ -81,6 +83,9 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 		// Has the Restore Job completed?
 		if restoreJob.Status.CompletionTime != nil {
+
+			requeueWhileJobRunning = false
+
 			log.Info("Job completed at", "completionTime", restoreJob.Status.CompletionTime)
 			ds.Status.CompletionTimestamp = restoreJob.Status.CompletionTime
 
@@ -105,6 +110,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 							VolumeSnapshotClassName: &ds.Spec.VolumeSnapshotClassName,
 							Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &ds.Name},
 						}
+						return controllerutil.SetOwnerReference(&ds, &snap, r.Scheme)
 
 					} else {
 						log.V(8).Info("Snapshot exits")
@@ -114,9 +120,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}
 		} else {
 			// Job is not finished yet - come back later
-			log.Info("Restore Job status", "jobStatus", restoreJob.Status.Conditions)
-
-			return ctrl.Result{RequeueAfter: time.Second * 60}, nil
+			log.V(8).Info("Restore Job status", "jobStatus", restoreJob.Status.Conditions)
 		}
 	}
 
@@ -160,6 +164,12 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.Error(err, "Job create failed", "jobName", job.Name)
 		return ctrl.Result{}, err
 	}
+
+	// Job is still not done - come back later
+	if requeueWhileJobRunning {
+		return ctrl.Result{RequeueAfter: time.Second * 60}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 

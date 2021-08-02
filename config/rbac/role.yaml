@@ -91,6 +91,7 @@ rules:
   - get
   - patch
   - update
+  - watch
 - apiGroups:
   - directory.forgerock.io
   resources:
