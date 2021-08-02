@@ -13,7 +13,6 @@ spec:
   # Optional - uses K8S default behavior if not provided
   # imagePullPolicy: IfNotPresent
 
-
   # The number of DS servers in the topology
   replicas: 1
   # The resources assigned to each DS pod
@@ -23,14 +22,6 @@ spec:
       cpu: 250m
     limits:
       memory: 1024Mi
-
-
-  # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
-  # If the class is not specified, "default" is used. Your cluster
-  # must have the default storageClass admission controller enabled to use "standard".
-  # If snapshots are enabled, this must be a CSI driver.
-  # On GKE: storageClassName: standard-rwo or premium-rwo
-  # For minikube/kind: csi-hostpath-sc
 
 # The volume spec for the DS data. This is the same as the Kubernetes PVC volume spec.
   volumeClaimSpec:
@@ -51,6 +42,7 @@ spec:
       apiGroup: snapshot.storage.k8s.io
 
   # Optional - Configures the operator to automatically take snapshots
+  # You must be using a CSI volume driver.
   snapshots:
     enabled: true
     # Take a snapshot every 30 minutes
