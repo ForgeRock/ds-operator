@@ -35,10 +35,14 @@ var DevMode = false
 // This is needed to chown the hostpath CSI volumes to the forgerock user.
 var DebugContainer = false
 
-// These need to be vars (not constants) as we use them in Pod Security Context templates, and
+// These need to be vars (not constants) as we use them in templates, and
 // Go wants a pointer to the var, not a const.
 var ForgeRockUser int64 = 11111
 var RootGroup int64 = 0
+
+const (
+	SnapshotApiGroupString = "snapshot.storage.k8s.io"
+)
 
 // LabelApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 const LabelApplicationName = "ds"
