@@ -6,12 +6,13 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  # The pvc that will hold backup data. This will not be deleted when
-  # this DirectoryBackup is deleted. You can use this pvc to restore
-  # LDIF data, or mount for further processing (example - export to S3, GCS, etc)
-  backupPVC:
+  # The volume that holds the backup. The volume name will be the same as our metadata.name
+  volumeClaimSpec:
     storageClassName: csi-hostpath-sc
-    size: 512Mi
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 512Mi
 
   # Backup in ldif format if true. If false, use ds binary backup.
   # Currently only ldif is supported.

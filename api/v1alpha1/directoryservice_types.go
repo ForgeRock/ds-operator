@@ -50,19 +50,11 @@ type DirectoryServiceSpec struct {
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 
-	// If specified, create the PVC from the volume snapshot specified in the name.
-	// If the name "latest" is used - attempt to calculate the latest snapshot the operator took.
-	// +kubebuilder:validation:Optional
-	InitializeFromSnapshotName string `json:"initializeFromSnapshotName"`
-
 	// Truststore - for mTLS connections
 	TrustStore TrustStore `json:"truststore,omitempty"`
 
-	// +kubebuilder:default:="100Gi"
-	Storage string `json:"storage"`
-
-	// +kubebuilder:validation:Optional
-	StorageClassName string `json:"storageClassName,omitempty"`
+	// +kubebuilder:validation:Required
+	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
 	// Snapshots
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`

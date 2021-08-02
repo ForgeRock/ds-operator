@@ -27,7 +27,6 @@ import (
 
 // DirectoryRestoreSpec defines the desired state of DirectoryRestore
 type DirectoryRestoreSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	SourcePVCName string `json:"sourcePvcName,required"`
@@ -41,12 +40,10 @@ type DirectoryRestoreSpec struct {
 	// Keystore references
 	Keystore DirectoryKeystores `json:"keystore,required"`
 
-	RestorePVC RestorePVC `json:"restore,required"`
-}
+	// +kubebuilder:validation:Required
+	VolumeClaimSpec *corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
-type RestorePVC struct {
-	Size                    string `json:"size"`
-	StorageClassName        string `json:"storageClassName"`
+	// +kubebuilder:validation:Required
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
 

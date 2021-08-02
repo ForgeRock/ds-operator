@@ -64,7 +64,7 @@ jobs:
       shell: bash
       run: |
         kubectl apply -f hack/secrets.yaml
-        kubectl apply -f test/ds-mini.yaml
+        kubectl apply -f hack/ds.yaml
         # kubectl describe pod
         kubectl rollout status sts/ds-idrepo --watch --timeout 120s
         kubectl scale directoryservice/ds-idrepo --replicas=2

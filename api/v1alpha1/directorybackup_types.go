@@ -30,23 +30,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type BackupPVC struct {
-	Size             string `json:"size"`
-	StorageClassName string `json:"storageClassName"`
-}
-
 // DirectoryBackupSpec defines the desired state of DirectoryBackup
 type DirectoryBackupSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	BackupPVC BackupPVC `json:"backupPVC,omitempty"`
 
 	// DirectoryPVCClaim is the PVC that contains the directory data. Make an array???
 	ClaimToBackup string `json:"claimToBackup"`
 
 	// Snapshot class name to use for all snapshots.
 	VolumeSnapshotClassName string `json:"volumeSnapshotClassName"`
+
+	// +kubebuilder:validation:Required
+	VolumeClaimSpec *corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
 	// Docker Image for the directory server.
 	Image string `json:"image"`
@@ -55,7 +50,7 @@ type DirectoryBackupSpec struct {
 	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
-	// Keystore references
+	// Keystore reference
 	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 }
 

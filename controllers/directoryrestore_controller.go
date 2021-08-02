@@ -23,9 +23,11 @@ import (
 	"time"
 
 	kbatch "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	klog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
@@ -96,22 +98,17 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				snap.Namespace = ds.GetNamespace()
 				ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
 					log.Info("CreateorUpdate snapshot", "name", snap.GetName())
-
-					fmt.Printf("volume %s", ds.Spec.RestorePVC.VolumeSnapshotClassName)
-
 					// does the snap not exist yet?
 					if snap.CreationTimestamp.IsZero() {
 						snap.ObjectMeta.Labels = createLabels(ds.GetName(), nil)
 						snap.Spec = snapshot.VolumeSnapshotSpec{
-							VolumeSnapshotClassName: &ds.Spec.RestorePVC.VolumeSnapshotClassName,
+							VolumeSnapshotClassName: &ds.Spec.VolumeSnapshotClassName,
 							Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &ds.Name},
 						}
 
 					} else {
 						log.V(8).Info("Snapshot exits")
 					}
-					fmt.Printf("snapshot %+v\n", snap)
-
 					return nil
 				})
 			}
@@ -129,8 +126,24 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	/// Create/update the PVC to hold the restored data
-	pvc, err := createPVC(ctx, r.Client, &ds, ds.Spec.RestorePVC.Size, ds.Spec.RestorePVC.StorageClassName, "", r.Scheme)
+	// Create/update the PVC to hold the restored data
+
+	var pvc v1.PersistentVolumeClaim
+	pvc.Name = ds.GetName()
+	pvc.Namespace = ds.GetNamespace()
+
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &pvc, func() error {
+		if pvc.CreationTimestamp.IsZero() {
+			log.Info("Creating restore pvc", "restorePvc", pvc.Name)
+			pvc.ObjectMeta.Labels = createLabels(pvc.Name, nil)
+			pvc.Annotations = map[string]string{
+				"pv.beta.kubernetes.io/gid": "0",
+			}
+			pvc.Spec = *ds.Spec.VolumeClaimSpec
+			return controllerutil.SetControllerReference(&ds, &pvc, r.Scheme)
+		}
+		return nil
+	})
 
 	if err != nil {
 		log.Error(err, "PVC claim creation failed", "pvcName", ds.Name)
