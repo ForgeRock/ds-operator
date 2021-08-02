@@ -27,7 +27,7 @@ test tests: generate fmt vet manifests
 # Run against the configured Kubernetes cluster in ~/.kube/config
 # Use --zap-log-level 10 to set detailed trace
 run: generate fmt vet manifests
-	go run ./main.go --zap-devel
+	DEBUG_CONTAINER=true DEV_MODE=true go run ./main.go --zap-devel
 
 # Install CRDs into a cluster
 install: manifests

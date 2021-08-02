@@ -43,7 +43,15 @@ spec:
   # The name "latest" is reserved. It signifies to the operator
   # to find the name of the latest snapshot that was taken by the operator . If you
   # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
-  # initializeFromSnapshotName: "latest"
+  initializeFromSnapshotName: "latest"
+
+
+
+  storage:
+    size:
+    stoagecass
+    initFromSnapshot:
+
 
   # Optional - Configures the operator to automatically take snapshots
   snapshots:
@@ -90,7 +98,6 @@ spec:
     # The secret MUST contain a key "ca.pem" that is the PEM formatted public cert to trust.
     secretName: "platform-ca"
     keyName: "ca.pem"
-
 
 
   #### Multi-cluster ####
