@@ -9,8 +9,9 @@ Basic features of the operator include:
 
 * Creation of StatefulSets, Services and Persistent volume claims for the directory
 * Configures replication by adding new directory pods to the replication topology
-* Backup and restore of the directory to cloud storage such as AWS S3, GCP bukets or Azure storage
 * Change service account passwords in the directory using a Kubernetes secret.
+* Take Volume Snapshots of the directory disk, and restore a directory based on a snapshot
+* Backup and Restore directory data to LDIF format.
 
 
 **Note: This is an early alpha project and should not be used in production.**
@@ -137,7 +138,7 @@ Beginning in Kubernetes 1.20, [Volume Snapshots](https://kubernetes.io/docs/conc
 available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image. This feature
 may also be available in earlier verions going back to 1.17.
 
-The ds-operator enables the following snapshot features:
+The ds-operator enables the following auto-snapshot features:
 
 * The ability to initialize directory server data from a previous volume snapshot. This process
 is much faster than recovering from backup media. The time to clone the disk will depend on the provider,
@@ -148,7 +149,7 @@ Use cases that are enabled by snapshots include:
 
 * Rapid rollback and recovery from the last snapshot point.
 * For testing, initializing the directory with a large amount of sample data saved in a previous snapshot.
-* In the future, snapshots can enable backups in a pod that is not serving traffic.
+
 
 ### Snapshot Prerequisites
 
@@ -171,27 +172,22 @@ EOF
 * The StorageClass in the ds-operator deployment yaml must also use the CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
   create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). The example `hack/ds.yaml`  has been updated.
 
-### Initializing the Directory server from a previous Volume Snapshot
+### Initializing the Directory Server from a Previous Volume Snapshot
 
-Edit the Custom Resource Spec (CR), and under spec, add the following:
+Edit the Custom Resource Spec (CR) and update the `dataSource` field to point to the snapshot.
+See [Create a PersistentVolumeClaim from a Volume Snapshot](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#create-persistent-volume-claim-from-volume-snapshot).
 
-```
-spec:
-  initializeFromSnapshotName: "latest"
-```
+The snapshot name can be any valid DS snapshot in the same namespace. The name `$(latest)` is special, and will
+be replaced by the latest auto-snapshot taken by the operator.
 
-The field `spec.initializeFromSnapshotName` is optional. If present, it is the name of a VolumeSnapshot that will be used
-to initialize the directory PVC claims. The special value "latest" will be interpreted by the operator as the
-"latest" snapshot that the operator made (assuming automatic snapshots are enabled).
 
-Notes:
+PVC claims that are already provisioned are not overwritten by Kubernetes. This setting only applies to the
+initialization of *new* PVC claims.
 
-* If a PVC claim is already provisioned, this setting has no effect. This setting only controls
-initialization of *new* PVC claims. Said another way, existing data will not be overwritten by the snapshot.
-* Changing this setting after deployment of a directory instance does not have any effect. This
+
+Changing this setting after deployment of a directory instance does not have any effect. This
 setting works by updating the volume claim template for the Kubernetes StatefulSet. Kubernetes
 does not allow the template to be updated after deployment.
-
 
 A "rollback" procedure is as follows:
 
@@ -226,7 +222,7 @@ Notes:
 * Only the first pvc (data-ds-idrepo-0 for example) is used for the snapshot. When initializing from a snapshot,
   all directory replicas start with the same data (see above)
 * Snapshots can be expensive. Do not snapshot overly frequently, and retain only the number of
-  snapshots that you need for availability.
+  snapshots that you need for availability. Many providers rate limit the number of snapshots that can be created.
 * Snapshots are not a replacement for offline backups. If the data on disk is corrupt, the snapshot will also
   be corrupt.
 * The very first snapshot will not happen until after the first `periodMinutes` (20 minutes in the example above).
@@ -307,7 +303,7 @@ Spec:
 
 ## Backup and Restore to LDIF (Preview)
 
-The operator now supports two new Custom  Resources:
+The operator supports two new Custom Resources:
 
 * [DirectoryBackup])(hack/ds-backup.yaml)
 * [DirectoryRestore](hack/ds-restore.yaml)
@@ -324,18 +320,17 @@ Taking a DirectoryBackup does the following:
 When the process concludes, the pvc with the LDIF data can be further processed. For example
 you can mount that pvc on a pod that will export the data to GCS or S3.
 
-Deleting the `DirectoryBackup` CR will the job and volumesnapshot, but will leave the backup pvc untouched.
+Deleting the `DirectoryBackup` CR will the job and volumesnapshot and the pvc.
 
 Taking a DirectoryRestore does the following:
+
 * Creates a new 'data' pvc to hold the restored directory data
 * Runs a job that mounts an existing ldif backup PVC (likely the one created by a DirectoryBackup run) and
  performs an LDIF import into the directory data pvc.
 * Creates a volume snapshot of the directory data pvc
 
-On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance.
-Set the `spec.initializeFromSnapshotName` to the snapshot name to create a new DS cluster from the recovered data.
+On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance (see above). )
 
 For day to day backup of directory data, prefer to use tools such as [velero.io](https://velero.io). Ldif export and import
 is useful to validate the integrity of the database, and for long term archival storage where a text based
 format is preferred.
-

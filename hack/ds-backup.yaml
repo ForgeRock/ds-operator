@@ -1,3 +1,4 @@
+# Backup to LDIF
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryBackup
 metadata:
@@ -6,12 +7,13 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  # The pvc that will hold backup data. This will not be deleted when
-  # this DirectoryBackup is deleted. You can use this pvc to restore
-  # LDIF data, or mount for further processing (example - export to S3, GCS, etc)
-  backupPVC:
+  # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
+  volumeClaimSpec:
     storageClassName: csi-hostpath-sc
-    size: 512Mi
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 512Mi
 
   # Backup in ldif format if true. If false, use ds binary backup.
   # Currently only ldif is supported.
@@ -28,6 +30,9 @@ spec:
   # The directory server binary that contains commands to export ldif or run dsbackup
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
   image:  gcr.io/forgeops-public/ds-idrepo:pem-backup-test
+
+  # Optional
+  # imagePullPolicy: IfNotPresent
 
 
   # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.

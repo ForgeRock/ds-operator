@@ -13,7 +13,6 @@ spec:
   # Optional - uses K8S default behavior if not provided
   # imagePullPolicy: IfNotPresent
 
-
   # The number of DS servers in the topology
   replicas: 1
   # The resources assigned to each DS pod
@@ -23,29 +22,27 @@ spec:
       cpu: 250m
     limits:
       memory: 1024Mi
-  # The amount of disk space for directory data
-  # Small for testing purposes
-  storage: 512Mi
-  # StorageClassName for the persistent volume claim. This should be fast SSD disk for directory server data
-  # If the class is not specified, "default" is used. Your cluster
-  # must have the default storageClass admission controller enabled to use "standard".
-  # The "standard" storageClass is available on minikube, GKE, and EKS
-  # storageClassName: standard-rwo
-  # For kind testing:
-  # storageClassName: standard
-  # For minikube
-  storageClassName: csi-hostpath-sc
 
-
-  # Optional: If snapshot name is provided, the directory PVCs will be
-  # initialized from the contents of the snapshot. They will NOT be initialized from the
-  # "prototype" backends.
-  # The name "latest" is reserved. It signifies to the operator
-  # to find the name of the latest snapshot that was taken by the operator . If you
-  # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
-  # initializeFromSnapshotName: "latest"
+# The volume spec for the DS data. This is the same as the Kubernetes PVC volume spec.
+  volumeClaimSpec:
+    storageClassName: csi-hostpath-sc
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 512Mi
+    # Optional: If dataSource is provided, the directory PVCs will be
+    # initialized from the contents of the snapshot. They will NOT be initialized from the "prototype" backends.
+    # The name "$(latest)" is reserved. It signifies to the operator
+    # to find the name of the latest auto snapshot that was taken . If you
+    # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
+    # If no automatic $(latest) snapshot can be found, the operator will create a new volume.
+    dataSource:
+      name: "$(latest)"
+      kind: VolumeSnapshot
+      apiGroup: snapshot.storage.k8s.io
 
   # Optional - Configures the operator to automatically take snapshots
+  # You must be using a CSI volume driver.
   snapshots:
     enabled: true
     # Take a snapshot every 30 minutes
@@ -90,7 +87,6 @@ spec:
     # The secret MUST contain a key "ca.pem" that is the PEM formatted public cert to trust.
     secretName: "platform-ca"
     keyName: "ca.pem"
-
 
 
   #### Multi-cluster ####

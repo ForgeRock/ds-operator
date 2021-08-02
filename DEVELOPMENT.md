@@ -39,9 +39,6 @@ kubectl delete -f hack/ds.yaml
 
 ### Development and Debug modes
 
-
-Development /Debug mode enables two features:
-
 * export DEV_MODE=true: The ldap connection to the pod uses localhost
 * export DEBUG_CONTAINER=true: Debug containers will be injected into the DS pods
 

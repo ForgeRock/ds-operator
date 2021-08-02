@@ -91,8 +91,27 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	/// Create/update the backup target PVC that holds the backup
-	pvc, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "", r.Scheme)
+	// Create the backup PVC
+	var pvc v1.PersistentVolumeClaim
+
+	pvc.Name = db.GetName() // Name is the same as this object
+	pvc.Namespace = db.GetNamespace()
+
+	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &pvc, func() error {
+		if pvc.CreationTimestamp.IsZero() {
+			log.Info("Creating backup pvc", "backupPvc", pvc.Name)
+			pvc.ObjectMeta.Labels = createLabels(pvc.Name, nil)
+			pvc.Annotations = map[string]string{
+				"pv.beta.kubernetes.io/gid": "0",
+			}
+			pvc.Spec = *db.Spec.VolumeClaimSpec
+			return controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
+		}
+		return nil
+	})
+
+	// /// Create/update the backup target PVC that holds the backup
+	// pvc, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "", r.Scheme)
 
 	if err != nil {
 		log.Error(err, "PVC claim creation failed", "pvcName", db.GetName())
@@ -126,10 +145,40 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Now create a PVC with the contents of the snapshot. This PVC will be mounted by the backup job.
-	// The Data pvc is named the same as the VolumeSnaphshot.
-	// TODO: Backup Size should be calulated from the size target PVC
+	// TODO: Backup Size should be calculated from the size target PVC
 	// The datasource of the PVC is set to be the snapshot we just created above.
-	dataPVC, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, snap.Name, r.Scheme)
+
+	var dataPVC v1.PersistentVolumeClaim
+
+	dataPVC.Name = snap.GetName() // Name is the same as the VolumeSnapshot
+	dataPVC.Namespace = snap.GetNamespace()
+
+	// TODO: Fix these
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, &dataPVC, func() error {
+		log.V(8).Info("CreateorUpdate PVC from snapshot", "pvcName", snap.GetName())
+
+		var apiGroup = SnapshotApiGroupString // so we can take address
+
+		// does the snap not exist yet?
+		if dataPVC.CreationTimestamp.IsZero() {
+			dataPVC.ObjectMeta.Labels = createLabels(snap.GetName(), nil)
+			dataPVC.Annotations = map[string]string{
+				"pv.beta.kubernetes.io/gid": "0",
+			}
+			// TODO: Fix ME - this should be a copy of the original pvc
+			// The size/class, etc. should come from the original pvc
+			dataPVC.Spec = *db.Spec.VolumeClaimSpec
+			dataPVC.Spec.DataSource = &v1.TypedLocalObjectReference{
+				Kind:     "VolumeSnapshot",
+				Name:     snap.GetName(),
+				APIGroup: &apiGroup,
+			}
+
+			return controllerutil.SetOwnerReference(&db, &dataPVC, r.Scheme)
+		} else {
+			return controllerutil.SetOwnerReference(&db, &dataPVC, r.Scheme)
+		}
+	})
 
 	if err != nil {
 		log.Error(err, "PVC creation failed", "pvcName", snap.Name, "dataPVC", dataPVC)
