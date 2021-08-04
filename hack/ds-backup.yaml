@@ -9,7 +9,7 @@ metadata:
 spec:
   # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
   volumeClaimSpec:
-    storageClassName: csi-hostpath-sc
+    storageClassName: fast
     accessModes: [ "ReadWriteOnce" ]
     resources:
       requests:
@@ -25,7 +25,7 @@ spec:
 
   # The snapshot class that will be used when snapshotting the above.
   # volumeSnapshotClassName: ds-snapshot-class
-  volumeSnapshotClassName: csi-hostpath-snapclass
+  volumeSnapshotClassName: ds-snapshot-class
 
   # The directory server binary that contains commands to export ldif or run dsbackup
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
