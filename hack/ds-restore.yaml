@@ -20,7 +20,7 @@ spec:
   # Spec for the pvc that will hold the restored data in DS JE format.
   # The PVC has the name metadata.name (ds-restore in this example).
   volumeClaimSpec:
-    storageClassName: csi-hostpath-sc
+    storageClassName: fast
     accessModes: [ "ReadWriteOnce" ]
     resources:
       requests:
@@ -29,7 +29,7 @@ spec:
   # The class to use when taking volume snapshots.
   # A snapshot named metadata.name will be created (ds-restore in this example)
   # This snapshot can be used to reinitialize a DS cluster.
-  volumeSnapshotClassName: csi-hostpath-snapclass
+  volumeSnapshotClassName: ds-snapshot-class
 
   # Secret that contains the ds pem keystore. This is needed to import data into JE
   # This keystore must match the keystore used to deploy the DirectoryService

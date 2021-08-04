@@ -7,7 +7,31 @@ minikube start
 minikube addons enable  csi-hostpath-driver
 minikube addons enable volumesnapshots
 
-kubectl apply -f hack/minikube-volume-snap-class.yaml
+# Create the volume snapshot class used in the samples.
+kubectl apply -f - <<EOF
+# Apply this on Minikube to create the VolumeSnapshotClass
+apiVersion: snapshot.storage.k8s.io/v1beta1
+kind: VolumeSnapshotClass
+metadata:
+  name: ds-snapshot-class
+driver: hostpath.csi.k8s.io
+deletionPolicy: Delete
+EOF
+
+kubectl create -f - <<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+parameters:
+  type: pd-ssd
+provisioner: hostpath.csi.k8s.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+EOF
+
+
+
 kubectl apply -f hack/secrets.yaml
 
 

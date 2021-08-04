@@ -25,7 +25,7 @@ spec:
 
 # The volume spec for the DS data. This is the same as the Kubernetes PVC volume spec.
   volumeClaimSpec:
-    storageClassName: csi-hostpath-sc
+    storageClassName: fast
     accessModes: [ "ReadWriteOnce" ]
     resources:
       requests:
@@ -45,7 +45,8 @@ spec:
   # You must be using a CSI volume driver.
   snapshots:
     enabled: true
-    # Take a snapshot every 30 minutes
+    # Take a snapshot every N minutes. The number here is VERY low for testing.
+    # On a production cluster, you should set this to something higher (30 minutes).
     periodMinutes: 2
     # Keep this many snapshots. Older snapshots will be deleted
     snapshotsRetained: 2
