@@ -61,6 +61,11 @@ type DirectoryServiceSpec struct {
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// The name of a configmap to mount on /opt/opendj/scripts
+	// Optional - if not provided no mount will be performed
+	ScriptConfigMapName string `json:"scriptConfigMapName,omitempty"`
+
 	// Multi-cluster
 	// +kubebuilder:validation:Optional
 	MultiCluster MultiCluster `json:"multiCluster,omitempty"`

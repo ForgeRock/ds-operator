@@ -189,6 +189,10 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              scriptConfigMapName:
+                description: The name of a configmap to mount on /opt/opendj/scripts
+                  Optional - if not provided no mount will be performed
+                type: string
               snapshots:
                 description: Snapshots
                 properties:

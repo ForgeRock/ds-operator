@@ -75,15 +75,17 @@ linkDataDirectories() {
     # List of directories which are expected to be found in the data directory.
     dataDirs="db changelogDb locks var config"
     mkdir -p data
+    ls -l data
     for d in ${dataDirs}; do
         if [[ ! -d "data/$d" ]]; then
             echo "initializing data/$d with the contents of the docker image"
             mv $d data
         else
             # the data/$d exists -we want to make sure it is used - not the one in the image
-            echo "Using data/$d instead of the docker image"
+            # rename the docker directory so the link works.
             mv $d $d.docker
         fi
+        echo "Linking $d to data/$d"
         ln -s data/$d
     done
 }
@@ -157,7 +159,15 @@ init)
     }
     linkDataDirectories
 
-    [[ -x scripts/setup.sh ]] && { echo "Executing setup script";  exec ./scripts/setup.sh; }
+    # If the user supplied a setup script, run it.
+    # Note - on K8S this is a symlink
+    if [[ -L scripts/setup ]]; then
+        echo "Executing user supplied setup"
+        /opt/opendj/scripts/setup
+        exit 0
+    fi
+    echo "Executing default-scripts/setup"
+    /opt/opendj/default-scripts/setup
     ;;
 
 # Special start for ds operator. Just needs to link the data directories

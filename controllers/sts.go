@@ -118,6 +118,65 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		},
 	}
 
+	var volumes = []v1.Volume{
+		{
+			Name: "secrets", // keystore and pin
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Keystore.SecretName,
+				},
+			},
+		},
+		{
+			Name: "admin-password",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Passwords["uid=admin"].SecretName,
+				},
+			},
+		},
+		{
+			Name: "monitor-password",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Passwords["uid=monitor"].SecretName,
+				},
+			},
+		},
+		{
+			Name: "pem-trust-certs",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName:  ds.Spec.TrustStore.SecretName,
+					DefaultMode: &defaultMode600,
+				},
+			},
+		},
+	}
+
+	var mode int32 = 0755 // mode to mount scripts
+
+	// If the user supplies a script configmap, mount it to /opt/opendj/scripts
+	if ds.Spec.ScriptConfigMapName != "" {
+
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "scripts",
+			MountPath: "/opt/opendj/scripts",
+		})
+
+		volumes = append(volumes, v1.Volume{
+			Name: "scripts",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: ds.Spec.ScriptConfigMapName,
+					},
+					DefaultMode: &mode,
+				},
+			},
+		})
+	}
+
 	var envVars = []v1.EnvVar{
 		{
 			Name: "POD_NAME",
@@ -245,41 +304,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 						FSGroup:   &RootGroup,
 						RunAsUser: &ForgeRockUser,
 					},
-					Volumes: []v1.Volume{
-						{
-							Name: "secrets", // keystore and pin
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Keystore.SecretName,
-								},
-							},
-						},
-						{
-							Name: "admin-password",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Passwords["uid=admin"].SecretName,
-								},
-							},
-						},
-						{
-							Name: "monitor-password",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Passwords["uid=monitor"].SecretName,
-								},
-							},
-						},
-						{
-							Name: "pem-trust-certs",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName:  ds.Spec.TrustStore.SecretName,
-									DefaultMode: &defaultMode600,
-								},
-							},
-						},
-					},
+					Volumes: volumes,
 				},
 			},
 			VolumeClaimTemplates: []v1.

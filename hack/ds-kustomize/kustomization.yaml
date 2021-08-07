@@ -1,0 +1,15 @@
+kind: Kustomization
+
+resources:
+- ds.yaml
+- secrets.yaml
+
+generatorOptions:
+ disableNameSuffixHash: true
+
+# Generate a configmap with our scripts
+configMapGenerator:
+- name: ds-script-config
+  files:
+  - setup.sh
+  - benchmark.sh
