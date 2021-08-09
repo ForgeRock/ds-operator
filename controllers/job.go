@@ -16,7 +16,7 @@ import (
 
 // Create a directory service job that can backup or restore data
 func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Scheme, dataPVC *v1.PersistentVolumeClaim, backupPVC string,
-	keystore *directoryv1alpha1.DirectoryKeystores, command, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy) (*batch.Job, error) {
+	keystore *directoryv1alpha1.DirectoryKeystores, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy) (*batch.Job, error) {
 
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
@@ -85,7 +85,7 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 								Image: image,
 								// to debug use this, and comment out Args
 								// Command: []string{"/bin/sh", "-c", "sleep 3000"},
-								Command:         command,
+								// Command:         command,
 								Args:            args,
 								ImagePullPolicy: pullPolicy,
 								// Sample command that is executed in the container:

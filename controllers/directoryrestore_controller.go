@@ -155,10 +155,9 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Note we override the docker-entrypoint.sh here for restore - invoking ds-restore.sh directly
-	command := []string{"/opt/opendj/scripts/ds-restore.sh"}
-	args := []string{}
+	args := []string{"restore"}
 	// Create the restore Job
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Keystore, command, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Keystore, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy)
 
 	if err != nil {
 		log.Error(err, "Job create failed", "jobName", job.Name)
