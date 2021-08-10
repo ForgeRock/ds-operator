@@ -9,7 +9,7 @@ metadata:
 spec:
   # TODO; This test image is for PEM keystore support
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image: dstest:latest
+  image: gcr.io/forgeops-public/ds-cdk:dev
   imagePullPolicy: IfNotPresent
 
   # Optional - uses K8S default behavior if not provided

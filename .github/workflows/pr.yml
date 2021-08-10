@@ -56,13 +56,21 @@ jobs:
         make deploy-debug
         kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 120s
 
+    ## Note: gcr.io/forgeops-public/ds-cdk:dev is assumed to be pullable
+    ## TODO: Move the build of this image to forgeops/
+
+
     - name: deploy directory service
       shell: bash
       run: |
         kubectl apply -f hack/secrets.yaml
         kubectl apply -f hack/ds.yaml
         # kubectl describe pod
-        kubectl rollout status sts/ds-idrepo --watch --timeout 120s
+        kubectl rollout status sts/ds-idrepo --watch --timeout 120s || {
+            echo "Failed to deploy directory service"
+            kubectl describe pod,pvc
+            exit 1
+        }
         kubectl scale directoryservice/ds-idrepo --replicas=2
         kubectl rollout status sts/ds-idrepo --watch --timeout 120s
         # wait for a couple of minutes for a snapshots. There should be at least one

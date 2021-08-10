@@ -300,7 +300,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: ds.Spec.ImagePullPolicy,
 							Args:            []string{"start"},
-							// Command:      []string{"sh", "-c", "echo debug pod running && sleep 1000"},
 							VolumeMounts: volumeMounts,
 							Resources:    ds.DeepCopy().Spec.Resources,
 							Env:          envVars,

@@ -247,9 +247,9 @@ init)
         init
         # Set the admin and monitor passwords from K8S secrets
         setAdminAndMonitorPasswords
-        # If the user supplies an index script, run it
-        # The default-script/add-index is a no-op.
-        executeScript add-index
+        # If the user supplies an post-init script, run it
+        # The default-script is a no-op.
+        executeScript post-init
         exit 0;
     }
     linkDataDirectories

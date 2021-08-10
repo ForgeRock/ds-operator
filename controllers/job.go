@@ -83,14 +83,8 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 							{
 								Name:  "ds-job",
 								Image: image,
-								// to debug use this, and comment out Args
-								// Command: []string{"/bin/sh", "-c", "sleep 3000"},
-								// Command:         command,
 								Args:            args,
 								ImagePullPolicy: pullPolicy,
-								// Sample command that is executed in the container:
-								//  bin/import-ldif --ldifFile /var/tmp/test.ldif --backendId idmRepo --offline
-
 								Env: []v1.EnvVar{
 									{Name: "NAMESPACE", Value: owner.GetNamespace()},
 									{Name: "BACKUP_TYPE", Value: "ldif"}, // this all we support right now

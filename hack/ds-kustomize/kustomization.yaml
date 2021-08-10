@@ -13,6 +13,6 @@ configMapGenerator:
   files:
   # - setup
   - repl-stat.sh
-  # - add-index
+  # - post-init
 
 
