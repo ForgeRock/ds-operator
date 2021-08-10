@@ -22,6 +22,8 @@ export OPENDJ_JAVA_ARGS=${OPENDJ_JAVA_ARGS:-${DEFAULT_OPENDJ_JAVA_ARGS}}
 export DS_GROUP_ID=${DS_GROUP_ID:-default}
 export DS_SERVER_ID=${DS_SERVER_ID:-${HOSTNAME:-localhost}}
 export DS_ADVERTISED_LISTEN_ADDRESS=${DS_ADVERTISED_LISTEN_ADDRESS:-$(hostname -f)}
+export DS_CLUSTER_TOPOLOGY=${DS_CLUSTER_TOPOLOGY:-""}
+export MCS_ENABLED=${MCS_ENABLED:-false}
 
 # If the advertised listen address looks like a Kubernetes pod host name of the form
 # <statefulset-name>-<ordinal>.<domain-name> then derived the default bootstrap servers names as
@@ -34,17 +36,61 @@ export DS_ADVERTISED_LISTEN_ADDRESS=${DS_ADVERTISED_LISTEN_ADDRESS:-$(hostname -
 #     userstore-1.userstore.jnkns-pndj-bld-pr-4958-1.svc.cluster.local
 #     ds-userstore-1.userstore.jnkns-pndj-bld-pr-4958-1.svc.cluster.local
 #
+# Additionally, in multi region deployments, build unique definitions based
+# on the regions, which are also part of the pod FQDN.
+# For example, givens regions "europe" and "us", european pods will have:
+# FQDN:              ds-cts-1.ds-cts-europe.namespace.svc.cluster.local
+# And we can compute:
+# Server ID:         ds-cts-1_europe
+# Group ID:          europe
+# Bootstrap servers: ds-cts-0.ds-cts-europe.namespace.svc.cluster.local,ds-cts-0.ds-cts-us.namespace.svc.cluster.local
+#
 if [[ "${DS_ADVERTISED_LISTEN_ADDRESS}" =~ [^.]+-[0-9]+\..+ ]]; then
+    # Domain is everything after the first dot
     podDomain=${DS_ADVERTISED_LISTEN_ADDRESS#*.}
+    # Name is everything up to the first dot
     podName=${DS_ADVERTISED_LISTEN_ADDRESS%%.*}
     podPrefix=${podName%-*}
 
     ds0=${podPrefix}-0.${podDomain}:8989
-    ds1=${podPrefix}-1.${podDomain}:8989
-    export DS_BOOTSTRAP_REPLICATION_SERVERS=${DS_BOOTSTRAP_REPLICATION_SERVERS:-${ds0},${ds1}}
+    if [ -n "${DS_CLUSTER_TOPOLOGY}" ]; then
+        # Service name is the first subdomain of the FQDN
+        podService=${podDomain%%.*}
+        podServicePrefix=${podService%-*}
+        newBootstrapServers=${ds0}
+        # Configure bootstrap servers to include replication service if MCS is enabled
+        if ${MCS_ENABLED}; then
+            podDomain=${podDomain/cluster/clusterset}
+            newBootstrapServers="${podPrefix}-0.${podService##*-}.${podDomain}:8989"
+        fi
+        for cluster in ${DS_CLUSTER_TOPOLOGY//,/ }; do
+            regionService=${podServicePrefix}-${cluster}
+            # If the service name is ours, then set our identifiers
+            # else add the first pod of the cluster to the bootstrap servers
+            if [ ${regionService} == ${podService} ]; then
+               export DS_GROUP_ID=${cluster}
+               export DS_SERVER_ID=${podName}_${cluster}
+               if ${MCS_ENABLED}; then
+                    DS_ADVERTISED_LISTEN_ADDRESS="${podPrefix}-0.${cluster}.${regionService}.${podDomain#*.}"
+               fi
+            else
+                if ${MCS_ENABLED}; then
+                    additional="${podPrefix}-0.${cluster}.${regionService}.${podDomain#*.}:8989"
+                else
+                    additional="${podPrefix}-0.${regionService}.${podDomain#*.}:8989"
+                fi
+                newBootstrapServers="${newBootstrapServers},${additional}"
+            fi
+        done
+        export DS_BOOTSTRAP_REPLICATION_SERVERS=${DS_BOOTSTRAP_REPLICATION_SERVERS:-${newBootstrapServers}}
+    else
+        ds1=${podPrefix}-1.${podDomain}:8989
+        export DS_BOOTSTRAP_REPLICATION_SERVERS=${DS_BOOTSTRAP_REPLICATION_SERVERS:-${ds0},${ds1}}
+    fi
 else
     export DS_BOOTSTRAP_REPLICATION_SERVERS=${DS_BOOTSTRAP_REPLICATION_SERVERS:-${DS_ADVERTISED_LISTEN_ADDRESS}:8989}
 fi
+
 
 
 validateImage() {
@@ -74,15 +120,15 @@ bootstrapDataFromImageIfNeeded() {
 linkDataDirectories() {
     # List of directories which are expected to be found in the data directory.
     dataDirs="db changelogDb locks var config"
+
     mkdir -p data
-    ls -l data
     for d in ${dataDirs}; do
         if [[ ! -d "data/$d" ]]; then
-            echo "initializing data/$d with the contents of the docker image"
+            echo "No data/$d directory present."
             mv $d data
         else
             # the data/$d exists -we want to make sure it is used - not the one in the image
-            # rename the docker directory so the link works.
+            # rename the docker directory so the link works as it will want to overwrite the $d name
             mv $d $d.docker
         fi
         echo "Linking $d to data/$d"
@@ -138,11 +184,55 @@ waitUntilSigTerm() {
     done
 }
 
+setUserPasswordInLdifFile() {
+    file=$1
+    dn=$2
+    pwd=$3
+
+    echo "Updating the \"${dn}\" password"
+
+    # Set the JVM args to avoid blowing up the container memory.
+    enc_pwd=$(OPENDJ_JAVA_ARGS="-Xmx256m -Djava.security.egd=file:/dev/./urandom" encode-password -s "PBKDF2-HMAC-SHA256" -c "${pwd}")
+
+    ldifmodify "${file}" > "${file}.tmp" << EOF
+dn: ${dn}
+changetype: modify
+replace: userPassword
+userPassword: ${enc_pwd}
+EOF
+    rm "${file}"
+    mv "${file}.tmp" "${file}"
+}
+
+# These should be set and passed in by K8S. We use the same defaults here.
+export DS_UID_ADMIN_PASSWORD_FILE="${DS_UID_ADMIN_PASSWORD_FILE:-/var/run/secrets/admin/dirmanager.pw}"
+export DS_UID_MONITOR_PASSWORD_FILE="${DS_UID_MONITOR_PASSWORD_FILE:-/var/run/secrets/monitor/monitor.pw}"
+
+setAdminAndMonitorPasswords() {
+    adminPassword="${DS_UID_ADMIN_PASSWORD:-$(cat "${DS_UID_ADMIN_PASSWORD_FILE}")}"
+    monitorPassword="${DS_UID_MONITOR_PASSWORD:-$(cat "${DS_UID_MONITOR_PASSWORD_FILE}")}"
+    setUserPasswordInLdifFile data/db/rootUser/rootUser.ldif       "uid=admin"   $adminPassword
+    setUserPasswordInLdifFile data/db/monitorUser/monitorUser.ldif "uid=monitor" $monitorPassword
+}
+
+
 init() {
     echo "initializing..."
     linkDataDirectories
     removeLocks
     upgradeDataAndRebuildDegradedIndexes
+}
+
+# Check for a use supplied script $1, and if not found use the default one.
+executeScript() {
+    # todo: -x does not seems with sym links in Kube
+    if [[ -L scripts/$1 ]]; then
+    echo "Executing user supplied script $1"
+        ./scripts/$1
+    else
+        echo "Executing default script $1"
+        ./default-scripts/$1
+    fi
 }
 
 CMD="${1:-help}"
@@ -153,21 +243,33 @@ case "$CMD" in
 init)
     [[ -d data/db ]] && {
         echo "data/ directory contains data. setup skipped";
-        # Init still needs to check the indexes.
+        # Init still needs to check link the data/ directory and rebuild indexes.
         init
+        # Set the admin and monitor passwords from K8S secrets
+        setAdminAndMonitorPasswords
+        # If the user supplies an index script, run it
+        # The default-script/add-index is a no-op.
+        executeScript add-index
         exit 0;
     }
     linkDataDirectories
+    executeScript setup
+    init
+    setAdminAndMonitorPasswords
+    ;;
 
-    # If the user supplied a setup script, run it.
-    # Note - on K8S this is a symlink
-    if [[ -L scripts/setup ]]; then
-        echo "Executing user supplied setup"
-        /opt/opendj/scripts/setup
-        exit 0
-    fi
-    echo "Executing default-scripts/setup"
-    /opt/opendj/default-scripts/setup
+backup)
+    [[ ! -d data/db ]] && {
+        echo "There is no data to backup!";
+        exit 1
+    }
+    init
+    executeScript backup
+    ;;
+
+restore)
+    init
+    executeScript restore
     ;;
 
 # Special start for ds operator. Just needs to link the data directories

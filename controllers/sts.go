@@ -177,6 +177,12 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		})
 	}
 
+	var groupID = "default"
+
+	if ds.Spec.GroupID != "" {
+		groupID = ds.Spec.GroupID
+	}
+
 	var envVars = []v1.EnvVar{
 		{
 			Name: "POD_NAME",
@@ -192,7 +198,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		},
 		{
 			Name:  "DS_GROUP_ID",
-			Value: ds.Spec.GroupID,
+			Value: groupID,
 		},
 		{
 			Name:  "DS_CLUSTER_TOPOLOGY",

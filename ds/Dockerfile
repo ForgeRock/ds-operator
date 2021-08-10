@@ -1,6 +1,8 @@
 FROM gcr.io/forgerock-io/ds/pit1:7.2.0-5d3bee3563e4d4b239aadd1362bcd411e775d8c9
 
-COPY --chown=forgerock:root . /opt/opendj/
+# COPY --chown=forgerock:root . /opt/opendj/
+COPY --chown=forgerock:root default-scripts /opt/opendj/default-scripts
+COPY --chown=forgerock:root ldif-ext /opt/opendj/ldif-ext
 
 # This creates sample "prototype" backends for the CDK deployment. This is not required
 # and is done to accelerate the cdk startup.

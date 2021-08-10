@@ -38,3 +38,10 @@ for B in "${BACK_ENDS[@]}"; do
         fi
     fi
 done
+
+echo "Backing up config directory"
+cp -r data/config $DEST
+
+
+echo "Backed up files to $DEST:"
+ls -lR $DEST

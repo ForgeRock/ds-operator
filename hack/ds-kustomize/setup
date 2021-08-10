@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
+# Sample setup script for DS. This is almost a 1-1 copy of the default script.
+# You can modify this script to fit your needs, and uncomment the line in kustmization.yaml to include it.
+# Study this carefully - there are some prerequisites that must be met in order for this to work.
+
+
 # Setup the directory server for the idrepo service.
-# Add in custom tuning, index creation, etc. to this file.
 
 # Profile and versions. If the schema for a profile has not been
 # changed - it may use an older version. For example, AM 7.1 still uses the 6.5 schema for configuration
@@ -11,6 +15,7 @@ AM_CTS="am-cts:6.5"
 DS_PROXIED_SERVER="ds-proxied-server:7.0"
 
 
+# Where the operator mounts the pem keys
 PEM_KEYS_DIRECTORY="pem-keys-directory"
 PEM_TRUSTSTORE_DIRECTORY="pem-trust-directory"
 
@@ -39,7 +44,6 @@ setup-profile --profile ${CONFIG} \
 #EOF
 
 
-set -e
 # These indexes are required for the combined AM/IDM repo
 dsconfig --offline --no-prompt --batch <<EOF
 create-backend-index \
@@ -160,8 +164,6 @@ EOF
 # EOF
 
 
-
-
 mkdir -p $PEM_TRUSTSTORE_DIRECTORY
 mkdir -p $PEM_KEYS_DIRECTORY
 
@@ -233,3 +235,29 @@ EOF
 
 
 echo "Done."
+
+
+## Relocate the backends in config.ldif
+
+echo "Updating config.ldif to use the data/ directory"
+cp config/config.ldif /tmp/config.ldif
+
+sed  -e 's|ds-cfg-db-directory: db|ds-cfg-db-directory: data/db|'  \
+     -e 's|ds-cfg-replication-db-directory: changelogDb|ds-cfg-replication-db-directory: data/changelogDb|' \
+     -e 's|ds-cfg-ldif-file: db/adminRoot/admin-backend.ldif|ds-cfg-ldif-file: data/db/adminRoot/admin-backend.ldif|' \
+     -e 's|ds-cfg-ldif-file: db/monitorUser/monitorUser.ldif|ds-cfg-ldif-file: data/db/monitorUser/monitorUser.ldif|' \
+      /tmp/config.ldif > config/config.ldif
+
+
+# The default docker config does not replicate schema.
+# We want schema to be replicated - this is appended to the config.ldif file
+cat <<EOF >>config/config.ldif
+
+dn: cn=cn=schema,cn=domains,cn=Multimaster synchronization,cn=Synchronization Providers,cn=config
+objectClass: top
+objectClass: ds-cfg-replication-domain
+cn: cn=schema
+ds-cfg-base-dn: cn=schema
+ds-cfg-enabled: true
+
+EOF

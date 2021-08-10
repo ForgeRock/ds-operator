@@ -17,15 +17,22 @@ SOURCE="/backup/$NAMESPACE/$BACKUP_TYPE"
     exit 1
 }
 
-# Call the entrypoint - to make sure the proto backends are restored
-/opt/opendj/docker-entrypoint.sh initialize-only
-
 echo "Restoring files found in $SOURCE:"
 ls -lR $SOURCE
 
 
 if [[ $BACKUP_TYPE == "ldif" ]]; then
-    LDIF=$(cd $SOURCE; ls *.ldif*)
+    echo "Restoring config.ldif"
+    # Move the docker supplied config to data/
+    mv config config.docker
+    # overwrite default config.ldif with the backup
+    cp  -r $SOURCE/config data
+    # Link the top level config so DS knows where to find it
+    ln -s data/config
+
+    LDIF=$(cd $SOURCE; ls *.ldif.gz)
+
+
     for F in $LDIF
     do
         # Strip the .ldif or .ldif.gz from the filename to get backend name
@@ -38,6 +45,7 @@ if [[ $BACKUP_TYPE == "ldif" ]]; then
             import-ldif --clearBackend --ldifFile "${SOURCE}/$F" --backendId ${BACKEND} --offline
         fi
     done
+
 else
     # use ds-restore command
 

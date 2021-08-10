@@ -11,5 +11,8 @@ generatorOptions:
 configMapGenerator:
 - name: ds-script-config
   files:
-  - setup.sh
-  - benchmark.sh
+  # - setup
+  - repl-stat.sh
+  # - add-index
+
+

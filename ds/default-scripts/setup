@@ -12,7 +12,7 @@ PEM_KEYS_DIRECTORY="pem-keys-directory"
 PEM_TRUSTSTORE_DIRECTORY="pem-trust-directory"
 
 # If we are running live in kubernetes, at this point the user has NOT provided their own setup script
-# We just restore the prototype idrepo setup and exit.
+# We just restore the prototype idrepo setup that is in teh docker image and exit.
 
 if [[ -r idrepo.tar.z ]]; then
         echo "No user supplied setup script found. Restoring the default idrepo configuration. This also includes a CTS backend"
@@ -21,7 +21,7 @@ if [[ -r idrepo.tar.z ]]; then
         exit 0
 fi
 
-# If the above proto.tar.z file does not exist, we are running in docker build time - so build the default configuration.
+# If the above proto.tar.z file does not exist, we are running in docker build time - so build the default idrepo configuration.
 
 ## This appends additional configuration to the bundled profiles ##
 chmod +w  template/setup-profiles/AM/config/6.5/base-entries.ldif \
@@ -176,8 +176,9 @@ EOF
 # EOF
 
 
-## Setup the PEM trustore. This is REQUIRED.
+### Setup the PEM trustore. This is REQUIRED. ######
 
+# The pods will have the pem stores mounted at this location.
 mkdir -p $PEM_TRUSTSTORE_DIRECTORY
 mkdir -p $PEM_KEYS_DIRECTORY
 
@@ -249,3 +250,28 @@ EOF
 
 
 echo "Done."
+
+
+## This patches the config.ldif to set the backends to the data/db directory.
+
+echo "Updating config.ldif to use the data/ directory"
+cp config/config.ldif /tmp/config.ldif
+
+sed  -e 's|ds-cfg-db-directory: db|ds-cfg-db-directory: data/db|'  \
+     -e 's|ds-cfg-replication-db-directory: changelogDb|ds-cfg-replication-db-directory: data/changelogDb|' \
+     -e 's|ds-cfg-ldif-file: db/adminRoot/admin-backend.ldif|ds-cfg-ldif-file: data/db/adminRoot/admin-backend.ldif|' \
+     -e 's|ds-cfg-ldif-file: db/monitorUser/monitorUser.ldif|ds-cfg-ldif-file: data/db/monitorUser/monitorUser.ldif|' \
+      /tmp/config.ldif > config/config.ldif
+
+
+# We want schema to be replicated and by default in docker it is not.
+cat <<EOF >>config/config.ldif
+
+dn: cn=cn=schema,cn=domains,cn=Multimaster synchronization,cn=Synchronization Providers,cn=config
+objectClass: top
+objectClass: ds-cfg-replication-domain
+cn: cn=schema
+ds-cfg-base-dn: cn=schema
+ds-cfg-enabled: true
+
+EOF
