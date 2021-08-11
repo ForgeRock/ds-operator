@@ -29,6 +29,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims/finalizers
+  - secrets/finalizers
+  - services/finalizers
+  verbs:
+  - update
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -40,6 +48,13 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments/finalizers
+  - statefulsets/finalizers
+  verbs:
+  - update
 - apiGroups:
   - apps
   resources:
@@ -82,6 +97,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs/finalizers
+  verbs:
+  - update
 - apiGroups:
   - batch
   resources:
@@ -167,6 +188,12 @@ rules:
   verbs:
   - get
   - patch
+  - update
+- apiGroups:
+  - directory.forgerock.io
+  resources:
+  - directoryservices/finalizers
+  verbs:
   - update
 - apiGroups:
   - snapshot.storage.k8s.io

@@ -71,14 +71,18 @@ var (
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices;directorybackup;directoryrestore,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status;directorybackup/status;directoryrestore/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets;services;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets/finalizers;services/finalizers;persistentvolumeclaims/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;create
 // +kubebuilder:rbac:groups=apps,resources=statefulsets/status,verbs=get;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments/finalizers;statefulsets/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;update;patch;delete;watch
+// +kubebuilder:rbac:groups=batch,resources=jobs/finalizers,verbs=update
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile loop for DS controller
