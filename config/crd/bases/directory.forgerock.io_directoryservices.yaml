@@ -39,6 +39,7 @@ spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
               groupID:
+                default: default
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
                   $(POD_NAME) to allocate each ds server to its own group.'
@@ -189,6 +190,10 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
+              scriptConfigMapName:
+                description: The name of a configmap to mount on /opt/opendj/scripts
+                  Optional - if not provided no mount will be performed
+                type: string
               snapshots:
                 description: Snapshots
                 properties:

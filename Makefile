@@ -42,6 +42,8 @@ deploy: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/default | kubectl apply -f -
 
+# Deploys controller -enabling debug side cars. Use when running with the csi hosthpath provisioner.
+# This runs an init container to chown the pvc volume to the forgerock user.
 deploy-debug: manifests
 	cd config/debug && kustomize edit set image controller=${IMG}
 	kustomize build config/debug | kubectl apply -f -

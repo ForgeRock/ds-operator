@@ -23,8 +23,6 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: fast
-parameters:
-  type: pd-ssd
 provisioner: hostpath.csi.k8s.io
 reclaimPolicy: Delete
 volumeBindingMode: Immediate

@@ -29,7 +29,8 @@ spec:
 
   # The directory server binary that contains commands to export ldif or run dsbackup
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image:  gcr.io/forgeops-public/ds-idrepo:pem-backup-test
+  image:  dstest:latest
+  imagePullPolicy: IfNotPresent
 
   # Optional
   # imagePullPolicy: IfNotPresent

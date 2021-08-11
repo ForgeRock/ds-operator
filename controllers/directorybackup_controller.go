@@ -185,10 +185,9 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	// Create the Pod/Job that runs the LDIF export
-	args := []string{"/opt/opendj/scripts/ds-backup.sh"}
-	command := []string{}
+	args := []string{"backup"}
 
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, command, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)

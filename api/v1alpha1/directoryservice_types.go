@@ -42,6 +42,8 @@ type DirectoryServiceSpec struct {
 
 	// GroupID is the value used to identify this group of directory servers (default: "default")
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
+	// Most users do not need to change this field.
+	// +kubebuilder:default:=default
 	GroupID string `json:"groupID,omitempty"`
 
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -60,6 +62,11 @@ type DirectoryServiceSpec struct {
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// The name of a configmap to mount on /opt/opendj/scripts
+	// Optional - if not provided no mount will be performed
+	ScriptConfigMapName string `json:"scriptConfigMapName,omitempty"`
 
 	// Multi-cluster
 	// +kubebuilder:validation:Optional

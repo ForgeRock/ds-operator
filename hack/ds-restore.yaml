@@ -12,10 +12,10 @@ spec:
   sourcePvcName: ds-backup
 
   # The directory server binary that contains commands to import ldif or run dsbackup
-  image:  gcr.io/forgeops-public/ds-idrepo:pem-backup-test
+  image:  dstest:latest
 
   # Opitional
-  # imagePullPolicy: IfNotPresent
+  imagePullPolicy: IfNotPresent
 
   # Spec for the pvc that will hold the restored data in DS JE format.
   # The PVC has the name metadata.name (ds-restore in this example).

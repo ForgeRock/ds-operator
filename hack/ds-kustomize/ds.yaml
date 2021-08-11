@@ -7,10 +7,10 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+  # TODO; This test image is for PEM keystore support
+  # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
   image: gcr.io/forgeops-public/ds-cdk:dev
-
-  # Optional - uses K8S default behavior if not provided
-  # imagePullPolicy: IfNotPresent
+  imagePullPolicy: IfNotPresent
 
   # The number of DS servers in the topology
   replicas: 1
@@ -37,13 +37,14 @@ spec:
     # If no automatic $(latest) snapshot can be found, the operator will create a new volume.
     dataSource:
       name: "$(latest)"
+      # name: "ds-restore"
       kind: VolumeSnapshot
       apiGroup: snapshot.storage.k8s.io
 
   # Optional - Configures the operator to automatically take snapshots
   # You must be using a CSI volume driver.
   snapshots:
-    enabled: true
+    enabled: false
     # Take a snapshot every N minutes. The number here is VERY low for testing.
     # On a production cluster, you should set this to something higher (30 minutes).
     periodMinutes: 2
@@ -87,6 +88,8 @@ spec:
     # The secret MUST contain a key "ca.pem" that is the PEM formatted public cert to trust.
     secretName: "platform-ca"
     keyName: "ca.pem"
+
+  scriptConfigMapName: ds-script-config
 
 
   #### Multi-cluster ####
