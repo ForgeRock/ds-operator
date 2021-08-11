@@ -42,6 +42,8 @@ type DirectoryServiceSpec struct {
 
 	// GroupID is the value used to identify this group of directory servers (default: "default")
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
+	// Most users do not need to change this field.
+	// +kubebuilder:default:=default
 	GroupID string `json:"groupID,omitempty"`
 
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`

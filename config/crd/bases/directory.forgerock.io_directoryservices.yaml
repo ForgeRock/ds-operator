@@ -39,6 +39,7 @@ spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
               groupID:
+                default: default
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
                   $(POD_NAME) to allocate each ds server to its own group.'

@@ -12,9 +12,6 @@ spec:
   image: gcr.io/forgeops-public/ds-cdk:dev
   imagePullPolicy: IfNotPresent
 
-  # Optional - uses K8S default behavior if not provided
-  # imagePullPolicy: IfNotPresent
-
   # The number of DS servers in the topology
   replicas: 1
   # The resources assigned to each DS pod

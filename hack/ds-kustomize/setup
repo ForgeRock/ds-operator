@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sample setup script for DS. This is almost a 1-1 copy of the default script.
-# You can modify this script to fit your needs, and uncomment the line in kustmization.yaml to include it.
+# You can modify this script to fit your needs, and uncomment the line in kustomization.yaml to include it.
 # Study this carefully - there are some prerequisites that must be met in order for this to work.
 
 
@@ -249,15 +249,10 @@ sed  -e 's|ds-cfg-db-directory: db|ds-cfg-db-directory: data/db|'  \
       /tmp/config.ldif > config/config.ldif
 
 
-# The default docker config does not replicate schema.
-# We want schema to be replicated - this is appended to the config.ldif file
-cat <<EOF >>config/config.ldif
-
-dn: cn=cn=schema,cn=domains,cn=Multimaster synchronization,cn=Synchronization Providers,cn=config
-objectClass: top
-objectClass: ds-cfg-replication-domain
-cn: cn=schema
-ds-cfg-base-dn: cn=schema
-ds-cfg-enabled: true
-
+# We want schema to be replicated and by default in docker it is not.
+# See https://stash.forgerock.org/projects/OPENDJ/repos/opendj/browse/opendj-server/resource/samples/docker/setup.sh#63-64
+dsconfig --offline --no-prompt --batch <<EOF
+create-replication-domain --provider-name "Multimaster synchronization" --domain-name "cn=schema" --set "base-dn:cn=schema" --set "enabled:&{ds.enable.schema.replication|true}"
+# TODO: Uncomment this once we support database encryption (OPENDJ-6598).
+# create-replication-domain --provider-name "Multimaster synchronization" --domain-name "cn=admin data" --set "base-dn:cn=admin data"
 EOF

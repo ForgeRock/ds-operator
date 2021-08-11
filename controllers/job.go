@@ -81,8 +81,8 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 						},
 						Containers: []v1.Container{
 							{
-								Name:  "ds-job",
-								Image: image,
+								Name:            "ds-job",
+								Image:           image,
 								Args:            args,
 								ImagePullPolicy: pullPolicy,
 								Env: []v1.EnvVar{

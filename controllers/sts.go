@@ -177,12 +177,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		})
 	}
 
-	var groupID = "default"
-
-	if ds.Spec.GroupID != "" {
-		groupID = ds.Spec.GroupID
-	}
-
 	var envVars = []v1.EnvVar{
 		{
 			Name: "POD_NAME",
@@ -198,7 +192,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		},
 		{
 			Name:  "DS_GROUP_ID",
-			Value: groupID,
+			Value: ds.Spec.GroupID,
 		},
 		{
 			Name:  "DS_CLUSTER_TOPOLOGY",
@@ -300,9 +294,9 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: ds.Spec.ImagePullPolicy,
 							Args:            []string{"start"},
-							VolumeMounts: volumeMounts,
-							Resources:    ds.DeepCopy().Spec.Resources,
-							Env:          envVars,
+							VolumeMounts:    volumeMounts,
+							Resources:       ds.DeepCopy().Spec.Resources,
+							Env:             envVars,
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
