@@ -12,7 +12,7 @@ spec:
   sourcePvcName: ds-backup
 
   # The directory server binary that contains commands to import ldif or run dsbackup
-  image:  dstest:latest
+  image:  gcr.io/forgeops-public/ds:dev
 
   # Opitional
   imagePullPolicy: IfNotPresent

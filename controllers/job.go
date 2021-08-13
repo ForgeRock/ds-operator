@@ -16,7 +16,7 @@ import (
 
 // Create a directory service job that can backup or restore data
 func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Scheme, dataPVC *v1.PersistentVolumeClaim, backupPVC string,
-	keystore *directoryv1alpha1.DirectoryKeystores, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy) (*batch.Job, error) {
+	keystore *directoryv1alpha1.DirectoryKeystores, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy, resources v1.ResourceRequirements) (*batch.Job, error) {
 
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
@@ -89,6 +89,7 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 									{Name: "NAMESPACE", Value: owner.GetNamespace()},
 									{Name: "BACKUP_TYPE", Value: "ldif"}, // this all we support right now
 								},
+								Resources: resources,
 								VolumeMounts: []v1.VolumeMount{
 									{
 										Name:      "backup",

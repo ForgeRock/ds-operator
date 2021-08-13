@@ -46,7 +46,9 @@ type DirectoryServiceSpec struct {
 	// +kubebuilder:default:=default
 	GroupID string `json:"groupID,omitempty"`
 
+	// Kubernetes resources assigned to the pod
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
 	// Keystore references

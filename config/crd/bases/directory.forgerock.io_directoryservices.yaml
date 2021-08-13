@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
   name: directoryservices.directory.forgerock.io
 spec:
@@ -42,7 +42,8 @@ spec:
                 default: default
                 description: 'GroupID is the value used to identify this group of
                   directory servers (default: "default") This field can be set to
-                  $(POD_NAME) to allocate each ds server to its own group.'
+                  $(POD_NAME) to allocate each ds server to its own group. Most users
+                  do not need to change this field.'
                 type: string
               image:
                 description: Docker Image for the directory server.
@@ -165,7 +166,7 @@ spec:
                 maximum: 8
                 type: integer
               resources:
-                description: ResourceRequirements describes the compute resource requirements.
+                description: Kubernetes resources assigned to the pod
                 properties:
                   limits:
                     additionalProperties:
