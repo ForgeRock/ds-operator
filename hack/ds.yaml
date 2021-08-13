@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  image: gcr.io/forgeops-public/ds-cdk:dev
+  image: gcr.io/forgeops-public/ds:dev
 
   # Optional - uses K8S default behavior if not provided
   # imagePullPolicy: IfNotPresent
