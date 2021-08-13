@@ -43,6 +43,9 @@ type DirectoryBackupSpec struct {
 	// +kubebuilder:validation:Required
 	VolumeClaimSpec *corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
+	// Kubernetes resources assigned to the pod
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// Docker Image for the directory server.
 	Image string `json:"image"`
 

@@ -30,6 +30,10 @@ type DirectoryRestoreSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	SourcePVCName string `json:"sourcePvcName,required"`
+
+	// Kubernetes resources assigned to the pod
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// Docker Image for the directory server.
 	Image string `json:"image"`
 

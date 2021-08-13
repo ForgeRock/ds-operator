@@ -29,7 +29,7 @@ spec:
 
   # The directory server binary that contains commands to export ldif or run dsbackup
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image:  dstest:latest
+  image:  gcr.io/forgeops-public/ds:dev
   imagePullPolicy: IfNotPresent
 
   # Optional
