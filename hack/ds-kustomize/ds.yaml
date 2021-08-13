@@ -9,7 +9,7 @@ metadata:
 spec:
   # TODO; This test image is for PEM keystore support
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image: gcr.io/forgeops-public/ds-cdk:dev
+  image: gcr.io/forgeops-public/ds:dev
   imagePullPolicy: IfNotPresent
 
   # The number of DS servers in the topology
