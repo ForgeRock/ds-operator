@@ -101,11 +101,11 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name:      "monitor-password",
 			MountPath: "/var/run/secrets/monitor",
 		},
-		{
-			Name:      "pem-trust-certs",
-			MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-			SubPath:   ds.Spec.TrustStore.KeyName,
-		},
+		// {
+		// 	Name:      "pem-trust-certs",
+		// 	MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
+		// 	SubPath:   ds.Spec.TrustStore.KeyName,
+		// },
 		// {
 		// 	Name: "secrets",
 		// 	MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
@@ -116,10 +116,20 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		// 	MountPath: "/opt/opendj/pem-keys-directory/master-key",
 		// 	SubPath:   "master-key-pair-combined.pem",
 		// },
+
+		{
+			Name:      "pem-trust-certs",
+			MountPath: "/opt/opendj/old-trust/trust.pem",
+			SubPath:   ds.Spec.TrustStore.KeyName,
+		},
+
 		{
 			Name:      "cert-manager-master-keypair",
 			MountPath: "/opt/opendj/cm",
-			// SubPath:   "master-key-pair-combined.pem",
+		},
+		{
+			Name:      "cert-manager-ssl-keypair",
+			MountPath: "/opt/opendj/cm-ssl",
 		},
 		{
 			Name:      "secrets",
@@ -134,6 +144,10 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		{
 			Name:      "pem-files-dir",
 			MountPath: "/opt/opendj/pem-keys-directory",
+		},
+		{
+			Name:      "pem-trust-dir",
+			MountPath: "/opt/opendj/pem-trust-directory",
 		},
 	}
 
@@ -181,7 +195,20 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			},
 		},
 		{
+			Name: "cert-manager-ssl-keypair",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName:  "ds-ssl-keypair",
+					DefaultMode: &defaultMode600,
+				},
+			},
+		},
+		{
 			Name:         "pem-files-dir",
+			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
+		},
+		{
+			Name:         "pem-trust-dir",
 			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
 		},
 	}
@@ -316,7 +343,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
 							// Command:         []string{"sh", "-c", "mkdir -p pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key && cp old-pem/ssl-key-pair pem-keys-directory/
-							Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key"},
+							Command: []string{"sh", "-c", "cat old-trust/trust.pem cm/ca.crt > pem-trust-directory/trust.pem && cat cm-ssl/tls.crt cm-ssl/tls.key > pem-keys-directory/ssl-key-pair && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key & sleep 60"},
 							// Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && sleep 60"},
 
 							VolumeMounts: volumeMounts,
