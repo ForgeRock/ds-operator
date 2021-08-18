@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+
+cat <<EOF >/var/tmp/addrate.template
+define suffix=ou=identities
+define maildomain=example.com
+
+branch: [suffix]
+objectClass: domain
+
+branch: ou=People,[suffix]
+objectclass: organizationalUnit
+subordinateTemplate: person
+
+template: person
+rdnAttr: uid
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+givenName: <first>
+sn: <last>
+cn: {givenName} {sn}
+initials: {givenName:1}<random:chars:ABCDEFGHIJKLMNOPQRSTUVWXYZ:1>{sn:1}
+employeeNumber: <sequential:100000>
+uid: user.{employeeNumber}
+mail: {uid}@[maildomain]
+userPassword: 5up35tr0ng
+telephoneNumber: <random:telephone>
+homePhone: <random:telephone>
+pager: <random:telephone>
+mobile: <random:telephone>
+street: <random:numeric:5> <file:streets> Street
+l: <file:cities>
+st: <file:states>
+postalCode: <random:numeric:5>
+postalAddress: {cn}${street}${l}, {st}  {postalCode}
+description: This is the description for {cn}.
+EOF
+
+
+pw=$(cat /var/run/secrets/admin/dirmanager.pw )
+addrate --noPurge --bindDN uid=admin  --port 1636 -Z --bindPassword $pw -X /var/tmp/addrate.template
+
+

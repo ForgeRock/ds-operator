@@ -35,11 +35,11 @@ spec:
     # to find the name of the latest auto snapshot that was taken . If you
     # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
     # If no automatic $(latest) snapshot can be found, the operator will create a new volume.
-    dataSource:
-      name: "$(latest)"
-      # name: "ds-restore"
-      kind: VolumeSnapshot
-      apiGroup: snapshot.storage.k8s.io
+    # dataSource:
+    #   name: "$(latest)"
+    #   # name: "ds-restore"
+    #   kind: VolumeSnapshot
+    #   apiGroup: snapshot.storage.k8s.io
 
   # Optional - Configures the operator to automatically take snapshots
   # You must be using a CSI volume driver.

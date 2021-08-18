@@ -106,15 +106,34 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
 			SubPath:   ds.Spec.TrustStore.KeyName,
 		},
+		// {
+		// 	Name: "secrets",
+		// 	MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+		// 	SubPath:   "ssl-key-pair-combined.pem",
+		// },
+		// {
+		// 	Name: "secrets",
+		// 	MountPath: "/opt/opendj/pem-keys-directory/master-key",
+		// 	SubPath:   "master-key-pair-combined.pem",
+		// },
+		{
+			Name:      "cert-manager-master-keypair",
+			MountPath: "/opt/opendj/cm",
+			// SubPath:   "master-key-pair-combined.pem",
+		},
 		{
 			Name:      "secrets",
-			MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
+			MountPath: "/opt/opendj/old-pem/ssl-key-pair",
 			SubPath:   "ssl-key-pair-combined.pem",
 		},
 		{
 			Name:      "secrets",
-			MountPath: "/opt/opendj/pem-keys-directory/master-key",
+			MountPath: "/opt/opendj/old-pem/master-key",
 			SubPath:   "master-key-pair-combined.pem",
+		},
+		{
+			Name:      "pem-files-dir",
+			MountPath: "/opt/opendj/pem-keys-directory",
 		},
 	}
 
@@ -151,6 +170,19 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					DefaultMode: &defaultMode600,
 				},
 			},
+		},
+		{
+			Name: "cert-manager-master-keypair",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName:  "ds-master-keypair",
+					DefaultMode: &defaultMode600,
+				},
+			},
+		},
+		{
+			Name:         "pem-files-dir",
+			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
 		},
 	}
 
@@ -278,6 +310,20 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					// Required for kubedns multi-cluster deployments
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
+
+						{
+							Name:            "fix-certs",
+							Image:           ds.Spec.Image,
+							ImagePullPolicy: v1.PullIfNotPresent,
+							// Command:         []string{"sh", "-c", "mkdir -p pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key && cp old-pem/ssl-key-pair pem-keys-directory/
+							Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key"},
+							// Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && sleep 60"},
+
+							VolumeMounts: volumeMounts,
+							// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
+							//SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
+						},
+
 						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
@@ -348,6 +394,8 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 	}
 	return *spec
 }
+
+var rootUser int64 = 0 // todo: remove me
 
 // Adds a debug init and sidecar containers.
 func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount, image string) {
