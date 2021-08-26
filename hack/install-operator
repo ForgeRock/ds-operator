@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#pipeline-ready
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_NAME="$(basename "$0")"
+
+MANIFEST=$(mktemp)
+pushd config/manager || { echo "Couldn't change to config/manager"; exit 1; }
+kustomize edit set image controller=${IMG}
+popd
+kustomize build config/default > "${MANIFEST}"
+i=0
+grep -i -A 4 -B 4 namespace "${MANIFEST}"
+
+while [ $i -le  30 ];
+do
+    if kubectl apply --filename=${MANIFEST} > /dev/null 2>&1;
+    then
+        echo "deploying ds operator complete"
+        break
+    fi
+    echo "deploying ds operator failed, trying again"
+    sleepTime=$(( $i * 2 ))
+    sleep $sleepTime
+
+    i=$(( $i + 1 ))
+done
+
+if ! kubectl rollout -n fr-system status deployment/ds-operator-ds-operator;
+then
+    echo "ds-operator failed to become healthy";
+    exit 1;
+fi
+
+while [ $i -le  30 ];
+do
+    if kubectl apply --filename=https://github.com/ForgeRock/secret-agent/releases/latest/download/secret-agent.yaml > /dev/null 2>&1;
+    then
+        echo "deploying secret agent."
+        break
+    fi
+    echo "deploying secret agent failed, trying again"
+    sleepTime=$(( $i * 2 ))
+    sleep $sleepTime
+
+    i=$(( $i + 1 ))
+done
+
+if ! kubectl rollout -n secret-agent-system status deployment/secret-agent-controller-manager;
+then
+    echo "secret-agent failed to become healthy.";
+    exit 1;
+fi

@@ -1,0 +1,37 @@
+# Restore LDIF files to a DS disk, and take a snapshot of that disk
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryRestore
+metadata:
+  name: ds-restore
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/part-of: forgerock
+spec:
+  # The source pvc that holds the ldif backup data to be restored.
+  # This is usually the "metadata.name" of a DirectoryBackup CR.
+  sourcePvcName: ds-backup
+
+  # The directory server binary that contains commands to import ldif or run dsbackup
+  image:  gcr.io/forgeops-public/ds:dev
+
+  # Opitional
+  imagePullPolicy: IfNotPresent
+
+  # Spec for the pvc that will hold the restored data in DS JE format.
+  # The PVC has the name metadata.name (ds-restore in this example).
+  volumeClaimSpec:
+    storageClassName: fast
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 2Gi
+
+  # The class to use when taking volume snapshots.
+  # A snapshot named metadata.name will be created (ds-restore in this example)
+  # This snapshot can be used to reinitialize a DS cluster.
+  volumeSnapshotClassName: ds-snapshot-class
+
+  # Secret that contains the ds pem keystore. This is needed to import data into JE
+  # This keystore must match the keystore used to deploy the DirectoryService
+  keystore:
+    secretName: ds

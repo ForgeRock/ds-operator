@@ -1,0 +1,83 @@
+#!/bin/bash
+set -ex
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TESTDIR=$SCRIPT_DIR/..
+echo "Test DS Backup DS Restore"
+kns="kubectl -n ${1}"
+
+$kns apply -f $TESTDIR/ds-nosnapshots.yaml
+ready=false
+attempt=0
+until $ready;
+do
+   if $kns rollout status sts/ds-idrepo --watch --timeout 300s;
+   then
+       break
+   fi
+   sleep 3
+   ((attempt++));
+   if [[ $attempt -gt 10 ]];
+   then
+       echo "exceeded timeout of 30 secs id repo object to be created"
+       exit 1
+   fi
+done
+
+ldapclient=$($kns get po -l app=debug-ldap --field-selector=status.phase==Running -o jsonpath='{.items[0].metadata.name}')
+if ! $kns exec $ldapclient -- bash /opt/scripts/ldap make-user-on-host ds-idrepo-0.ds-idrepo;
+then
+    echo "Couldn't create user"
+fi
+idrepo_0_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-0.ds-idrepo)
+idrepo_0=$(md5sum <<<$idrepo_0_results)
+
+
+# run ds-backup and ds-restore
+$kns apply -f $TESTDIR/ds-backup.yaml
+sleep 5
+$kns wait --for=condition=complete job/ds-backup --timeout=300s
+
+sleep 3
+if ! $kns get pvc ds-backup > /tmp/ds-backup-pvc.txt;
+then
+    echo "PVC couldn't be found"
+    cat /tmp/ds-backup-pvc.txt;
+fi
+
+$kns delete -f $TESTDIR/ds-nosnapshots.yaml
+$kns delete pvc data-ds-idrepo-0
+
+$kns apply -f $TESTDIR/ds-restore.yaml
+sleep 2
+$kns wait --for=condition=complete job/ds-restore --timeout=300s
+
+attempt=0
+snapReady="false"
+set +e
+until [[ $snapReady == "true" ]];
+do
+   if [[ $attempt -gt 100 ]];
+   then
+       echo "exceeded timeout of 300 secs for snapshot to be readyToUse"
+       exit 1
+   fi
+   sleep 3
+   snapReady=$($kns get volumesnapshot ds-restore -o jsonpath='{ .status.readyToUse }')
+   ((attempt++));
+done
+
+$kns apply -f $TESTDIR/ds-from-restore.yaml
+sleep 5
+$kns rollout status sts/ds-idrepo --watch --timeout 320s
+
+idrepo_0_snapshot_restore_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-0.ds-idrepo)
+idrepo_1_snapshot_restore_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-1.ds-idrepo)
+idrepo_0_snapshot_restore=$(md5sum <<<$idrepo_0_snapshot_restore_results)
+idrepo_1_snapshot_restore=$(md5sum <<<$idrepo_1_snapshot_restore_results)
+
+# make sure the record content are the same
+[[ "${idrepo_0}" != "${idrepo_0_snapshot_restore}" ]] \
+    && { echo "Found miss matched records from initial and snapshot snapshot_restored servers 0"; exit 1; }
+[[ "${idrepo_0}" != "${idrepo_1_snapshot_restore}" ]] \
+    && { echo "Found miss matched records from initial and snapshot snapshot_restored servers 1"; exit 1; }
+exit 0

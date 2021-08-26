@@ -1,0 +1,47 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TESTDIR=$SCRIPT_DIR/..
+echo "Test DS instance bootstrapping"
+kns="kubectl -n ${1}"
+
+$kns apply -f $TESTDIR/ds-nosnapshots.yaml
+ldapclient=$($kns get po -l app=debug-ldap --field-selector=status.phase==Running -o jsonpath='{.items[0].metadata.name}')
+
+sleep 5
+if ! $kns rollout status sts/ds-idrepo --watch --timeout 320s;
+then
+    echo "id repo didn't deploy"
+    exit 1
+fi
+
+if ! $kns exec $ldapclient -- bash /opt/scripts/ldap make-user-on-host ds-idrepo-0.ds-idrepo;
+then
+    echo "Couldn't create user"
+fi
+
+echo "DS instances rolled out, setting up data"
+idrepo_0_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap  get-user-on-host ds-idrepo-0.ds-idrepo)
+number_results=$(grep "#" <(echo "${idrepo_0_results}") | awk -F ": " '{print $2}')
+if [[ $number_results -ne 1 ]];
+then
+    echo "# Expected ds-idrepo-1 to have 1 entry found $number_results"
+fi
+echo "Scaling up and confirming data"
+$kns scale directoryservice/ds-idrepo --replicas=2
+sleep 5
+if ! $kns rollout status sts/ds-idrepo --watch --timeout 320s;
+then
+   echo "Scaling up didn't work"
+   exit 1
+fi
+
+idrepo_1_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-1.ds-idrepo)
+number_results=$(grep "#" <(echo "${idrepo_1_results}") | awk -F ": " '{print $2}')
+if [[ $number_results -ne 1 ]];
+then
+    echo "# Expected ds-idrepo-1 to have 1 entry found $number_results"
+fi
+$kns delete -f $TESTDIR/ds-nosnapshots.yaml
+$kns delete pvc --all
+echo "Completed testing bootrapping new instance"
+exit 0

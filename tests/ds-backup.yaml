@@ -1,0 +1,41 @@
+# Backup to LDIF
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryBackup
+metadata:
+  name: ds-backup
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/part-of: forgerock
+spec:
+  # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
+  volumeClaimSpec:
+    storageClassName: fast
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 2Gi
+
+  # Backup in ldif format if true. If false, use ds binary backup.
+  # Currently only ldif is supported.
+  # ldif: true
+
+  # The directory pvc to backup. This can be a "live" ds instance,
+  # assuming your snapshot provider can take "crash consistent" snapshots
+  claimToBackup: data-ds-idrepo-0
+
+  # The snapshot class that will be used when snapshotting the above.
+  # volumeSnapshotClassName: ds-snapshot-class
+  volumeSnapshotClassName: ds-snapshot-class
+
+  # The directory server binary that contains commands to export ldif or run dsbackup
+  # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+  image:  gcr.io/forgeops-public/ds:dev
+  imagePullPolicy: IfNotPresent
+
+  # Optional
+  # imagePullPolicy: IfNotPresent
+
+
+  # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.
+  keystore:
+    secretName: ds

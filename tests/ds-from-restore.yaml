@@ -1,0 +1,53 @@
+apiVersion: directory.forgerock.io/v1alpha1
+kind: DirectoryService
+metadata:
+  name: ds-idrepo
+  labels:
+    app.kubernetes.io/name: ds
+    app.kubernetes.io/testcase: ds-from-restore
+    app.kubernetes.io/part-of: forgerock
+spec:
+  image: gcr.io/forgeops-public/ds:dev
+  replicas: 2
+  resources:
+    requests:
+      memory: 900Mi
+      cpu: 250m
+    limits:
+      memory: 1024Mi
+  volumeClaimSpec:
+    storageClassName: fast
+    accessModes: [ "ReadWriteOnce" ]
+    resources:
+      requests:
+        storage: 2Gi
+    dataSource:
+      name: ds-restore
+      kind: VolumeSnapshot
+      apiGroup: snapshot.storage.k8s.io
+  snapshots:
+    enabled: false
+    periodMinutes: 2
+    snapshotsRetained: 2
+    volumeSnapshotClassName: ds-snapshot-class
+  passwords:
+    uid=admin:
+      secretName: ds-passwords
+      key: dirmanager.pw
+    uid=monitor:
+      secretName: ds-passwords
+      key: monitor.pw
+    uid=openam_cts,ou=admins,ou=famrecords,ou=openam-session,ou=tokens:
+      secretName: ds-env-secrets
+      key: AM_STORES_CTS_PASSWORD
+    uid=am-identity-bind-account,ou=admins,ou=identities:
+      secretName: ds-env-secrets
+      key: AM_STORES_USER_PASSWORD
+    uid=am-config,ou=admins,ou=am-config:
+      secretName: ds-env-secrets
+      key: AM_STORES_APPLICATION_PASSWORD
+  keystore:
+    secretName: ds
+  truststore:
+    secretName: "platform-ca"
+    keyName: "ca.pem"
