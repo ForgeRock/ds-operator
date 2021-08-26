@@ -1,0 +1,75 @@
+#!/bin/bash
+# Test Backup and Restore testing
+
+set -o pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TESTDIR=$SCRIPT_DIR/..
+
+kns="kubectl -n $1"
+
+read -r -d '' VS_TS_NAME <<'EOF'
+{{- range .items -}}
+    {{if .status.readyToUse -}}
+        {{ $ts := index .metadata.annotations "directory.forgerock.io/lastSnapshotTime" }}
+        {{- printf "%s %s\n" $ts .metadata.name -}}
+    {{end -}}
+{{end -}}'
+{{ if not .items }}0 notready{{end}}
+EOF
+#
+
+echo "Deploying periodic snapshot configuration."
+$kns apply -f $TESTDIR/ds-snapshots.yaml
+sleep 5
+if ! $kns rollout status sts/ds-idrepo --watch --timeout 320s;
+then
+    echo "idrepo didn't deploy"
+    exit 1
+fi
+echo "Deployment completed. idrepo ready"
+echo "Creating entry for testing."
+ldapclient=$($kns get po -l app=debug-ldap --field-selector=status.phase==Running -o jsonpath='{.items[0].metadata.name}')
+if ! $kns exec $ldapclient -- bash /opt/scripts/ldap make-user-on-host ds-idrepo-0.ds-idrepo;
+then
+    echo "Couldn't create user"
+fi
+created_ts=$(date --date="now 5 seconds" +%s)
+idrepo_0_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-0.ds-idrepo)
+idrepo_0=$(md5sum <<<$idrepo_0_results)
+echo $idrepo_0
+
+echo "idrepo ready for snapshot"
+
+
+snapshot_ts=0
+
+echo "Waiting for snapshot to be completed"
+until (( ${snapshot_ts} > ${created_ts} ));
+do
+    last_vs_ts_name=$($kns get volumesnapshots -o go-template="${VS_TS_NAME}" | sort | tail -n 1)
+    snapshot_ts=$(echo ${last_vs_ts_name} | cut -f1 -d ' ')
+    sleep 3
+done
+
+# remove ds and pvc
+$kns delete -f $TESTDIR/ds-snapshots.yaml
+$kns delete pvc --all
+
+# make sure DS and PVC are gone
+$kns get po ds-idrepo-0 && { echo "ds-idrepo-0 pod still exists"; exit 1; }
+$kns get pvc data-ds-idrepo-0 2>&1 /dev/null && { echo "ds-idrepo-0 data still exists"; exit 1; }
+
+# re deploy ds
+$kns apply -f $TESTDIR/ds-snapshots.yaml
+sleep 5
+$kns rollout status sts/ds-idrepo --watch --timeout 320s
+
+idrepo_0_restore_results=$($kns exec $ldapclient -- bash /opt/scripts/ldap get-user-on-host ds-idrepo-0.ds-idrepo)
+
+idrepo_0=$(md5sum <<<$idrepo_0_results)
+idrepo_0_restore=$(md5sum <<<$idrepo_0_restore_results)
+
+# make sure the record content are the same
+[[ "${idrepo_0}" != "${idrepo_0_restore}" ]] \
+    && { echo "Found miss matched records from initial and restored servers 0"; exit 1; }
+exit 0

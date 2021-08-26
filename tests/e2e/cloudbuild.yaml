@@ -1,0 +1,89 @@
+timeout: 1200s
+steps:
+- id: 'create-cluster'
+  name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    cd /workspace
+    ./tests/bin/cluster-up || echo "cluster exits"
+
+- id: 'build-images'
+  name: goreleaser/goreleaser
+  waitFor: ['-']
+  entrypoint: /bin/sh
+  dir: gopath/src/github.com
+  env: ['GOPATH=/workspace/gopath']
+  args:
+    - '-c'
+    - |-
+      ls -la /workspace
+      cd /workspace
+      make build IMG=gcr.io/engineering-devops/ds-operator:${SHORT_SHA}
+
+- id: 'push-operator-image'
+  name: 'gcr.io/cloud-builders/docker'
+  waitFor: ['build-images']
+  args:
+    - push
+    - gcr.io/engineering-devops/ds-operator:${SHORT_SHA}
+- id: 'deploy-ds-operator'
+  name: 'gcr.io/engineering-devops/skaffold'
+  waitFor: ['push-operator-image', 'create-cluster']
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    set -e
+    kustomize version
+    loc=$(gcloud --project engineering-devops container clusters list --filter='name:ds-operator-test' --format='value(location)')
+    gcloud container clusters get-credentials ds-operator-test --region=$$loc
+    export IMG=gcr.io/${PROJECT_ID}/ds-operator:${SHORT_SHA}
+    bash -x ./hack/install-operator
+- id: 'test-bootstrap'
+  name: 'gcr.io/engineering-devops/skaffold'
+  waitFor: ['deploy-ds-operator']
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    set -e
+    {
+        ./tests/bin/setup-ns test-ds-bootstrap
+        ./tests/e2e/test-bootstrap test-ds-bootstrap;
+    }
+- id: 'test-backup-restore'
+  name: 'gcr.io/engineering-devops/skaffold'
+  waitFor: ['deploy-ds-operator']
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    set -e
+    {
+        ./tests/bin/setup-ns test-ds-backup-restore
+        ./tests/e2e/test-backup-restore test-ds-backup-restore;
+    }
+- id: 'test-periodic-snaps'
+  name: 'gcr.io/engineering-devops/skaffold'
+  waitFor: ['deploy-ds-operator']
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    # set -e
+    # {
+    #     ./tests/bin/setup-ns test-periodic-snapshots
+    #     ./tests/e2e/test-periodic-snapshot test-periodic-snapshots;
+    # }
+    echo "not working"
+- id: 'delete-cluster'
+  name: 'gcr.io/cloud-builders/gcloud'
+  waitFor: ['test-periodic-snaps', 'test-bootstrap', 'test-backup-restore']
+  entrypoint: '/bin/bash'
+  args:
+  - '-c'
+  - |-
+    cd /workspace
+    ./tests/bin/cluster-down
