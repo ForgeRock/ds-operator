@@ -21,12 +21,16 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
 
-	//  Use in the security context only when testing using the hostpath provisioner
-	// The hostpath creates volumes owned by root - which the forgerock user can not access.
-	var rootUserOnlyForTesting int64 = 0
-
 	job.Name = owner.GetName()
 	job.Namespace = owner.GetNamespace()
+
+	user := ForgeRockUser
+	if DebugContainer {
+		// The hostpath creates volumes owned by root - which the forgerock user can not access.
+		// This for development of the operator minikube only.
+		log.V(8).Info("Debug container being configured, running as root.")
+		user = 0
+	}
 
 	_, err := ctrl.CreateOrUpdate(ctx, client, &job, func() error {
 		var err error
@@ -72,12 +76,9 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 						SecurityContext: &v1.PodSecurityContext{
 							SELinuxOptions: &v1.SELinuxOptions{},
 							WindowsOptions: &v1.WindowsSecurityContextOptions{},
-							// RunAsUser:      &ForgeRockUser,
-							// ****** FOR TESTING ONLY ****** TODO: Remove.
-							// TODO: Add a runtime flag to the controller to enable this "feature"
-							RunAsUser:  &rootUserOnlyForTesting,
-							RunAsGroup: &RootGroup,
-							FSGroup:    &RootGroup,
+							RunAsUser:      &user,
+							RunAsGroup:     &RootGroup,
+							FSGroup:        &RootGroup,
 						},
 						Containers: []v1.Container{
 							{
