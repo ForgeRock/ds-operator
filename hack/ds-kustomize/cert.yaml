@@ -19,7 +19,7 @@ spec:
       my-secret-annotation-1: "test"
       my-secret-annotation-2: "cert-manager-generated"
     labels:
-      my-secret-label: foo
+      app: ds-operator
 
   duration: 2160h # 90d
   renewBefore: 360h # 15d
@@ -42,12 +42,6 @@ spec:
   - "*.ds"
   - "*.ds-idrepo"
   - "*.ds-cts"
-    # - example.com
-    # - www.example.com
-  # uris:
-  #   - spiffe://cluster.local/ns/sandbox/sa/example
-  # ipAddresses:
-  #   - 192.168.0.5
   # Issuer references are always required.
   issuerRef:
     name: default-issuer
@@ -76,10 +70,9 @@ spec:
   # See https://github.com/jetstack/cert-manager/issues/4292.
   secretTemplate:
     annotations:
-      my-secret-annotation-1: "test"
       my-secret-annotation-2: "cert-manager-generated"
     labels:
-      my-secret-label: foo
+      app: ds-operator
 
   duration: 2160h # 90d
   renewBefore: 360h # 15d
@@ -100,14 +93,6 @@ spec:
   # At least one of a DNS Name, URI, or IP address is required.
   dnsNames:
   - "*.ds"
-  # - "*.ds-idrepo"
-  # - "*.ds-cts"
-    # - example.com
-    # - www.example.com
-  # uris:
-  #   - spiffe://cluster.local/ns/sandbox/sa/example
-  # ipAddresses:
-  #   - 192.168.0.5
   # Issuer references are always required.
   issuerRef:
     name: default-issuer

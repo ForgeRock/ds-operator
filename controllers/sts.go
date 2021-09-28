@@ -339,11 +339,13 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					InitContainers: []v1.Container{
 
 						{
+							// Init container that concats the cert-manager generated certs together. DS wants them in the same file.
+							// TODO: Put this logic in the entrypoint script. Check for USE_CERT_MANAGER?
 							Name:            "fix-certs",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: v1.PullIfNotPresent,
 							// Command:         []string{"sh", "-c", "mkdir -p pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key && cp old-pem/ssl-key-pair pem-keys-directory/
-							Command: []string{"sh", "-c", "cat cm-ssl/ca.crt > pem-trust-directory/trust.pem && cat cm-ssl/tls.crt cm-ssl/tls.key > pem-keys-directory/ssl-key-pair && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key & sleep 60"},
+							Command: []string{"sh", "-c", "cat cm-ssl/ca.crt > pem-trust-directory/trust.pem && cat cm-ssl/tls.crt cm-ssl/tls.key > pem-keys-directory/ssl-key-pair && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key"},
 							// Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && sleep 60"},
 
 							VolumeMounts: volumeMounts,
