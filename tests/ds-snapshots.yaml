@@ -25,16 +25,10 @@ spec:
       name: "$(latest)"
       kind: VolumeSnapshot
       apiGroup: snapshot.storage.k8s.io
-  volumeClaimSpec:
-    storageClassName: fast
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 2Gi
   snapshots:
     enabled: true
-    periodMinutes: 3
-    snapshotsRetained: 2
+    periodMinutes: 10
+    snapshotsRetained: 3
     volumeSnapshotClassName: ds-snapshot-class
   passwords:
     uid=admin:
