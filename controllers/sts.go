@@ -431,7 +431,7 @@ func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount,
 
 	var rootUser int64 = 0
 
-	// add the debug init container. You can a sleep here.
+	// add the debug init container. You can add an optional sleep here to inspect the pvc before the pods starts.
 	// This is needed when the hostpath provisioner is used as it does not chown volumes to the pod user.
 	var debugInit = []v1.Container{
 		{

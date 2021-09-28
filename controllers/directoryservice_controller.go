@@ -103,17 +103,13 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	var clusterIdentifier string = ""
+
+	// For simplicity, the service name is the same as the DS instance name
 	svcName := ds.Name
 
 	if ds.Spec.MultiCluster.ClusterTopology != "" {
 		clusterIdentifier = "-" + ds.Spec.MultiCluster.ClusterIdentifier
 		svcName = svcName + clusterIdentifier
-	}
-
-	// fmt.Printf("Debug: ds %+v\n", ds)
-
-	if err := r.Update(ctx, &ds); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	//// SECRETS ////
@@ -142,12 +138,6 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return requeue, err
 	}
 
-	// // Update the status of our ds object
-	// if err := r.Status().Update(ctx, &ds); err != nil {
-	// 	log.Error(err, "unable to update Directory status")
-	// 	return ctrl.Result{}, err
-	// }
-
 	//// LDAP Updates
 	ldap, err := r.getAdminLDAPConnection(ctx, &ds, &svc)
 	// server may be down or coming up. Requeue
@@ -160,7 +150,13 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// update ldap service account passwords
 	if err := r.updatePasswords(ctx, &ds, ldap); err != nil {
+		// update the object as the annoation needs to be preserved
 		return requeue, nil
+	}
+
+	// Update our CR - needed if any annotations have been added.
+	if err := r.Update(ctx, &ds); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Update the status of our ds object
