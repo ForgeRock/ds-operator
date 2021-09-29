@@ -23,16 +23,15 @@ type DSConnection struct {
 }
 
 type User struct {
-	DN              string
-	CN              string
-	SN              string
-	UID             string
-	Password        string
-	Mail            string
-	TelephoneNumber string
-	Description     string
-	GivenName       string
-	DisplayName     string
+	DN          string
+	CN          string
+	SN          string
+	UID         string
+	Password    string
+	Mail        string
+	Description string
+	GivenName   string
+	DisplayName string
 }
 
 // Connect to LDAP server via admin credentials
@@ -56,17 +55,21 @@ func (ds *DSConnection) Connect() error {
 
 // GetEntry get an ldap entry.
 // This doesn't do much right now ... just searches for an entry. Just for testing and to provide an example
-func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
+func (ds *DSConnection) getEntry(uid string) (*ldap.Entry, error) {
 
-	req := ldap.NewSearchRequest("ou=admins,ou=identities",
+	req := ldap.NewSearchRequest("ou=identities",
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(uid="+dn+")",
-		[]string{"dn", "cn", "uid"}, // A list attributes to retrieve
+		"(uid="+uid+")",
+		[]string{"dn", "cn", "uid", "mail", "displayName", "givenName", "sn", "description"}, // A list attributes to retrieve
 		nil)
 
 	res, err := ds.ldap.Search(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(res.Entries) != 1 {
+		return nil, fmt.Errorf("User not found or more than one entry matched")
 	}
 
 	// just for info...
@@ -80,7 +83,7 @@ func (ds *DSConnection) getEntry(dn string) (*ldap.Entry, error) {
 // BindPassword tries to bind as the DN with the password. This is used to test the password to see if we need to change it.
 // Return nil if the password is OK, err otherwise
 func (ds *DSConnection) BindPassword(DN, password string) error {
-	ds.Log.V(2).Info("ldap client - BIND", "DN", DN)
+	//ds.Log.V(2).Info("ldap client - BIND", "DN", DN)
 	// get a new connection. We cant do this with th existing connection as it would unbind us from the admin account..
 	tldap, err := ldap.DialURL(ds.URL, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
 	defer tldap.Close()
@@ -108,13 +111,38 @@ func (ds *DSConnection) AddUser(user *User) error {
 	req.Attribute("uid", []string{user.UID})
 	req.Attribute("userPassword", []string{user.Password})
 	req.Attribute("mail", []string{user.Mail})
-	req.Attribute("telephoneNumber", []string{user.TelephoneNumber})
 	req.Attribute("description", []string{user.Description})
 	req.Attribute("givenName", []string{user.GivenName})
 	req.Attribute("displayName", []string{user.DisplayName})
 
 	err := ds.ldap.Add(req)
 	return err
+}
+
+// GetUser returns a user object for the given DN.
+func (ds *DSConnection) GetUser(uid string) (*User, error) {
+	// ds.Log.V(2).Info("ldap client - get user", "uid", uid)
+	entry, err := ds.getEntry(uid)
+	if err != nil {
+		return nil, err
+	}
+	// todo:
+	user := &User{
+		UID:         uid,
+		DN:          entry.DN,
+		Mail:        entry.GetAttributeValue("mail"),
+		CN:          entry.GetAttributeValue("cn"),
+		SN:          entry.GetAttributeValue("sn"),
+		GivenName:   entry.GetAttributeValue("givenName"),
+		DisplayName: entry.GetAttributeValue("displayName"),
+		Description: entry.GetAttributeValue("description"),
+	}
+	return user, nil
+}
+
+func (ds *DSConnection) DeleteEntry(dn string) error {
+	dr := ldap.DelRequest{DN: dn}
+	return ds.ldap.Del(&dr)
 }
 
 func purgeTaskDN(id string) string {
