@@ -1,5 +1,5 @@
 /*
-	Copyright 2020 ForgeRock AS.
+	Copyright 2021 ForgeRock AS.
 */
 // Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
 package ldap
@@ -20,6 +20,19 @@ type DSConnection struct {
 	Password string
 	ldap     *ldap.Conn
 	Log      logr.Logger
+}
+
+type User struct {
+	DN              string
+	CN              string
+	SN              string
+	UID             string
+	Password        string
+	Mail            string
+	TelephoneNumber string
+	Description     string
+	GivenName       string
+	DisplayName     string
 }
 
 // Connect to LDAP server via admin credentials
@@ -86,6 +99,24 @@ func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
 	return err
 }
 
+// Create a sample user. Used for testing, but could be used in the future for creating admin service accounts.
+func (ds *DSConnection) AddUser(user *User) error {
+	req := ldap.NewAddRequest(user.DN, nil)
+	req.Attribute("objectClass", []string{"inetOrgPerson", "organizationalPerson", "person", "top"})
+	req.Attribute("cn", []string{user.CN})
+	req.Attribute("sn", []string{user.SN})
+	req.Attribute("uid", []string{user.UID})
+	req.Attribute("userPassword", []string{user.Password})
+	req.Attribute("mail", []string{user.Mail})
+	req.Attribute("telephoneNumber", []string{user.TelephoneNumber})
+	req.Attribute("description", []string{user.Description})
+	req.Attribute("givenName", []string{user.GivenName})
+	req.Attribute("displayName", []string{user.DisplayName})
+
+	err := ds.ldap.Add(req)
+	return err
+}
+
 func purgeTaskDN(id string) string {
 	return "ds-recurring-task-id=" + id + "-purge,cn=Recurring Tasks,cn=Tasks"
 }
@@ -125,7 +156,7 @@ func (ds *DSConnection) createTask(taskID string, taskDN string, cron string, ba
 	return ds.ldap.Add(req)
 }
 
-// GetMonitorData returns cn=monitor data. We use thi for status updates.
+// GetMonitorData returns cn=monitor data. We use this for status updates.
 // todo: What kinds of data do we want?
 func (ds *DSConnection) GetMonitorData() error {
 
