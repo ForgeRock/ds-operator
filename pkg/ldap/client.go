@@ -1,7 +1,7 @@
 /*
 	Copyright 2021 ForgeRock AS.
 */
-// Package ldap provides ldap client access to our DS deployment. Used to manage users, etc.
+// Package ldap provides ldap client access to our DS deployment. Used to manage tasks, set passwords, etc.
 package ldap
 
 import (
@@ -10,7 +10,6 @@ import (
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
-	"github.com/go-logr/logr"
 )
 
 // DSConnection parameters for managing the DS ldap service
@@ -19,19 +18,15 @@ type DSConnection struct {
 	DN       string
 	Password string
 	ldap     *ldap.Conn
-	Log      logr.Logger
 }
 
-type User struct {
-	DN          string
-	CN          string
-	SN          string
-	UID         string
-	Password    string
-	Mail        string
-	Description string
-	GivenName   string
-	DisplayName string
+type LdapObject struct {
+	DN              string
+	CreateTimeStamp string
+	ObjectClass     []string
+	// For simplicity we have a map of single valued string attributes.
+	// For our needs we don't need multi valued or non string attributes.
+	StringAttrs map[string]string
 }
 
 // Connect to LDAP server via admin credentials
@@ -53,14 +48,13 @@ func (ds *DSConnection) Connect() error {
 	return nil
 }
 
-// GetEntry get an ldap entry.
-// This doesn't do much right now ... just searches for an entry. Just for testing and to provide an example
-func (ds *DSConnection) getEntry(uid string) (*ldap.Entry, error) {
+// GetEntry gets an user ldap entry by its UID. The search starts under ou=identities
+func (ds *DSConnection) getEntryByUID(uid string) (*LdapObject, error) {
 
 	req := ldap.NewSearchRequest("ou=identities",
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		"(uid="+uid+")",
-		[]string{"dn", "cn", "uid", "mail", "displayName", "givenName", "sn", "description"}, // A list attributes to retrieve
+		[]string{"dn", "cn", "uid", "mail", "displayName", "givenName", "sn", "description", "createTimestamp", "objectClass"}, // A list attributes to retrieve
 		nil)
 
 	res, err := ds.ldap.Search(req)
@@ -72,12 +66,19 @@ func (ds *DSConnection) getEntry(uid string) (*ldap.Entry, error) {
 		return nil, fmt.Errorf("User not found or more than one entry matched")
 	}
 
-	// just for info...
-	for _, entry := range res.Entries {
-		fmt.Printf("%s: %v cn=%s\n", entry.DN, entry.GetAttributeValue("uid"), entry.GetAttributeValue("cn"))
+	ra := res.Entries[0]
+	sa := make(map[string]string)
+
+	for _, a := range ra.Attributes {
+		sa[a.Name] = a.Values[0]
 	}
 
-	return res.Entries[0], err
+	return &LdapObject{
+		DN:              ra.DN,
+		CreateTimeStamp: ra.GetAttributeValue("createTimeStamp"),
+		ObjectClass:     ra.GetAttributeValues("objectClass"),
+		StringAttrs:     sa,
+	}, nil
 }
 
 // BindPassword tries to bind as the DN with the password. This is used to test the password to see if we need to change it.
@@ -96,65 +97,77 @@ func (ds *DSConnection) BindPassword(DN, password string) error {
 // UpdatePassword changes the password for the user identified by the DN. This is done as an administrative password change
 // The old password is not required.
 func (ds *DSConnection) UpdatePassword(DN, newPassword string) error {
-	ds.Log.V(2).Info("ldap client - update password", "DN", DN)
+	//ds.Log.V(2).Info("ldap client - update password", "DN", DN)
 	req := ldap.NewPasswordModifyRequest(DN, "", newPassword)
 	_, err := ds.ldap.PasswordModify(req)
 	return err
 }
 
 // Create a sample user. Used for testing, but could be used in the future for creating admin service accounts.
-func (ds *DSConnection) AddUser(user *User) error {
-	req := ldap.NewAddRequest(user.DN, nil)
-	req.Attribute("objectClass", []string{"inetOrgPerson", "organizationalPerson", "person", "top"})
-	req.Attribute("cn", []string{user.CN})
-	req.Attribute("sn", []string{user.SN})
-	req.Attribute("uid", []string{user.UID})
-	req.Attribute("userPassword", []string{user.Password})
-	req.Attribute("mail", []string{user.Mail})
-	req.Attribute("description", []string{user.Description})
-	req.Attribute("givenName", []string{user.GivenName})
-	req.Attribute("displayName", []string{user.DisplayName})
+func (ds *DSConnection) AddEntry(obj *LdapObject) error {
+	req := ldap.NewAddRequest(obj.DN, nil)
+	req.Attribute("objectClass", obj.ObjectClass)
+	// add all the single valued string attributes
+	for k, v := range obj.StringAttrs {
+		req.Attribute(k, []string{v})
+	}
 
 	err := ds.ldap.Add(req)
 	return err
 }
 
-// GetUser returns a user object for the given DN.
-func (ds *DSConnection) GetUser(uid string) (*User, error) {
-	// ds.Log.V(2).Info("ldap client - get user", "uid", uid)
-	entry, err := ds.getEntry(uid)
+// Get an Entry by its DN. attrs is a list of attributes to return. objectClass and createTimeStamp are always returned.
+func (ds *DSConnection) GetEntryByDN(DN string, attrs []string) (*LdapObject, error) {
+	attrs = append(attrs, "createTimeStamp")
+	attrs = append(attrs, "objectClass")
+
+	req := ldap.NewSearchRequest(DN, ldap.ScopeBaseObject, ldap.NeverDerefAliases, 0, 0, false,
+		"(objectclass=*)", attrs, nil)
+
+	res, err := ds.ldap.Search(req)
 	if err != nil {
 		return nil, err
 	}
-	// todo:
-	user := &User{
-		UID:         uid,
-		DN:          entry.DN,
-		Mail:        entry.GetAttributeValue("mail"),
-		CN:          entry.GetAttributeValue("cn"),
-		SN:          entry.GetAttributeValue("sn"),
-		GivenName:   entry.GetAttributeValue("givenName"),
-		DisplayName: entry.GetAttributeValue("displayName"),
-		Description: entry.GetAttributeValue("description"),
+
+	if len(res.Entries) != 1 {
+		return nil, fmt.Errorf("Object with dn %s not found", DN)
 	}
-	return user, nil
+	ra := res.Entries[0]
+	sa := make(map[string]string)
+
+	for _, a := range ra.Attributes {
+		//fmt.Printf("attrs=%s:%s\n", a.Name, a.Values[0])
+		sa[a.Name] = a.Values[0]
+	}
+
+	return &LdapObject{
+		DN:              DN,
+		CreateTimeStamp: ra.GetAttributeValue("createTimeStamp"),
+		ObjectClass:     ra.GetAttributeValues("objectClass"),
+		StringAttrs:     sa,
+	}, nil
+
 }
 
+// Delete an LDAP entry specified by dn
 func (ds *DSConnection) DeleteEntry(dn string) error {
 	dr := ldap.DelRequest{DN: dn}
 	return ds.ldap.Del(&dr)
 }
 
+// calculate the DN of a purge recurring task
 func purgeTaskDN(id string) string {
 	return "ds-recurring-task-id=" + id + "-purge,cn=Recurring Tasks,cn=Tasks"
 }
 
+// calculate the DN of a task
 func backupTaskDN(id string) string {
 	return "ds-recurring-task-id=" + id + "-backup,cn=Recurring Tasks,cn=Tasks"
 }
 
 // Create a task in DS. Currently suports only purge and backup. If we need more tasks, consider refactoring this to be
 // more generic
+// This is currently not used - but may be in the future if we return to direct DS to S3 backups
 func (ds *DSConnection) createTask(taskID string, taskDN string, cron string, backupPath string, taskObjClass string, purgeHours int32) error {
 	req := ldap.NewAddRequest(taskDN, []ldap.Control{})
 	req.Attribute("objectclass", []string{"top", "ds-task", "ds-recurring-task", taskObjClass})
@@ -184,9 +197,9 @@ func (ds *DSConnection) createTask(taskID string, taskDN string, cron string, ba
 	return ds.ldap.Add(req)
 }
 
-// GetMonitorData returns cn=monitor data. We use this for status updates.
-// todo: What kinds of data do we want?
-func (ds *DSConnection) GetMonitorData() error {
+// getMonitorData returns cn=monitor data. We use this for status updates.
+// todo: What kinds of data do we want to monitor?
+func (ds *DSConnection) getMonitorData() error {
 
 	req := ldap.NewSearchRequest("cn=monitor",
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 100, 0, false,
@@ -196,7 +209,9 @@ func (ds *DSConnection) GetMonitorData() error {
 
 	res, err := ds.ldap.Search(req)
 
-	res.PrettyPrint(2)
+	fmt.Printf("%d monitoring entries found\n", len(res.Entries))
+
+	// res.PrettyPrint(2)
 
 	return err
 }
