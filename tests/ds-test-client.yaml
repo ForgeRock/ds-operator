@@ -23,9 +23,8 @@ spec:
     spec:
       containers:
       - command:
-        - tail
-        - -f
-        - /dev/null
+        - sleep
+        - infinity
         env:
           - name: DSADMINPW
             valueFrom:
@@ -47,7 +46,5 @@ spec:
       volumes:
         - name: ldap-client
           configMap:
+            defaultMode: 0776
             name: ldap-client
-            items:
-            - key: ldap
-              path: ldap
