@@ -20,7 +20,7 @@ spec:
     accessModes: [ "ReadWriteOnce" ]
     resources:
       requests:
-        storage: 2Gi
+        storage: 10Gi
     dataSource:
       name: "$(latest)"
       kind: VolumeSnapshot
@@ -49,5 +49,5 @@ spec:
   keystore:
     secretName: ds
   truststore:
-    secretName: "platform-ca"
-    keyName: "ca.pem"
+    secretName: "truststore-pem"
+    keyName: "cacerts"

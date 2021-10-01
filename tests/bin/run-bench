@@ -1,0 +1,62 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -o pipefail
+set -x
+
+host=$1
+
+# Test to make sure the server is running and ready to write
+if ! $SCRIPT_DIR/ldap make-user-on-host;
+then
+  echo "DS doesn't seem to be ready, exiting"
+  exit 1
+fi
+
+cat << 'EOF' > addrate.template
+define suffix=ou=identities
+define maildomain=foo.com
+
+branch: [suffix]
+objectClass: domain
+
+branch: ou=people,[suffix]
+objectclass: organizationalUnit
+subordinateTemplate: person
+
+template: person
+rdnAttr: uid
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+givenName: <first>
+sn: <last>
+cn: {givenName} {sn}
+initials: {givenName:1}<random:chars:ABCDEFGHIJKLMNOPQRSTUVWXYZ:1>{sn:1}
+employeeNumber: <sequential:100000>
+uid: user.{employeeNumber}
+mail: {uid}@[maildomain]
+userPassword: 5up35tr0ng
+telephoneNumber: <random:telephone>
+homePhone: <random:telephone>
+pager: <random:telephone>
+mobile: <random:telephone>
+street: <random:numeric:5> <file:streets> Street
+l: <file:cities>
+st: <file:states>
+postalCode: <random:numeric:5>
+postalAddress: {cn}${street}${l}, {st}  {postalCode}
+description: This is the description for {cn}.
+EOF
+
+/opt/opendj/bin/addrate \
+            --hostname "${host}" \
+            --port 1636 \
+            --useSsl \
+            --trustAll \
+            --bindDn uid=admin \
+            --bindPassword "${DSADMINPW}" \
+            --noPurge \
+            --noRebind \
+            --numConcurrentRequests 10 \
+            addrate.template
