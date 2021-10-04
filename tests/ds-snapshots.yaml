@@ -16,7 +16,7 @@ spec:
     limits:
       memory: 1024Mi
   volumeClaimSpec:
-    storageClassName: fast
+    storageClassName: standard-rwo
     accessModes: [ "ReadWriteOnce" ]
     resources:
       requests:

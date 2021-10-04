@@ -241,8 +241,8 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					TopologySpreadConstraints: []v1.TopologySpreadConstraint{
 						{
 							MaxSkew:           1,
-							TopologyKey:       "zone",
-							WhenUnsatisfiable: "ScheduleAnyway",
+							TopologyKey:       "topology.kubernetes.io/zone",
+							WhenUnsatisfiable: v1.ScheduleAnyway,
 							LabelSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
 									"app.kubernetes.io/instance": ds.Name,
@@ -278,7 +278,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Name:            "ds",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: ds.Spec.ImagePullPolicy,
-							Args:            []string{"start"},
+							Args:            []string{"start-ds"},
 							VolumeMounts:    volumeMounts,
 							Resources:       ds.DeepCopy().Spec.Resources,
 							Env:             envVars,
