@@ -293,33 +293,18 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Replicas:    ds.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: createLabels(ds.Name, map[string]string{
-						"affinity": "directory", // for anti-affinity
-					}),
+					Labels: createLabels(ds.Name, nil),
 				},
 				Spec: v1.PodSpec{
-					// We use anti affinity to spread the pods out over host node
-					Affinity: &v1.Affinity{
-						// NodeAffinity:    &v1.NodeAffinity{},
-						// PodAffinity:     &v1.PodAffinity{},
-						PodAntiAffinity: &v1.PodAntiAffinity{
-							//RequiredDuringSchedulingIgnoredDuringExecution:  []v1.PodAffinityTerm{},
-							PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
-								{
-									Weight: 100,
-									PodAffinityTerm: v1.PodAffinityTerm{
-										LabelSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{},
-											MatchExpressions: []metav1.LabelSelectorRequirement{
-												{
-													Key:      "affinity",
-													Operator: "In",
-													Values:   []string{"directory"},
-												},
-											},
-										},
-										TopologyKey: "kubernetes.io/hostname",
-									},
+					// Spread the DS pods across zones if possible. If not possible, schedule anyways
+					TopologySpreadConstraints: []v1.TopologySpreadConstraint{
+						{
+							MaxSkew:           1,
+							TopologyKey:       "topology.kubernetes.io/zone",
+							WhenUnsatisfiable: v1.ScheduleAnyway,
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app.kubernetes.io/instance": ds.Name,
 								},
 							},
 						},
@@ -368,7 +353,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Name:            "ds",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: ds.Spec.ImagePullPolicy,
-							Args:            []string{"start"},
+							Args:            []string{"start-ds"},
 							VolumeMounts:    volumeMounts,
 							Resources:       ds.DeepCopy().Spec.Resources,
 							Env:             envVars,

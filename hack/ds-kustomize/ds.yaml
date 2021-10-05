@@ -9,7 +9,7 @@ metadata:
 spec:
   # TODO; This test image is for PEM keystore support
   # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image: gcr.io/forgeops-public/ds:dev
+  image: gcr.io/forgeops-public/ds:7.2-dev
   imagePullPolicy: IfNotPresent
 
   # The number of DS servers in the topology
@@ -44,12 +44,12 @@ spec:
   # Optional - Configures the operator to automatically take snapshots
   # You must be using a CSI volume driver.
   snapshots:
-    enabled: false
+    enabled: true
     # Take a snapshot every N minutes. The number here is VERY low for testing.
     # On a production cluster, you should set this to something higher (30 minutes).
-    periodMinutes: 2
+    periodMinutes: 10
     # Keep this many snapshots. Older snapshots will be deleted
-    snapshotsRetained: 2
+    snapshotsRetained: 3
     # This defaults to ds-snapshot-class if not specified
     volumeSnapshotClassName: ds-snapshot-class
 
