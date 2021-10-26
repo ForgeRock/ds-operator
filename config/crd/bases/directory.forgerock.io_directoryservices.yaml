@@ -39,7 +39,7 @@ spec:
             description: DirectoryServiceSpec defines the desired state of DirectoryService
             properties:
               certificates:
-                description: Certificates needed for direcotory operation.
+                description: Certificates needed for directory operation.
                 properties:
                   masterSecretName:
                     default: ds-master-keypair
@@ -82,9 +82,14 @@ spec:
                     description: ClusterTopology is a comma separate string of identifiers
                       for each cluster e.g. "europe,us"
                     type: string
-                  mcsEnabled:
-                    default: false
-                    type: boolean
+                  solution:
+                    default: clouddns
+                    description: Solution defines the multi-cluster solution used.
+                    enum:
+                    - clouddns
+                    - mcs
+                    - kubens
+                    type: string
                 required:
                 - clusterIdentifier
                 - clusterTopology

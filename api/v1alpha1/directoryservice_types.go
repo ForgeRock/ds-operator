@@ -52,7 +52,7 @@ type DirectoryServiceSpec struct {
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
 
-	// Certificates needed for direcotory operation.
+	// Certificates needed for directory operation.
 	Certificates DirectoryCertificates `json:"certificates"`
 
 	// +kubebuilder:validation:Required
@@ -186,13 +186,15 @@ type DirectoryServiceList struct {
 
 // MultiCluster enables MCS and configures identifiers for multiple multi-cluster solutions
 type MultiCluster struct {
-	// +kubebuilder:default:=false
-	McsEnabled bool `json:"mcsEnabled,omitempty"`
 	// ClusterTopology is a comma separate string of identifiers for each cluster e.g. "europe,us"
 	// +kubebuilder:validation:required
-	ClusterTopology string `json:"clusterTopology"`
+	ClusterTopology 	string `json:"clusterTopology"`
 	// +kubebuilder:validation:required
-	ClusterIdentifier string `json:"clusterIdentifier"`
+	ClusterIdentifier 	string `json:"clusterIdentifier"`
+	// Solution defines the multi-cluster solution used.
+	// +kubebuilder:validation:Enum=clouddns;mcs;kubens	
+	// +kubebuilder:default:=clouddns
+	Solution 			string `json:"solution,omitempty"`
 }
 
 func init() {

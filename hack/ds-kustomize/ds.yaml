@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: forgerock
 spec:
   image: gcr.io/forgeops-public/ds:7.2-dev
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
 
   # The number of DS servers in the topology
   replicas: 1
@@ -91,14 +91,18 @@ spec:
   scriptConfigMapName: ds-script-config
 
 
-  #### Multi-cluster ####
+  ### Multi-cluster (Google Cloud only)####
+  # clusterTopology and clusterIdentifier are required in multi-cluster solutions to ensure DS is configured uniquely across clusters.
+  # clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers.
+  # Bootstrap servers example output in a multi-cluster MCS environment:
+  # Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo-eu.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
+  # Bootstrap servers example output in a multi cluster kubens environment:
+  # Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo-eu.prod.svc.cluster.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.cluster.local:8989
+  # Bootstrap servers example output in a multi cluster clouddns environment:
+  # Bootstrap replication server(s) : ds-idrepo-0.ds-idrepo.prod.svc.eu:8989,ds-idrepo-0.ds-idrepo.prod.svc.us:8989
   # multiCluster:
-    ## clusterTopology and clusterIdentifier are required in multi-cluster solutions make DS unique across clusters.
-    ## clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers.
-    ## Bootstrap servers example output in a multi-region MCS environment:
-    ## Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo-eu.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
     # clusterTopology: "eu,us"
-    ## clusterIdentifier - current clusters identifier.  Must match 1 of the identifiers in clusterTopology
+    # Current clusters identifier.  Must match 1 of the identifiers in clusterTopology
     # clusterIdentifier: "eu"
-    ## Enable MCS(Googles Multi-cluster Services).  Not required for kubedns solution
-    # mcsEnabled: true
+    # Multi-cluster solution to use. Defaults to clouddns
+    # solution: "clouddns"

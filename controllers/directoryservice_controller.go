@@ -115,8 +115,10 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	svcName := ds.Name
 
 	if ds.Spec.MultiCluster.ClusterTopology != "" {
-		clusterIdentifier = "-" + ds.Spec.MultiCluster.ClusterIdentifier
-		svcName = svcName + clusterIdentifier
+		if ds.Spec.MultiCluster.Solution == "kubens" {
+			clusterIdentifier = "-" + ds.Spec.MultiCluster.ClusterIdentifier
+			svcName = svcName + clusterIdentifier
+		}
 	}
 
 	//// SECRETS ////

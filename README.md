@@ -48,7 +48,7 @@ Once the ds-operator has been installed, you can deploy an instance of the direc
 Below is a sample deployment session
 
 ```bash
-kubectl apply -k hack/ds-kustomize.yaml
+kubectl apply -k hack/ds-kustomize
 
 # pw.sh script will retrieve the uid=admin password:
 ./hack/pw.sh
@@ -251,22 +251,15 @@ spec:
 DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
 DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:
 
-[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)
+[CloudDNS(Recommended solution)](https://github.com/ForgeRock/forgeops/tree/master/etc/multi-cluster/clouddns)  
+[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)  
 [kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)
 
-
 To enable multi-cluster:
-* configure a list of unique identifiers(`clusterTopology`) for each cluster.
-* provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 of the names in `clusterTopology`.
+* Configure a list of unique identifiers(`clusterTopology`) for each cluster.
+* Provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 of the names in `clusterTopology`.
+* Configure the solution option if using a alternative solution to the CloudDNS recommended option.
 
-**MCS**
-If using MCS set `mcsEnable` to `true`.  The `clusterTopology` names need to match the cluster membership names used when
-registering the cluster to the hub as specified in the docs. These help to define the bootstrap servers.  E.g. deploying idrepo to cluster 'eu' would look like:
-
-`<hostname>.<uniqueidentifier/membershipname>.<servicename>.svc.clusterset.local:8989`
-```
-Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
-```
 Spec:
 
 ```yaml
@@ -274,7 +267,7 @@ Spec:
   multiCluster:
     clusterTopology: "eu,us"
     clusterIdentifier: "eu"
-    mcsEnable: true
+    solution: "clouddns"
 ```
 
 ## Backup and Restore to LDIF (Preview)

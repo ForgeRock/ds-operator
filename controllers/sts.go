@@ -77,9 +77,16 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	// var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
+	// Enable Multi-cluster Services(MCS)
+	var mcsEnabled = false
+
 	if ds.Spec.MultiCluster.ClusterTopology != "" {
 		// Remove AdvertisedListenAddress default value so it can be configured by multi-cluster settings
 		advertisedListenAddress = ""
+	}
+
+	if ds.Spec.MultiCluster.Solution == "mcs" {
+		mcsEnabled = true
 	}
 
 	var volumeMounts = []v1.VolumeMount{
@@ -209,7 +216,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		},
 		{
 			Name:  "MCS_ENABLED",
-			Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
+			Value: strconv.FormatBool(mcsEnabled),
 		},
 		{
 			Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
