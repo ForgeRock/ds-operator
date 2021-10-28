@@ -154,7 +154,7 @@ rules:
   resources:
   - directorybackups/finalizers
   verbs:
-  - update
+  - '*'
 - apiGroups:
   - directory.forgerock.io
   resources:
@@ -180,7 +180,7 @@ rules:
   resources:
   - directoryrestores/finalizers
   verbs:
-  - update
+  - '*'
 - apiGroups:
   - directory.forgerock.io
   resources:
@@ -194,7 +194,7 @@ rules:
   resources:
   - directoryservices/finalizers
   verbs:
-  - update
+  - '*'
 - apiGroups:
   - snapshot.storage.k8s.io
   resources:

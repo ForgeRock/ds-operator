@@ -44,7 +44,7 @@ type DirectoryRestoreReconciler struct {
 
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryrestores,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryrestores/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryrestores/finalizers,verbs=update
+//+kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryrestores/finalizers,verbs=*
 
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile

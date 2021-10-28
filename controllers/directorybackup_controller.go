@@ -43,7 +43,7 @@ type DirectoryBackupReconciler struct {
 //
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/finalizers,verbs=update
+//+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/finalizers,verbs=*
 
 //
 // For more details, check Reconcile and its Result here:

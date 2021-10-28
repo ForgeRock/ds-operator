@@ -78,7 +78,7 @@ var (
 // Add in all the RBAC permissions that a DS controller needs. StatefulSets, etc.
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices;directorybackup;directoryrestore,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/status;directorybackup/status;directoryrestore/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=directory.forgerock.io,resources=directoryservices/finalizers,verbs=*
 // +kubebuilder:rbac:groups="",resources=secrets;services;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets/finalizers;services/finalizers;persistentvolumeclaims/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;create
