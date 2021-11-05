@@ -1,5 +1,5 @@
 /*
-	Copyright 2020 ForgeRock AS.
+	Copyright 2021 ForgeRock AS.
 */
 
 package controllers
@@ -21,6 +21,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+/// NOTE: The proxy is not supported. This is stub code in preparation for future support.
 
 func (r *DirectoryServiceReconciler) reconcileProxy(ctx context.Context, ds *directoryv1alpha1.DirectoryService) error {
 	var deployment apps.Deployment
@@ -180,12 +182,9 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "data",
-									MountPath: "/opt/opendj/data",
+									MountPath: DSDataPath,
 								},
-								{
-									Name:      "secrets", // keystores
-									MountPath: "/opt/opendj/secrets",
-								},
+
 								{
 									Name:      "admin-password",
 									MountPath: "/var/run/secrets/admin",
@@ -229,15 +228,19 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 							VolumeMounts: []v1.VolumeMount{
 								{
 									Name:      "data",
-									MountPath: "/opt/opendj/data",
+									MountPath: DSDataPath,
 								},
 								{
-									Name:      "secrets",
-									MountPath: "/opt/opendj/secrets",
+									Name:      "ds-ssl-keypair",
+									MountPath: SSLKeyPath,
 								},
 								{
-									Name:      "secrets",
-									MountPath: "/var/run/secrets/opendj",
+									Name:      "ds-master-keypair",
+									MountPath: MasterKeyPath,
+								},
+								{
+									Name:      "truststore",
+									MountPath: TruststoreKeyPath,
 								},
 							},
 							Resources: ds.DeepCopy().Spec.Proxy.Resources,
@@ -259,10 +262,26 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 					},
 					Volumes: []v1.Volume{
 						{
-							Name: "secrets", // keystore and pin
+							Name: "ds-master-keypair", // master keypair for encryption
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Keystore.SecretName,
+									SecretName: ds.Spec.Certificates.MasterSecretName,
+								},
+							},
+						},
+						{
+							Name: "ds-ssl-keypair", // ssl between instances
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: ds.Spec.Certificates.SSLSecretName,
+								},
+							},
+						},
+						{
+							Name: "truststore", // truststore
+							VolumeSource: v1.VolumeSource{
+								Secret: &v1.SecretVolumeSource{
+									SecretName: ds.Spec.Certificates.TruststoreSecretName,
 								},
 							},
 						},

@@ -53,8 +53,8 @@ type DirectoryBackupSpec struct {
 	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
-	// Keystore reference
-	Keystore DirectoryKeystores `json:"keystore,omitempty"`
+	// Certificates - needed for reading/writing encrypted data
+	Certificates DirectoryCertificates `json:"certificates,required"`
 }
 
 //+kubebuilder:object:root=true

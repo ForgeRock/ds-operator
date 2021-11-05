@@ -36,6 +36,23 @@ spec:
           spec:
             description: DirectoryBackupSpec defines the desired state of DirectoryBackup
             properties:
+              certificates:
+                description: Certificates - needed for reading/writing encrypted data
+                properties:
+                  masterSecretName:
+                    default: ds-master-keypair
+                    type: string
+                  sslSecretName:
+                    default: ds-ssl-keypair
+                    type: string
+                  truststoreSecretName:
+                    default: ds-ssl-keypair
+                    type: string
+                required:
+                - masterSecretName
+                - sslSecretName
+                - truststoreSecretName
+                type: object
               claimToBackup:
                 description: DirectoryPVCClaim is the PVC that contains the directory
                   data. Make an array???
@@ -51,16 +68,6 @@ spec:
                 - IfNotPresent
                 - Always
                 type: string
-              keystore:
-                description: Keystore reference
-                properties:
-                  secretName:
-                    default: ds
-                    description: The name of a secret containing the keystore
-                    type: string
-                required:
-                - secretName
-                type: object
               resources:
                 description: Kubernetes resources assigned to the pod
                 properties:
@@ -213,6 +220,7 @@ spec:
                 description: Snapshot class name to use for all snapshots.
                 type: string
             required:
+            - certificates
             - claimToBackup
             - image
             - volumeClaimSpec

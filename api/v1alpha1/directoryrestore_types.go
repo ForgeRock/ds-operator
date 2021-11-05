@@ -41,8 +41,8 @@ type DirectoryRestoreSpec struct {
 	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
-	// Keystore references
-	Keystore DirectoryKeystores `json:"keystore,required"`
+	// Certificates - needed for reading/writing encrypted data
+	Certificates DirectoryCertificates `json:"certificates,required"`
 
 	// +kubebuilder:validation:Required
 	VolumeClaimSpec *corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`

@@ -51,11 +51,9 @@ type DirectoryServiceSpec struct {
 
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
-	// Keystore references
-	Keystore DirectoryKeystores `json:"keystore,omitempty"`
 
-	// Truststore - for mTLS connections
-	TrustStore TrustStore `json:"truststore,omitempty"`
+	// Certificates needed for direcotory operation.
+	Certificates DirectoryCertificates `json:"certificates"`
 
 	// +kubebuilder:validation:Required
 	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
@@ -97,6 +95,16 @@ type DirectoryPasswords struct {
 	Key string `json:"key"`
 	// Create a random secret if true. Otherwise assumes the secret already exists
 	Create bool `json:"create,omitempty"`
+}
+
+// DirectoryCertificates required for operation of the directory server
+type DirectoryCertificates struct {
+	// +kubebuilder:default:=ds-master-keypair
+	MasterSecretName string `json:"masterSecretName"`
+	// +kubebuilder:default:=ds-ssl-keypair
+	SSLSecretName string `json:"sslSecretName"`
+	// +kubebuilder:default:="ds-ssl-keypair"
+	TruststoreSecretName string `json:"truststoreSecretName"`
 }
 
 // DirectoryKeystores provides a reference to the keystore secrets

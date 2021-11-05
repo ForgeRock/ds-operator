@@ -1,23 +1,18 @@
 apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: ds-ssl-cert
-  # namespace: sandbox
 spec:
   # Secret names are always required.
   secretName: ds-ssl-keypair
-
-  # Secret template is optional. If set, these annotations
-  # and labels will be copied to the secret named example-com-tls.
-
-  # Note: Labels and annotations from the template are only synced to the Secret at the time when the certificate
-  # is created or renewed. Currently labels and annotations can only be added, but not removed. Removing any
-  # labels or annotations from the template or removing the template itself will have no effect.
-  # See https://github.com/jetstack/cert-manager/issues/4292.
   secretTemplate:
-    annotations:
-      my-secret-annotation-1: "test"
-      my-secret-annotation-2: "cert-manager-generated"
     labels:
       app: ds-operator
 
@@ -44,38 +39,33 @@ spec:
   - "*.ds-cts"
   # Issuer references are always required.
   issuerRef:
-    name: default-issuer
+    name: selfsigned-issuer
     # We can reference ClusterIssuers by changing the kind here.
     # The default value is Issuer (i.e. a locally namespaced Issuer)
-    kind: ClusterIssuer
+    kind: Issuer
     # This is optional since cert-manager will default to this value however
     # if you are using an external issuer, change this to that issuer group.
     group: cert-manager.io
 ---
+# The master keypair used by DS to encrypt data.
+# IF YOU LOSE THIS KEYPAIR YOU WILL LOSE YOUR DATA!!!!
+# Backup the secret that contains the keypair.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: ds-master-cert
   # namespace: sandbox
 spec:
-  # Secret names are always required.
   secretName: ds-master-keypair
-
-  # Secret template is optional. If set, these annotations
-  # and labels will be copied to the secret named example-com-tls.
-
-  # Note: Labels and annotations from the template are only synced to the Secret at the time when the certificate
-  # is created or renewed. Currently labels and annotations can only be added, but not removed. Removing any
-  # labels or annotations from the template or removing the template itself will have no effect.
-  # See https://github.com/jetstack/cert-manager/issues/4292.
+  
   secretTemplate:
-    annotations:
-      my-secret-annotation-2: "cert-manager-generated"
     labels:
       app: ds-operator
 
-  duration: 2160h # 90d
-  renewBefore: 360h # 15d
+  # Note: The master cert should not be rotated as the private key 
+  # must be kept to decrypt the data. You can delete the Certificate
+  # and cert-manager will leave the tls secret alone. 
+  duration: 1000000h # about 41 years... 
   subject:
     organizations:
       - "ForgeRock.com"
@@ -95,10 +85,10 @@ spec:
   - "*.ds"
   # Issuer references are always required.
   issuerRef:
-    name: default-issuer
+    name: selfsigned-issuer
     # We can reference ClusterIssuers by changing the kind here.
     # The default value is Issuer (i.e. a locally namespaced Issuer)
-    kind: ClusterIssuer
+    kind: Issuer
     # This is optional since cert-manager will default to this value however
     # if you are using an external issuer, change this to that issuer group.
     group: cert-manager.io

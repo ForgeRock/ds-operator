@@ -36,6 +36,12 @@ spec:
   # imagePullPolicy: IfNotPresent
 
 
-  # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.
-  keystore:
-    secretName: ds
+  certificates:
+    # the tls.key in this secret is the private key used for encrypting DS data.
+    # BACK THIS UP!! If you lose this secret your data will be lost forever.
+    masterSecretName: ds-master-keypair
+    # Used for SSL connections between ds instances - for replication, etc.
+    sslSecretName: ds-ssl-keypair
+    # The truststore is taken from the ca.crt in the secret. In most cases
+    # you can use the same ca trust pem in the ssl secret above.
+    truststoreSecretName: ds-ssl-keypair

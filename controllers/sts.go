@@ -74,11 +74,6 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
 func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet, svcName string) {
-
-	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
-	// not a constant
-	var defaultMode600 int32 = 0600
-
 	// var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
@@ -90,7 +85,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	var volumeMounts = []v1.VolumeMount{
 		{
 			Name:      "data",
-			MountPath: "/opt/opendj/data",
+			MountPath: DSDataPath,
 		},
 
 		{
@@ -101,62 +96,46 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name:      "monitor-password",
 			MountPath: "/var/run/secrets/monitor",
 		},
-		// {
-		// 	Name:      "pem-trust-certs",
-		// 	MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-		// 	SubPath:   ds.Spec.TrustStore.KeyName,
-		// },
-		// {
-		// 	Name: "secrets",
-		// 	MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-		// 	SubPath:   "ssl-key-pair-combined.pem",
-		// },
-		// {
-		// 	Name: "secrets",
-		// 	MountPath: "/opt/opendj/pem-keys-directory/master-key",
-		// 	SubPath:   "master-key-pair-combined.pem",
-		// },
-
 		{
-			Name:      "pem-trust-certs",
-			MountPath: "/opt/opendj/old-trust/trust.pem",
-			SubPath:   ds.Spec.TrustStore.KeyName,
-		},
-
-		{
-			Name:      "cert-manager-master-keypair",
-			MountPath: "/opt/opendj/cm",
+			Name:      "ds-ssl-keypair",
+			MountPath: SSLKeyPath,
 		},
 		{
-			Name:      "cert-manager-ssl-keypair",
-			MountPath: "/opt/opendj/cm-ssl",
+			Name:      "ds-master-keypair",
+			MountPath: MasterKeyPath,
 		},
 		{
-			Name:      "secrets",
-			MountPath: "/opt/opendj/old-pem/ssl-key-pair",
-			SubPath:   "ssl-key-pair-combined.pem",
+			Name:      "truststore",
+			MountPath: TruststoreKeyPath,
 		},
 		{
-			Name:      "secrets",
-			MountPath: "/opt/opendj/old-pem/master-key",
-			SubPath:   "master-key-pair-combined.pem",
-		},
-		{
-			Name:      "pem-files-dir",
-			MountPath: "/opt/opendj/pem-keys-directory",
-		},
-		{
-			Name:      "pem-trust-dir",
-			MountPath: "/opt/opendj/pem-trust-directory",
+			Name:      "keys",
+			MountPath: "/var/run/secrets/keys",
 		},
 	}
 
 	var volumes = []v1.Volume{
 		{
-			Name: "secrets", // keystore and pin
+			Name: "ds-master-keypair", // master keypair for encryption
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName: ds.Spec.Keystore.SecretName,
+					SecretName: ds.Spec.Certificates.MasterSecretName,
+				},
+			},
+		},
+		{
+			Name: "ds-ssl-keypair", // ssl between instances
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Certificates.SSLSecretName,
+				},
+			},
+		},
+		{
+			Name: "truststore", // truststore
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Certificates.TruststoreSecretName,
 				},
 			},
 		},
@@ -177,39 +156,10 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			},
 		},
 		{
-			Name: "pem-trust-certs",
+			Name: "keys", // where DS expects to find the PEM keys
 			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
-					SecretName:  ds.Spec.TrustStore.SecretName,
-					DefaultMode: &defaultMode600,
-				},
+				EmptyDir: &v1.EmptyDirVolumeSource{},
 			},
-		},
-		{
-			Name: "cert-manager-master-keypair",
-			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
-					SecretName:  "ds-master-keypair",
-					DefaultMode: &defaultMode600,
-				},
-			},
-		},
-		{
-			Name: "cert-manager-ssl-keypair",
-			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
-					SecretName:  "ds-ssl-keypair",
-					DefaultMode: &defaultMode600,
-				},
-			},
-		},
-		{
-			Name:         "pem-files-dir",
-			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
-		},
-		{
-			Name:         "pem-trust-dir",
-			VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}},
 		},
 	}
 
@@ -324,21 +274,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					InitContainers: []v1.Container{
 
 						{
-							// Init container that concats the cert-manager generated certs together. DS wants them in the same file.
-							// TODO: Put this logic in the entrypoint script. Check for USE_CERT_MANAGER?
-							Name:            "fix-certs",
-							Image:           ds.Spec.Image,
-							ImagePullPolicy: v1.PullIfNotPresent,
-							// Command:         []string{"sh", "-c", "mkdir -p pem-keys-directory && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key && cp old-pem/ssl-key-pair pem-keys-directory/
-							Command: []string{"sh", "-c", "cat cm-ssl/ca.crt > pem-trust-directory/trust.pem && cat cm-ssl/tls.crt cm-ssl/tls.key > pem-keys-directory/ssl-key-pair && cat cm/tls.key cm/tls.crt cm/ca.crt >pem-keys-directory/master-key"},
-							// Command: []string{"sh", "-c", "cp old-pem/ssl-key-pair pem-keys-directory && sleep 60"},
-
-							VolumeMounts: volumeMounts,
-							// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
-							//SecurityContext: &v1.SecurityContext{RunAsUser: &rootUser},
-						},
-
-						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
 							ImagePullPolicy: ds.Spec.ImagePullPolicy,
@@ -423,7 +358,7 @@ func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount,
 			Name:            "debug-init",
 			Image:           image,
 			ImagePullPolicy: v1.PullIfNotPresent,
-			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/data"},
+			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/dsdata"},
 			// Args: []string{"sleep 1000"},
 			VolumeMounts: volumeMounts,
 			// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
