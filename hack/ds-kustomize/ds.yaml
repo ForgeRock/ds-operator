@@ -35,7 +35,6 @@ spec:
     # If no automatic $(latest) snapshot can be found, the operator will create a new volume.
     # dataSource:
     #   name: "$(latest)"
-    #   # name: "ds-restore"
     #   kind: VolumeSnapshot
     #   apiGroup: snapshot.storage.k8s.io
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-
 # Sample script to add an index when the server is started
 
+# For now -just exit. 
+exit 0
 
 dsconfig --offline --no-prompt --batch <<EOF
 create-backend-index \

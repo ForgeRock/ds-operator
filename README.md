@@ -13,12 +13,9 @@ Basic features of the operator include:
 * Take Volume Snapshots of the directory disk, and restore a directory based on a snapshot
 * Backup and Restore directory data to LDIF format.
 
+Please see the annotated [hack/ds-kustomize](hack/ds-kustomize) for the most current reference on the DirectoryService custom resource specification.
 
-**Note: This is an early alpha project and should not be used in production.**
-
-Please see the annotated [hack/ds.yaml](hack/ds.yaml) for the most current reference on the DirectoryService custom resource specification.
-
-Developers please refer to the [developers guide](DEVELOPMENT.md)
+Developers please refer to the [developers guide](DEVELOPMENT.md).
 
 
 ## Install the Operator
@@ -44,38 +41,14 @@ kubectl logs -n fr-system  -l  control-plane=ds-operator -f
 stern -n fr-system ds-
 ```
 
-## Install the Secret Agent Operator
-
-The ds-operator can create some (but not all) secrets needed by the directory server.
-Use the [secret agent operator](https://github.com/ForgeRock/secret-agent) to
-create the required secrets.
-
-Secret agent can be installed using the [secret-agent.sh](https://raw.githubusercontent.com/ForgeRock/forgeops/master/bin/secret-agent.sh) script.
-
-* Note to ForgeRock developers: secret-agent is already installed on the eng-shared cluster.*
-
-For development you can deploy [hack/secrets.yaml](hack/secrets.yaml) instead of running secret agent. These are static secrets
-and should never be used in production.
-
 ## Deploy a Directory Instance
 
-Once the ds-operator has been installed, you can deploy an instance of the directory service using the custom
-resource provided in `hack/ds.yaml`.
+Once the ds-operator has been installed, you can deploy an instance of the directory service using the sample in [hack/ds-kustomize].
 
 Below is a sample deployment session
 
 ```bash
-# Create the required secrets using secret agent. If you get an error here check
-# to see that you have deployed secret agent.
-kubectl apply -f hack/secret_agent.yaml
-
-# Alternatively, using static secrets:
-# kubectl apply -f hack/secrets.yaml
-
-kubectl get secrets
-
-# Deploy the sample directory instance
-kubectl apply -f hack/ds.yaml
+kubectl apply -k hack/ds-kustomize.yaml
 
 # pw.sh script will retrieve the uid=admin password:
 ./hack/pw.sh
@@ -91,7 +64,7 @@ kubectl scale directoryservice/ds-idrepo --replicas=2
 kubectl edit directoryservice/ds-idrepo
 
 # Delete the directory instance.
-kubectl delete -f hack/ds.yaml
+kubectl delete -k hack/ds-kustomize
 
 # If you want to delete the PVC claims...
 kubectl delete pvc data-ds-0
@@ -102,22 +75,27 @@ The directory service deployment creates a statefulset to run the directory serv
 
 ## Directory Docker Image
 
-The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project.
+The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project. You must use the
+most recent "mutable" ds image in https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds.
 
-Evaluation images have been built for you on gcr.io/forgeops-public/ds-idrepo. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
+Evaluation images have been built for you on gcr.io/forgeops-public/ds. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
 
-Note that the operator is transitioning from Java keystores to the use of PEM secrets. This work has not yet been merged into ForgeOps.
-
-The operator assume the referenced image is built for purpose, and has all the required configuration, indexes and schema for your deployment.
+The entrypoint and behavior of the docker image is important. If you want to make changes please consult the README for the ds image in forgeops.
 
 ## Secrets
 
-The operator supports creating (some) secrets, or a bring-your-own secrets model. Currently the operator *CAN NOT* generate the
-keystore required for the directory service. Use [secret agent](https://github.com/ForgeRock/secret-agent) for that. If you have a ForgeOps deployment
-the secrets created for the existing directory service are compatible with the operator.
+The operator supports creating (some) secrets, or a bring-your-own secrets model. 
 
 The operator can generate random secrets for the `uid=admin` account, `cn=monitor` and application service accounts (for
 example - the AM CTS account). Refer to the annotated sample.
+
+Kubernetes cert-manager is the recommended way to generate PEM certificates for the directory deployment.
+The included sample in [hack/ds-kustomize/cert.yaml](hack/ds-kustomize/cert.yaml) creates certificates for the master and SSL keypairs. 
+
+However, cert-manager is not a requirement. Any valid PEM certificates can be used for the directory deployment.
+For example, you could use `openssl` commands to generate the PEM keypairs. 
+
+WARNING: It is _extremely_ important to backup the  master keypair. Directory data is encrypted using the master keypair, and if it is lost your directory data will be unrecoverable.
 
 ## Scheduling
 
@@ -128,15 +106,13 @@ The operator provides the following control over scheduling:
 * Tainting
  such nodes will help them "repel" non directory workloads, which can be helpful for performance.  If nodes are not tainted,
  this toleration has no effect. This should be thought of as an optional feature that most users will not require.
-* Anti-Affinity: The DS nodes will prefer to be scheduled on nodes that do not have other directory pods on them. This is
+* Anti-Affinity: The DS nodes will _prefer_ to be scheduled on nodes that do not have other directory pods on them. This is
   "soft" anti-affinity.  DS pods will be scheduled on the same node if the scheduler is not able to fulfill the request.
 
-
-## Volume Snapshots (Preview ONLY)
+## Volume Snapshots
 
 Beginning in Kubernetes 1.20, [Volume Snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) are generally
-available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image. This feature
-may also be available in earlier verions going back to 1.17.
+available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image. 
 
 The ds-operator enables the following auto-snapshot features:
 
@@ -153,7 +129,7 @@ Use cases that are enabled by snapshots include:
 
 ### Snapshot Prerequisites
 
-* The cloud provider must support Kubernetes Volume Snapshots. This has been tested on GKE version 1.18.
+* The cloud provider must support Kubernetes Volume Snapshots. This has been tested on GKE version 1.18 an above.
 * Snapshots require the `csi` volume driver. Consult your providers documentation. On GKE enable
   the `GcePersistentDiskCsiDriver` addon when creating or updating the cluster. The forgeops `cluster-up.sh` script
   for GKE has been updated to include this addon.
@@ -193,7 +169,7 @@ A "rollback" procedure is as follows:
 
 * Validate that you have a good snapshot to rollback to. `kubectl get volumesnapshots`.
 * Delete the directory deployment *and* the PVC claims.  For example: `kubectl delete directoryservice/ds-idrepo-0 && kubectl delete pvc ds-idrepo-0` (repeat for all PVCs).
-* Set the `spec.initializeFromSnapshotName` either to "latest" (assuming the operator is taking snapshots) or the name of a specific volume snapshot.
+* Set the `dataSource` either to "$(latest)" (assuming the operator is taking snapshots) or the name of a specific volume snapshot.
 * Redeploy the directory service.  The new PVCs will be cloned from the snapshot.
 * *All* directory instances are initialized from the same snapshot volume. For example, in a two way replication topology,
   ds-idrepo-0 and ds-idrepo-1 will both contain the same starting data and changelog.

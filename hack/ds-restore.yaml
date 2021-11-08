@@ -12,9 +12,9 @@ spec:
   sourcePvcName: ds-backup
 
   # The directory server binary that contains commands to import ldif or run dsbackup
-  image:  gcr.io/forgeops-public/ds:dev
+  image:  gcr.io/forgeops-public/ds:7.2-dev
 
-  # Opitional
+  # Optional
   imagePullPolicy: IfNotPresent
 
   # Spec for the pvc that will hold the restored data in DS JE format.
@@ -31,7 +31,7 @@ spec:
   # This snapshot can be used to reinitialize a DS cluster.
   volumeSnapshotClassName: ds-snapshot-class
 
-  # Secret that contains the ds pem keystore. This is needed to import data into JE
-  # This keystore must match the keystore used to deploy the DirectoryService
-  keystore:
-    secretName: ds
+  certificates:
+    masterSecretName: ds-master-keypair
+    sslSecretName: ds-ssl-keypair
+    truststoreSecretName: ds-ssl-keypair
