@@ -72,7 +72,7 @@ jobs:
             exit 1
         }
         kubectl scale directoryservice/ds-idrepo --replicas=2
-        kubectl rollout status sts/ds-idrepo --watch --timeout 120s
+        kubectl rollout status sts/ds-idrepo --watch --timeout 300s
         # wait for a couple of minutes for a snapshots. There should be at least one
         sleep 120
         # get num snaps - plus the header line
