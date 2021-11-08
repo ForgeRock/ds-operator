@@ -63,8 +63,7 @@ jobs:
     - name: deploy directory service
       shell: bash
       run: |
-        kubectl apply -f hack/secrets.yaml
-        kubectl apply -f hack/ds.yaml
+        kubectl apply -k ds-kustomize
         sleep 20
         kubectl describe pod
         kubectl rollout status sts/ds-idrepo --watch --timeout 300s || {
@@ -78,6 +77,5 @@ jobs:
         sleep 120
         # get num snaps - plus the header line
         kubectl get volumesnapshots
-
 
   # TODO; Add ldap test, backup test, restore test
