@@ -63,7 +63,7 @@ jobs:
     - name: deploy directory service
       shell: bash
       run: |
-        kubectl apply -k ds-kustomize
+        kubectl apply -k hack/ds-kustomize
         sleep 20
         kubectl describe pod
         kubectl rollout status sts/ds-idrepo --watch --timeout 300s || {
