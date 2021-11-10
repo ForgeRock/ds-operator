@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: forgerock
 spec:
   image: gcr.io/forgeops-public/ds:7.2-dev
-  imagePullPolicy: Never
+  imagePullPolicy: IfNotPresent
 
   # The number of DS servers in the topology
   replicas: 1

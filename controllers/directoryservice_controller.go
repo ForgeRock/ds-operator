@@ -44,7 +44,7 @@ const (
 	SnapshotApiGroupString = "snapshot.storage.k8s.io"
 	// where we mount the PVC on the DS pod
 	// TODO: Update when https://bugster.forgerock.org/jira/browse/OPENDJ-8372 is fixed
-	DSDataPath = "/opt/opendj/dsdata"
+	DSDataPath = "/opt/opendj/data"
 	// The path in the pod where PEM secrets are mounted
 	MasterKeyPath     = "/var/run/secrets/ds-master-keypair"
 	SSLKeyPath        = "/var/run/secrets/ds-ssl-keypair"

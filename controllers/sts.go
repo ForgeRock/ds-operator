@@ -358,7 +358,7 @@ func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount,
 			Name:            "debug-init",
 			Image:           image,
 			ImagePullPolicy: v1.PullIfNotPresent,
-			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/dsdata"},
+			Command:         []string{"sh", "-c", "echo debug pod running && chown -R 11111:0 /opt/opendj/data"},
 			// Args: []string{"sleep 1000"},
 			VolumeMounts: volumeMounts,
 			// Currently the debug init runs as root so we can chmod the hostpath provisioner. This is only needed in testing.
