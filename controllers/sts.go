@@ -74,11 +74,6 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
 func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet, svcName string) {
-
-	// TODO: What is the canonical go way of using these contants in a template. Go wants a pointer to these
-	// not a constant
-	var defaultMode600 int32 = 0600
-
 	// var initArgs []string // args provided to the init container
 	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
@@ -90,7 +85,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	var volumeMounts = []v1.VolumeMount{
 		{
 			Name:      "data",
-			MountPath: "/opt/opendj/data",
+			MountPath: DSDataPath,
 		},
 
 		{
@@ -102,28 +97,45 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			MountPath: "/var/run/secrets/monitor",
 		},
 		{
-			Name:      "pem-trust-certs",
-			MountPath: "/opt/opendj/pem-trust-directory/trust.pem",
-			SubPath:   ds.Spec.TrustStore.KeyName,
+			Name:      "ds-ssl-keypair",
+			MountPath: SSLKeyPath,
 		},
 		{
-			Name:      "secrets",
-			MountPath: "/opt/opendj/pem-keys-directory/ssl-key-pair",
-			SubPath:   "ssl-key-pair-combined.pem",
+			Name:      "ds-master-keypair",
+			MountPath: MasterKeyPath,
 		},
 		{
-			Name:      "secrets",
-			MountPath: "/opt/opendj/pem-keys-directory/master-key",
-			SubPath:   "master-key-pair-combined.pem",
+			Name:      "truststore",
+			MountPath: TruststoreKeyPath,
+		},
+		{
+			Name:      "keys",
+			MountPath: "/var/run/secrets/keys",
 		},
 	}
 
 	var volumes = []v1.Volume{
 		{
-			Name: "secrets", // keystore and pin
+			Name: "ds-master-keypair", // master keypair for encryption
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName: ds.Spec.Keystore.SecretName,
+					SecretName: ds.Spec.Certificates.MasterSecretName,
+				},
+			},
+		},
+		{
+			Name: "ds-ssl-keypair", // ssl between instances
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Certificates.SSLSecretName,
+				},
+			},
+		},
+		{
+			Name: "truststore", // truststore
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: ds.Spec.Certificates.TruststoreSecretName,
 				},
 			},
 		},
@@ -144,12 +156,9 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			},
 		},
 		{
-			Name: "pem-trust-certs",
+			Name: "keys", // where DS expects to find the PEM keys
 			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
-					SecretName:  ds.Spec.TrustStore.SecretName,
-					DefaultMode: &defaultMode600,
-				},
+				EmptyDir: &v1.EmptyDirVolumeSource{},
 			},
 		},
 	}
@@ -263,6 +272,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					// Required for kubedns multi-cluster deployments
 					Subdomain: svcName,
 					InitContainers: []v1.Container{
+
 						{
 							Name:            "init",
 							Image:           ds.Spec.Image,
@@ -333,6 +343,8 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 	}
 	return *spec
 }
+
+var rootUser int64 = 0 // todo: remove me
 
 // Adds a debug init and sidecar containers.
 func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount, image string) {

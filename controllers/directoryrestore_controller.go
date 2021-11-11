@@ -157,7 +157,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Note we override the docker-entrypoint.sh here for restore - invoking ds-restore.sh directly
 	args := []string{"restore"}
 	// Create the restore Job
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Keystore, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy, ds.Spec.Resources)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Certificates, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy, ds.Spec.Resources)
 
 	if err != nil {
 		log.Error(err, "Job create failed", "jobName", job.Name)

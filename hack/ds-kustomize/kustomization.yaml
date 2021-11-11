@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
 - ds.yaml
 - secrets.yaml
+- cert.yaml
 
 generatorOptions:
  disableNameSuffixHash: true

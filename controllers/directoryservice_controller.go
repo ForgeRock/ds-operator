@@ -42,6 +42,13 @@ var RootGroup int64 = 0
 
 const (
 	SnapshotApiGroupString = "snapshot.storage.k8s.io"
+	// where we mount the PVC on the DS pod
+	// TODO: Update when https://bugster.forgerock.org/jira/browse/OPENDJ-8372 is fixed
+	DSDataPath = "/opt/opendj/data"
+	// The path in the pod where PEM secrets are mounted
+	MasterKeyPath     = "/var/run/secrets/ds-master-keypair"
+	SSLKeyPath        = "/var/run/secrets/ds-ssl-keypair"
+	TruststoreKeyPath = "/var/run/secrets/truststore"
 )
 
 // LabelApplicationName is the value for app.kubernetes.io/name.  See https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/

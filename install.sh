@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Install the operator from a released version. Use the hack/install-operator script for adhoc testing.
+# 
 DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-latest}
 
 USAGE="Usage: $0 install|remove|upgrade"

@@ -29,8 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	klog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	kbatch "k8s.io/api/batch/v1"
-
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	snapshot "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 )
@@ -68,7 +66,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// List in progress backup job to update status. The backup job has the same name as this object
-	var backupJob kbatch.Job
+	var backupJob batch.Job
 
 	// Ignore if job is not found - it might not yet be created.
 	if err := r.Get(ctx, req.NamespacedName, &backupJob); client.IgnoreNotFound(err) != nil {
@@ -165,8 +163,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			dataPVC.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
-			// TODO: Fix ME - this should be a copy of the original pvc
-			// The size/class, etc. should come from the original pvc
+			// TODO: The size/class, etc. could come from the original pvc
 			dataPVC.Spec = *db.Spec.VolumeClaimSpec
 			dataPVC.Spec.DataSource = &v1.TypedLocalObjectReference{
 				Kind:     "VolumeSnapshot",
@@ -187,7 +184,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Create the Pod/Job that runs the LDIF export
 	args := []string{"backup"}
 
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Keystore, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy, db.Spec.Resources)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Certificates, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy, db.Spec.Resources)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)

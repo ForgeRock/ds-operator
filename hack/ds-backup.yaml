@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+  image:  gcr.io/forgeops-public/ds:7.2-dev
+  imagePullPolicy: Never
+
   # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
   volumeClaimSpec:
     storageClassName: fast
@@ -15,7 +18,7 @@ spec:
       requests:
         storage: 512Mi
 
-  # Backup in ldif format if true. If false, use ds binary backup.
+  # Backup in ldif format if true (default). If false, use ds binary backup.
   # Currently only ldif is supported.
   # ldif: true
 
@@ -27,15 +30,7 @@ spec:
   # volumeSnapshotClassName: ds-snapshot-class
   volumeSnapshotClassName: ds-snapshot-class
 
-  # The directory server binary that contains commands to export ldif or run dsbackup
-  # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image:  gcr.io/forgeops-public/ds:dev
-  imagePullPolicy: IfNotPresent
-
-  # Optional
-  # imagePullPolicy: IfNotPresent
-
-
-  # Secret that contains the ds pem keystore. This is needed to decrypt the data for backup.
-  keystore:
-    secretName: ds
+  certificates:
+    masterSecretName: ds-master-keypair
+    sslSecretName: ds-ssl-keypair
+    truststoreSecretName: ds-ssl-keypair
