@@ -13,8 +13,6 @@ spec:
 
   # The directory server binary that contains commands to import ldif or run dsbackup
   image:  gcr.io/forgeops-public/ds:7.2-dev
-
-  # Optional
   imagePullPolicy: IfNotPresent
 
   # Spec for the pvc that will hold the restored data in DS JE format.
