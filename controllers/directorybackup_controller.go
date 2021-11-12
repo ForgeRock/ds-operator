@@ -89,9 +89,8 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// Create the backup PVC
+	// Create the /backup PVC to hold the backup
 	var pvc v1.PersistentVolumeClaim
-
 	pvc.Name = db.GetName() // Name is the same as this object
 	pvc.Namespace = db.GetNamespace()
 
@@ -108,21 +107,18 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return nil
 	})
 
-	// /// Create/update the backup target PVC that holds the backup
-	// pvc, err := createPVC(ctx, r.Client, &db, db.Spec.BackupPVC.Size, db.Spec.BackupPVC.StorageClassName, "", r.Scheme)
-
 	if err != nil {
-		log.Error(err, "PVC claim creation failed", "pvcName", db.GetName())
+		log.Error(err, "backup PVC claim creation failed", "pvcName", db.GetName())
 		return ctrl.Result{}, err
 	}
 
-	//  Create a Snapshot of the target PVC to be backed up
+	//  Create a Snapshot of the target PVC to be backed up. For example, a snapshot of data-ds-idrepo-0 PVC
 	var snap snapshot.VolumeSnapshot
 	snap.Name = "snap-" + db.GetName()
 	snap.Namespace = db.GetNamespace()
 
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
-		log.V(8).Info("CreateorUpdate snapshot", "name", snap.GetName())
+		log.V(8).Info("CreateorUpdate backup snapshot", "name", snap.GetName())
 
 		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
@@ -142,9 +138,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	// Now create a PVC with the contents of the snapshot. This PVC will be mounted by the backup job.
-	// TODO: Backup Size should be calculated from the size target PVC
-	// The datasource of the PVC is set to be the snapshot we just created above.
+	// Now create a PVC with the contents of the snapshot we just took above. This PVC will be mounted by the backup job.
 
 	var dataPVC v1.PersistentVolumeClaim
 
@@ -163,8 +157,9 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			dataPVC.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
-			// TODO: The size/class, etc. could come from the original pvc
+			// TODO: The size/class, etc. could come from the original pvc instead of the backup volume size
 			dataPVC.Spec = *db.Spec.VolumeClaimSpec
+			// The datasource of the PVC is set to be the snapshot we just created above.
 			dataPVC.Spec.DataSource = &v1.TypedLocalObjectReference{
 				Kind:     "VolumeSnapshot",
 				Name:     snap.GetName(),
@@ -181,7 +176,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		log.Error(err, "PVC creation failed", "pvcName", snap.Name, "dataPVC", dataPVC)
 		return ctrl.Result{}, err
 	}
-	// Create the Pod/Job that runs the LDIF export
+	// Create the Pod/Job that runs the backup
 	args := []string{"backup"}
 
 	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Certificates, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy, db.Spec.Resources)

@@ -154,9 +154,11 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// Note we override the docker-entrypoint.sh here for restore - invoking ds-restore.sh directly
 	args := []string{"restore"}
-	// Create the restore Job
+	// Create the restore Job.
+	// The source of a the backup is specified by the SourcePVCName as part of the spec. This is a PVC that was previously created by a backup task.
+	// The target of the restore is the PVC we created above. Once the Job completes, we will snapshot this PVC. The snapshot will be used to initialize
+	// a new DS cluster.
 	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Certificates, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy, ds.Spec.Resources)
 
 	if err != nil {
