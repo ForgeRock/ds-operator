@@ -101,8 +101,10 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			pvc.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
-			pvc.Spec = *db.Spec.VolumeClaimSpec
-			return controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
+			pvc.Spec = db.Spec.PodTemplate.VolumeClaimSpec
+			// NOTE: If you want the backup PVC to be deleted when the backup CR is deleted,
+			// uncomment this. For now we believe it is safer to let the user explicitly delete the PVC.
+			// return controllerutil.SetControllerReference(&db, &pvc, r.Scheme)
 		}
 		return nil
 	})
@@ -124,7 +126,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if snap.CreationTimestamp.IsZero() {
 			snap.ObjectMeta.Labels = createLabels(snap.GetName(), nil)
 			snap.Spec = snapshot.VolumeSnapshotSpec{
-				VolumeSnapshotClassName: &db.Spec.VolumeSnapshotClassName,
+				VolumeSnapshotClassName: &db.Spec.PodTemplate.VolumeSnapshotClassName,
 				Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &db.Spec.ClaimToBackup}}
 
 			return controllerutil.SetOwnerReference(&db, &snap, r.Scheme)
@@ -158,7 +160,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				"pv.beta.kubernetes.io/gid": "0",
 			}
 			// TODO: The size/class, etc. could come from the original pvc instead of the backup volume size
-			dataPVC.Spec = *db.Spec.VolumeClaimSpec
+			dataPVC.Spec = db.Spec.PodTemplate.VolumeClaimSpec
 			// The datasource of the PVC is set to be the snapshot we just created above.
 			dataPVC.Spec.DataSource = &v1.TypedLocalObjectReference{
 				Kind:     "VolumeSnapshot",
@@ -179,7 +181,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Create the Pod/Job that runs the backup
 	args := []string{"backup"}
 
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.Certificates, args, db.Spec.Image, &db, db.Spec.ImagePullPolicy, db.Spec.Resources)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.PodTemplate, args, &db)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)

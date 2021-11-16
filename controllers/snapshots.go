@@ -71,7 +71,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 			Annotations: map[string]string{"directory.forgerock.io/lastSnapshotTime": strconv.Itoa(int(now))},
 		},
 		Spec: snapshot.VolumeSnapshotSpec{
-			VolumeSnapshotClassName: &ds.Spec.Snapshots.VolumeSnapshotClassName,
+			VolumeSnapshotClassName: &ds.Spec.PodTemplate.VolumeSnapshotClassName,
 			Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &pvcClaimToSnap}}}
 
 	log.Info("taking snapshot ", "snasphot", snapName, "pvc", pvcClaimToSnap)

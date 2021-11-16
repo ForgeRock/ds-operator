@@ -1,4 +1,5 @@
-# Restore LDIF files to a DS disk, and take a snapshot of that disk
+# Restore backed up files to a DS disk, and take a snapshot of that disk
+# That snapshot can be used to initialize a new DS cluster.
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryRestore
 metadata:
@@ -7,29 +8,40 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
+  # The pod template is exactly the same as the one used for the DirectoryService CRD
+  # In this case, it applies to the DS Job that will run the restore.
+  podTemplate:
+    # The directory server binary that contains commands to import ldif or run dsbackup
+    # The "restore" entrypoint is called in the Job
+    image:  gcr.io/forgeops-public/ds:7.2-dev
+    imagePullPolicy: IfNotPresent
+
+    # Spec for the pvc that will hold the restored data in DS JE format.
+    # The PVC has the name metadata.name (ds-restore in this example).
+    # You must ensure this is large enough to hold the restored data.
+    volumeClaimSpec:
+      storageClassName: fast
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 512Mi
+
+    # The class to use when taking volume snapshots.
+    # A snapshot named metadata.name will be created (ds-restore in this example)
+    # This snapshot can be used to reinitialize a DS cluster.
+    volumeSnapshotClassName: ds-snapshot-class
+
+    certificates:
+      masterSecretName: ds-master-keypair
+      sslSecretName: ds-ssl-keypair
+      truststoreSecretName: ds-ssl-keypair
+
+    # The restore default scripts support different backup types
+    # The sample below restores all three backups in sequence.
+    env:
+    - name: DS_BACKUP_TYPE
+      value: "tar,ldif,dsbackup"
+
   # The source pvc that holds the ldif backup data to be restored.
   # This is usually the "metadata.name" of a DirectoryBackup CR.
   sourcePvcName: ds-backup
-
-  # The directory server binary that contains commands to import ldif or run dsbackup
-  image:  gcr.io/forgeops-public/ds:7.2-dev
-  imagePullPolicy: IfNotPresent
-
-  # Spec for the pvc that will hold the restored data in DS JE format.
-  # The PVC has the name metadata.name (ds-restore in this example).
-  volumeClaimSpec:
-    storageClassName: fast
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 512Mi
-
-  # The class to use when taking volume snapshots.
-  # A snapshot named metadata.name will be created (ds-restore in this example)
-  # This snapshot can be used to reinitialize a DS cluster.
-  volumeSnapshotClassName: ds-snapshot-class
-
-  certificates:
-    masterSecretName: ds-master-keypair
-    sslSecretName: ds-ssl-keypair
-    truststoreSecretName: ds-ssl-keypair

@@ -13,7 +13,7 @@ Basic features of the operator include:
 * Take Volume Snapshots of the directory disk, and restore a directory based on a snapshot
 * Backup and Restore directory data to LDIF format.
 
-Please see the annotated [hack/ds-kustomize](hack/ds-kustomize) for the most current reference on the DirectoryService custom resource specification.
+Please see the annotated [hack/ds-kustomize](hack/ds-kustomize) for the annotated reference of the DirectoryService custom resource specification.
 
 Developers please refer to the [developers guide](DEVELOPMENT.md).
 
@@ -76,9 +76,9 @@ The directory service deployment creates a statefulset to run the directory serv
 ## Directory Docker Image
 
 The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project. You must use the
-most recent "mutable" ds image in https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds.
+most recent "dynamic" ds image in https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds.
 
-Evaluation images have been built for you on gcr.io/forgeops-public/ds. The [ds.yaml](hack/ds.yaml) Custom Resource references this image.
+Evaluation images have been built for you on gcr.io/forgeops-public/ds. The [ds.yaml](hack/ds-kustomize/ds.yaml) Custom Resource references this image.
 
 The entrypoint and behavior of the docker image is important. If you want to make changes please consult the README for the ds image in forgeops.
 
@@ -93,9 +93,9 @@ Kubernetes cert-manager is the recommended way to generate PEM certificates for 
 The included sample in [hack/ds-kustomize/cert.yaml](hack/ds-kustomize/cert.yaml) creates certificates for the master and SSL keypairs. 
 
 However, cert-manager is not a requirement. Any valid PEM certificates can be used for the directory deployment.
-For example, you could use `openssl` commands to generate the PEM keypairs. 
+For example, you could use `openssl` commands to generate the PEM key pairs. All certificates must be of secret type `kubernetes.io/tls`.
 
-WARNING: It is _extremely_ important to backup the  master keypair. Directory data is encrypted using the master keypair, and if it is lost your directory data will be unrecoverable.
+WARNING: It is _extremely_ important to backup the  master key pair. Directory data is encrypted using the master keypair, and if it is lost your directory data will be unrecoverable.
 
 ## Scheduling
 
@@ -106,8 +106,8 @@ The operator provides the following control over scheduling:
 * Tainting
  such nodes will help them "repel" non directory workloads, which can be helpful for performance.  If nodes are not tainted,
  this toleration has no effect. This should be thought of as an optional feature that most users will not require.
-* Anti-Affinity: The DS nodes will _prefer_ to be scheduled on nodes that do not have other directory pods on them. This is
-  "soft" anti-affinity.  DS pods will be scheduled on the same node if the scheduler is not able to fulfill the request.
+* Topology Constraints: The DS nodes will _prefer_ to be scheduled on nodes and zones that do not have other directory pods on them. This is
+  "soft" anti-affinity.  DS pods will still be scheduled on the same node if the scheduler is not able to fulfill the request. 
 
 ## Volume Snapshots
 
@@ -187,18 +187,17 @@ snapshots:
   periodMinutes: 20
   # Keep this many snapshots. Older snapshots will be deleted
   snapshotsRetained: 3
-  # This defaults to ds-snapshot-class if not specified
-  volumeSnapshotClassName: ds-snapshot-class
 ```
 
 Snapshot settings can be dynamically changed while the directory is running.
 
 Notes:
 
-* Only the first pvc (data-ds-idrepo-0 for example) is used for the snapshot. When initializing from a snapshot,
+* Only the first pvc (data-ds-idrepo-0 for example) is used for the automatic snapshot. When initializing from a snapshot,
   all directory replicas start with the same data (see above)
 * Snapshots can be expensive. Do not snapshot overly frequently, and retain only the number of
-  snapshots that you need for availability. Many providers rate limit the number of snapshots that can be created.
+  snapshots that you need for availability. Many providers rate limit the number of snapshots that can be created. GCP
+  limits the number of snapshots to 6 per hour per PVC.
 * Snapshots are not a replacement for offline backups. If the data on disk is corrupt, the snapshot will also
   be corrupt.
 * The very first snapshot will not happen until after the first `periodMinutes` (20 minutes in the example above).
@@ -249,35 +248,18 @@ spec:
 ## Multi-cluster (Preview)
 
 DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
-DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:
+DS pods need to be uniquely identifiable within the topology  across all clusters.  
 
-[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)
-[kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)
+By overriding and passing the DS_BOOTSTRAP_SERVERS and DS_GROUP_ID environment variables, you can configure
+replication across multiple clusters. The requirements:
 
+* The DS pods must be directly reachable across all clusters.
+* Pods must have a resolvable DNS name across all clusters.
 
-To enable multi-cluster:
-* configure a list of unique identifiers(`clusterTopology`) for each cluster.
-* provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 of the names in `clusterTopology`.
+Multi-cluster is an advanced use case. You must thoroughly understand how to configure cross cluster networking and DNS resolution
+before attempting to setup DS multi-cluster.
 
-**MCS**
-If using MCS set `mcsEnable` to `true`.  The `clusterTopology` names need to match the cluster membership names used when
-registering the cluster to the hub as specified in the docs. These help to define the bootstrap servers.  E.g. deploying idrepo to cluster 'eu' would look like:
-
-`<hostname>.<uniqueidentifier/membershipname>.<servicename>.svc.clusterset.local:8989`
-```
-Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
-```
-Spec:
-
-```yaml
-  #### Multi-cluster ####
-  multiCluster:
-    clusterTopology: "eu,us"
-    clusterIdentifier: "eu"
-    mcsEnable: true
-```
-
-## Backup and Restore to LDIF (Preview)
+## Backup and Restore (Preview)
 
 The operator supports two new Custom Resources:
 
@@ -291,21 +273,22 @@ Taking a DirectoryBackup does the following:
 
 * Snapshots and then clones a PVC with the contents of the directory data.
 * Runs a directory server binary pod, mounting that PVC
-* Exports the data in LDIF format to another pvc
+* Exports the data in (tar, LDIF or dsbackup) format to another pvc
 
-When the process concludes, the pvc with the LDIF data can be further processed. For example
-you can mount that pvc on a pod that will export the data to GCS or S3.
+When the process concludes, the pvc with the data can be further processed. For example
+you can mount that pvc on a pod that will export the data to GCS or S3. This design
+provides maximum flexibility to BYOJ (bring your own Job) for final archival.
 
-Deleting the `DirectoryBackup` CR will the job and volumesnapshot and the pvc.
+Deleting the `DirectoryBackup` CR will the delete the volumesnapshot but it retains the backup pvc.
 
 Taking a DirectoryRestore does the following:
 
 * Creates a new 'data' pvc to hold the restored directory data
-* Runs a job that mounts an existing ldif backup PVC (likely the one created by a DirectoryBackup run) and
- performs an LDIF import into the directory data pvc.
+* Runs a job that mounts an existing backup PVC (likely the one created by a DirectoryBackup above) and
+ performs an data import into the directory data pvc.
 * Creates a volume snapshot of the directory data pvc
 
-On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance (see above). )
+On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance (see above).
 
 For day to day backup of directory data, prefer to use tools such as [velero.io](https://velero.io). Ldif export and import
 is useful to validate the integrity of the database, and for long term archival storage where a text based

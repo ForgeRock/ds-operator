@@ -109,15 +109,9 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	var clusterIdentifier string = ""
 
 	// For simplicity, the service name is the same as the DS instance name
 	svcName := ds.Name
-
-	if ds.Spec.MultiCluster.ClusterTopology != "" {
-		clusterIdentifier = "-" + ds.Spec.MultiCluster.ClusterIdentifier
-		svcName = svcName + clusterIdentifier
-	}
 
 	//// SECRETS ////
 	if err := r.reconcileSecrets(ctx, &ds); err != nil {

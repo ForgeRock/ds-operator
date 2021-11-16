@@ -16,7 +16,7 @@ import (
 
 // Create a directory service job that can backup or restore data
 func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Scheme, dataPVC *v1.PersistentVolumeClaim, backupPVC string,
-	certificates *directoryv1alpha1.DirectoryCertificates, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy, resources v1.ResourceRequirements) (*batch.Job, error) {
+	podTemplate *directoryv1alpha1.DirectoryPodTemplate, args []string, owner metav1.Object) (*batch.Job, error) {
 
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
@@ -30,6 +30,14 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 		// This for development of the operator minikube only.
 		log.V(8).Info("Debug container being configured, running as root.")
 		user = 0
+	}
+
+	var envVars = []v1.EnvVar{
+		{Name: "NAMESPACE", Value: owner.GetNamespace()},
+	}
+
+	if podTemplate.Env != nil {
+		envVars = append(envVars, podTemplate.Env...)
 	}
 
 	_, err := ctrl.CreateOrUpdate(ctx, client, &job, func() error {
@@ -66,7 +74,7 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 							{
 								VolumeSource: v1.VolumeSource{
 									Secret: &v1.SecretVolumeSource{
-										SecretName: certificates.MasterSecretName,
+										SecretName: podTemplate.Certificates.MasterSecretName,
 									},
 								},
 								Name: "master-keypair", // pem based master key pair for crypting data
@@ -89,14 +97,11 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 						Containers: []v1.Container{
 							{
 								Name:            "ds-job",
-								Image:           image,
+								Image:           podTemplate.Image,
 								Args:            args,
-								ImagePullPolicy: pullPolicy,
-								Env: []v1.EnvVar{
-									{Name: "NAMESPACE", Value: owner.GetNamespace()},
-									{Name: "BACKUP_TYPE", Value: "ldif"}, // this all we support right now
-								},
-								Resources: resources,
+								ImagePullPolicy: podTemplate.ImagePullPolicy,
+								Env:             envVars,
+								Resources:       podTemplate.Resources,
 								VolumeMounts: []v1.VolumeMount{
 									{
 										Name:      "backup",

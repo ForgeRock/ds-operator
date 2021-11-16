@@ -6,8 +6,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -66,21 +64,14 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 	ds.Status.CurrentReplicas = &sts.Status.CurrentReplicas
 
 	// Update the image
-	sts.Spec.Template.Spec.Containers[0].Image = ds.Spec.Image
-	sts.Spec.Template.Spec.InitContainers[0].Image = ds.Spec.Image
+	sts.Spec.Template.Spec.Containers[0].Image = ds.Spec.PodTemplate.Image
+	sts.Spec.Template.Spec.InitContainers[0].Image = ds.Spec.PodTemplate.Image
 
 	return nil
 }
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
 func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet, svcName string) {
-	// var initArgs []string // args provided to the init container
-	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
-
-	if ds.Spec.MultiCluster.ClusterTopology != "" {
-		// Remove AdvertisedListenAddress default value so it can be configured by multi-cluster settings
-		advertisedListenAddress = ""
-	}
 
 	var volumeMounts = []v1.VolumeMount{
 		{
@@ -119,7 +110,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name: "ds-master-keypair", // master keypair for encryption
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName: ds.Spec.Certificates.MasterSecretName,
+					SecretName: ds.Spec.PodTemplate.Certificates.MasterSecretName,
 				},
 			},
 		},
@@ -127,7 +118,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name: "ds-ssl-keypair", // ssl between instances
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName: ds.Spec.Certificates.SSLSecretName,
+					SecretName: ds.Spec.PodTemplate.Certificates.SSLSecretName,
 				},
 			},
 		},
@@ -135,7 +126,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name: "truststore", // truststore
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName: ds.Spec.Certificates.TruststoreSecretName,
+					SecretName: ds.Spec.PodTemplate.Certificates.TruststoreSecretName,
 				},
 			},
 		},
@@ -196,22 +187,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			},
 		},
 		{
-			Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
-			Value: advertisedListenAddress,
-		},
-		{
-			Name:  "DS_GROUP_ID",
-			Value: ds.Spec.GroupID,
-		},
-		{
-			Name:  "DS_CLUSTER_TOPOLOGY",
-			Value: ds.Spec.MultiCluster.ClusterTopology,
-		},
-		{
-			Name:  "MCS_ENABLED",
-			Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
-		},
-		{
 			Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
 			Value: "true",
 		},
@@ -223,6 +198,11 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name:  "DS_UID_ADMIN_PASSWORD_FILE",
 			Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
 		},
+	}
+
+	// Append any env vars the user provides
+	if ds.Spec.PodTemplate.Env != nil {
+		envVars = append(envVars, ds.Spec.PodTemplate.Env...)
 	}
 
 	// Create a template
@@ -246,11 +226,21 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					Labels: createLabels(ds.Name, nil),
 				},
 				Spec: v1.PodSpec{
-					// Spread the DS pods across zones if possible. If not possible, schedule anyways
+					// Spread the DS pods across hosts (nodes) and zones if possible. If not possible, schedule anyways
 					TopologySpreadConstraints: []v1.TopologySpreadConstraint{
 						{
 							MaxSkew:           1,
 							TopologyKey:       "topology.kubernetes.io/zone",
+							WhenUnsatisfiable: v1.ScheduleAnyway,
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app.kubernetes.io/instance": ds.Name,
+								},
+							},
+						},
+						{
+							MaxSkew:           1,
+							TopologyKey:       "topology.kubernetes.io/hostname",
 							WhenUnsatisfiable: v1.ScheduleAnyway,
 							LabelSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
@@ -275,22 +265,22 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 
 						{
 							Name:            "init",
-							Image:           ds.Spec.Image,
-							ImagePullPolicy: ds.Spec.ImagePullPolicy,
+							Image:           ds.Spec.PodTemplate.Image,
+							ImagePullPolicy: ds.Spec.PodTemplate.ImagePullPolicy,
 							Args:            []string{"init"},
 							VolumeMounts:    volumeMounts,
-							Resources:       ds.DeepCopy().Spec.Resources,
+							Resources:       ds.DeepCopy().Spec.PodTemplate.Resources,
 							Env:             envVars,
 						},
 					},
 					Containers: []v1.Container{
 						{
 							Name:            "ds",
-							Image:           ds.Spec.Image,
-							ImagePullPolicy: ds.Spec.ImagePullPolicy,
+							Image:           ds.Spec.PodTemplate.Image,
+							ImagePullPolicy: ds.Spec.PodTemplate.ImagePullPolicy,
 							Args:            []string{"start-ds"},
 							VolumeMounts:    volumeMounts,
-							Resources:       ds.DeepCopy().Spec.Resources,
+							Resources:       ds.DeepCopy().Spec.PodTemplate.Resources,
 							Env:             envVars,
 						},
 					},
@@ -319,7 +309,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	}
 
 	if DebugContainer {
-		injectDebugContainers(stemplate, volumeMounts, ds.Spec.Image)
+		injectDebugContainers(stemplate, volumeMounts, ds.Spec.PodTemplate.Image)
 	}
 
 	stemplate.DeepCopyInto(sts)
@@ -327,7 +317,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 
 // If the user supplies a snapshot update the PVC volume claim to initialize from it
 func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService) v1.PersistentVolumeClaimSpec {
-	spec := ds.Spec.VolumeClaimSpec.DeepCopy()
+	spec := ds.Spec.PodTemplate.VolumeClaimSpec.DeepCopy()
 
 	// If the user wants to init from a snapshot, and they use the sentinel value "$(latest)" - Then try to calculate the latest snapshot name
 	if spec.DataSource != nil && spec.DataSource.Name == "$(latest)" {
@@ -347,6 +337,7 @@ func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx cont
 var rootUser int64 = 0 // todo: remove me
 
 // Adds a debug init and sidecar containers.
+// These are used during testing. See comments inline:
 func injectDebugContainers(sts *apps.StatefulSet, volumeMounts []v1.VolumeMount, image string) {
 
 	var rootUser int64 = 0

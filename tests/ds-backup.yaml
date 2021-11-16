@@ -20,9 +20,6 @@ spec:
       requests:
         storage: 2Gi
 
-  # Backup in ldif format if true. If false, use ds binary backup.
-  # Currently only ldif is supported.
-  # ldif: true
 
   # The directory pvc to backup. This can be a "live" ds instance,
   # assuming your snapshot provider can take "crash consistent" snapshots
