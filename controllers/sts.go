@@ -6,8 +6,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 
 	directoryv1alpha1 "github.com/ForgeRock/ds-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -74,13 +72,8 @@ func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.State
 
 // https://godoc.org/k8s.io/api/apps/v1#StatefulSetSpec
 func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet, svcName string) {
-	// var initArgs []string // args provided to the init container
-	var advertisedListenAddress = fmt.Sprintf("$(POD_NAME).%s", ds.Name)
 
-	if ds.Spec.MultiCluster.ClusterTopology != "" {
-		// Remove AdvertisedListenAddress default value so it can be configured by multi-cluster settings
-		advertisedListenAddress = ""
-	}
+	// var initArgs []string // args provided to the init container
 
 	var volumeMounts = []v1.VolumeMount{
 		{
@@ -196,22 +189,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			},
 		},
 		{
-			Name:  "DS_ADVERTISED_LISTEN_ADDRESS",
-			Value: advertisedListenAddress,
-		},
-		{
-			Name:  "DS_GROUP_ID",
-			Value: ds.Spec.GroupID,
-		},
-		{
-			Name:  "DS_CLUSTER_TOPOLOGY",
-			Value: ds.Spec.MultiCluster.ClusterTopology,
-		},
-		{
-			Name:  "MCS_ENABLED",
-			Value: strconv.FormatBool(ds.Spec.MultiCluster.McsEnabled),
-		},
-		{
 			Name:  "DS_SET_UID_ADMIN_AND_MONITOR_PASSWORDS",
 			Value: "true",
 		},
@@ -223,6 +200,15 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Name:  "DS_UID_ADMIN_PASSWORD_FILE",
 			Value: "/var/run/secrets/admin/" + ds.Spec.Passwords["uid=admin"].Key,
 		},
+	}
+
+	if len(ds.Spec.Env) > 0 {
+		for i := range ds.Spec.Env {
+			envVars = append(envVars, v1.EnvVar{
+					Name: ds.Spec.Env[i].Name,
+					Value: ds.Spec.Env[i].Value,
+			})
+		}
 	}
 
 	// Create a template

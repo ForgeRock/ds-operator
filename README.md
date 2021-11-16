@@ -247,34 +247,34 @@ spec:
 ```
 
 ## Multi-cluster (Preview)
+ 
+DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes(currently Google Cloud only).
+DS pods need to be uniquely identifiable within the topology  across all clusters.  We describe using CloudDNS for GKE 
+to handle this.  See the setup documentation below:
 
-DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
-DS pods need to be uniquely identifiable within the topology  across all clusters.  There are 2 sample solutions documented in forgeops:
+[CloudDNS for GKE doc](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-cluster/clouddns/README.md)
 
-[MCS(GKE Multi-cluster Services)](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/mcs/docs/article.adoc)
-[kubedns](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-region/kubedns/doc/article.adoc)
-
-
-To enable multi-cluster:
-* configure a list of unique identifiers(`clusterTopology`) for each cluster.
-* provide the current cluster's identifier(`clusterIdentifier`). `clusterIdentifier` must match 1 of the names in `clusterTopology`.
-
-**MCS**
-If using MCS set `mcsEnable` to `true`.  The `clusterTopology` names need to match the cluster membership names used when
-registering the cluster to the hub as specified in the docs. These help to define the bootstrap servers.  E.g. deploying idrepo to cluster 'eu' would look like:
-
-`<hostname>.<uniqueidentifier/membershipname>.<servicename>.svc.clusterset.local:8989`
-```
-Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
-```
-Spec:
+To enable multi-cluster, configure the following environment variables in the custom resource.  
+* DS_GROUP_ID must contain the cluster identifier as described in the CloudDNS docs(e.g. "eu" for EU cluster)  
+* DS_BOOTSTRAP_REPLICATION_SERVERS
 
 ```yaml
-  #### Multi-cluster ####
-  multiCluster:
-    clusterTopology: "eu,us"
-    clusterIdentifier: "eu"
-    mcsEnable: true
+  env:
+    - name: DS_GROUP_ID
+      value: ""
+    - name: DS_BOOTSTRAP_REPLICATION_SERVERS
+      value: ""
+```
+
+Example env configuration for ds-idrepo on EU cluster:
+
+CloudDNS:
+```yaml
+  env:
+    - name: DS_GROUP_ID
+      value: "EU"
+    - name: DS_BOOTSTRAP_REPLICATION_SERVERS
+      value: "ds-idrepo-0.ds-idrepo.prod.svc.eu:8989,ds-idrepo-0.ds-idrepo.prod.svc.us:8989"
 ```
 
 ## Backup and Restore to LDIF (Preview)

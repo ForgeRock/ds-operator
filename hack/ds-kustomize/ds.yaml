@@ -20,6 +20,13 @@ spec:
     limits:
       memory: 1024Mi
 
+  # env:
+    # Required for multi-cluster deployments
+    # - name: DS_GROUP_ID
+    #   value: ""
+    # - name: DS_BOOTSTRAP_REPLICATION_SERVERS
+    #   value: ""
+
 # The volume spec for the DS data. This is the same as the Kubernetes PVC volume spec.
   volumeClaimSpec:
     storageClassName: fast
@@ -89,16 +96,3 @@ spec:
 
 
   scriptConfigMapName: ds-script-config
-
-
-  #### Multi-cluster ####
-  # multiCluster:
-    ## clusterTopology and clusterIdentifier are required in multi-cluster solutions make DS unique across clusters.
-    ## clusterTopology - list of identifiers for the each cluster used to determine the bootstrap servers.
-    ## Bootstrap servers example output in a multi-region MCS environment:
-    ## Bootstrap replication server(s) : ds-idrepo-0.eu.ds-idrepo-eu.prod.svc.clusterset.local:8989,ds-idrepo-0.us.ds-idrepo.prod.svc.clusterset.local:8989
-    # clusterTopology: "eu,us"
-    ## clusterIdentifier - current clusters identifier.  Must match 1 of the identifiers in clusterTopology
-    # clusterIdentifier: "eu"
-    ## Enable MCS(Googles Multi-cluster Services).  Not required for kubedns solution
-    # mcsEnabled: true

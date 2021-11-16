@@ -40,6 +40,10 @@ type DirectoryServiceSpec struct {
 	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	// Env vars
+	// +kubebuilder:validation:Optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
 	// GroupID is the value used to identify this group of directory servers (default: "default")
 	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
 	// Most users do not need to change this field.
