@@ -1,4 +1,4 @@
-# Backup to LDIF
+# Backup the directory to a PVC
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryBackup
 metadata:
@@ -7,30 +7,36 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  image:  gcr.io/forgeops-public/ds:7.2-dev
-  imagePullPolicy: IfNotPresent
+  # The pod template is exactly the same as the one used for the DirectoryService CRD
+  # In this case, it applies to the DS Job that will run the backup.
+  # The "backup" entrypoint will be called.
+  podTemplate:
+    image:  gcr.io/forgeops-public/ds:7.2-dev
+    imagePullPolicy: IfNotPresent
 
-  # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
-  volumeClaimSpec:
-    storageClassName: fast
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 512Mi
+    # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
+    volumeClaimSpec:
+      storageClassName: fast
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 512Mi
 
-  # Backup in ldif format if true (default). If false, use ds binary backup.
-  # Currently only ldif is supported.
-  # ldif: true
+    # Used for snapshot creation
+    volumeSnapshotClassName: ds-snapshot-class
 
-  # The directory pvc to backup. This can be a "live" ds instance,
+    # Backup / Restore need the master keypair for encrypting/decrypting data.
+    certificates:
+      masterSecretName: ds-master-keypair
+      sslSecretName: ds-ssl-keypair
+      truststoreSecretName: ds-ssl-keypair
+    # The backup/restore default scripts support different backup types
+    # The sample below runs all three backups in sequence.
+    env:
+    - name: DS_BACKUP_TYPE
+      value: "tar,ldif,dsbackup"
+
+
+  # The directory pvc to target for backup. This can be a "live" ds instance,
   # assuming your snapshot provider can take "crash consistent" snapshots
   claimToBackup: data-ds-idrepo-0
-
-  # The snapshot class that will be used when snapshotting the above.
-  # volumeSnapshotClassName: ds-snapshot-class
-  volumeSnapshotClassName: ds-snapshot-class
-
-  certificates:
-    masterSecretName: ds-master-keypair
-    sslSecretName: ds-ssl-keypair
-    truststoreSecretName: ds-ssl-keypair

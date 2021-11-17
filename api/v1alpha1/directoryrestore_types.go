@@ -18,7 +18,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,28 +26,10 @@ import (
 
 // DirectoryRestoreSpec defines the desired state of DirectoryRestore
 type DirectoryRestoreSpec struct {
+	PodTemplate DirectoryPodTemplate `json:"podTemplate"`
 	// Important: Run "make" to regenerate code after modifying this file
 
 	SourcePVCName string `json:"sourcePvcName,required"`
-
-	// Kubernetes resources assigned to the pod
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// Docker Image for the directory server.
-	Image string `json:"image"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
-	// Certificates - needed for reading/writing encrypted data
-	Certificates DirectoryCertificates `json:"certificates,required"`
-
-	// +kubebuilder:validation:Required
-	VolumeClaimSpec *corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
-
-	// +kubebuilder:validation:Required
-	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
 
 // DirectoryRestoreStatus defines the observed state of DirectoryRestore

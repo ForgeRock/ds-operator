@@ -71,14 +71,14 @@ the hostpath CSI provisioner.
 * Deleting the CR properly cleans up the statefulset and service (owner refs are working OK). PVC is left behind - which is a good thing
 * Scale subresource support (`kubectl scale directoryservice/ds --replicas=2`)
 * Service account passwords are now supported. The operator can change the account passwords for AM, IDM, etc..
-* backup / restore to LDIF implemented (preview)
+* backup / restore  (preview)
 * Volume snapshots support.
 
-Updating the spec.image will update the statefulset and perform a rolling update. For example:
+Updating the spec.podTemplate.image will update the statefulset and perform a rolling update. For example:
 
 ```bash
 kubectl patch directoryservice/ds --type='json' \
-   -p='[{"op": "replace", "path": "/spec/image", "value":"gcr.io/forgeops-public/ds-idrepo:2020.10.28-AlSugoDiNoci"}]'
+   -p='[{"op": "replace", "path": "/spec/podTemplate/image", "value":"gcr.io/forgeops-public/ds:2021-12-01"}]'
 ```
 
 

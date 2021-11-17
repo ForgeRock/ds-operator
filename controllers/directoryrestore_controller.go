@@ -107,7 +107,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					if snap.CreationTimestamp.IsZero() {
 						snap.ObjectMeta.Labels = createLabels(ds.GetName(), nil)
 						snap.Spec = snapshot.VolumeSnapshotSpec{
-							VolumeSnapshotClassName: &ds.Spec.VolumeSnapshotClassName,
+							VolumeSnapshotClassName: &ds.Spec.PodTemplate.VolumeSnapshotClassName,
 							Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &ds.Name},
 						}
 						return controllerutil.SetOwnerReference(&ds, &snap, r.Scheme)
@@ -143,7 +143,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			pvc.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
-			pvc.Spec = *ds.Spec.VolumeClaimSpec
+			pvc.Spec = ds.Spec.PodTemplate.VolumeClaimSpec
 			return controllerutil.SetControllerReference(&ds, &pvc, r.Scheme)
 		}
 		return nil
@@ -159,7 +159,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// The source of a the backup is specified by the SourcePVCName as part of the spec. This is a PVC that was previously created by a backup task.
 	// The target of the restore is the PVC we created above. Once the Job completes, we will snapshot this PVC. The snapshot will be used to initialize
 	// a new DS cluster.
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.Certificates, args, ds.Spec.Image, &ds, ds.Spec.ImagePullPolicy, ds.Spec.Resources)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.PodTemplate, args, &ds)
 
 	if err != nil {
 		log.Error(err, "Job create failed", "jobName", job.Name)

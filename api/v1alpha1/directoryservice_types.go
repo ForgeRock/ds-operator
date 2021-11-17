@@ -27,50 +27,48 @@ import (
 type DirectoryServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Docker Image for the directory server.
-	Image string `json:"image,required"`
+	PodTemplate DirectoryPodTemplate `json:"podTemplate"`
+
 	// Replicas is the number of directory server instances to create
 	// +kubebuilder:validation:Maximum:=8
 	// +kubebuilder:default:=1
 	Replicas *int32 `json:"replicas,required"`
-	// Type of ds instance. Allowed - cts or idrepo? If allow setting the Image, we don't need a type?
-	// DSType string `json:"dsType,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
-	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-
-	// GroupID is the value used to identify this group of directory servers (default: "default")
-	// This field can be set to $(POD_NAME) to allocate each ds server to its own group.
-	// Most users do not need to change this field.
-	// +kubebuilder:default:=default
-	GroupID string `json:"groupID,omitempty"`
-
-	// Kubernetes resources assigned to the pod
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// The account secrets. The key is the DN of the secret (example, uid=admin)
 	Passwords map[string]DirectoryPasswords `json:"passwords"`
-
-	// Certificates needed for direcotory operation.
-	Certificates DirectoryCertificates `json:"certificates"`
-
-	// +kubebuilder:validation:Required
-	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
 	// Snapshots
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
+}
+
+// DirecotoryPodTemplate provides the common configuration for all three CRDs
+type DirectoryPodTemplate struct {
+	// Docker Image for the directory server.
+	Image string `json:"image,required"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+
+	// Kubernetes resources assigned to the pod
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// Certificates needed for direcotory operation.
+	Certificates DirectoryCertificates `json:"certificates"`
+	// +kubebuilder:validation:Required
+	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
 	// +kubebuilder:validation:Optional
 	// The name of a configmap to mount on /opt/opendj/scripts
 	// Optional - if not provided no mount will be performed
 	ScriptConfigMapName string `json:"scriptConfigMapName,omitempty"`
 
-	// Multi-cluster
-	// +kubebuilder:validation:Optional
-	MultiCluster MultiCluster `json:"multiCluster,omitempty"`
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// Name of the volumesnapshot class used in any snapshot operation
+	// +kubebuilder:validation:Required
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,ommitempty"`
 }
 
 // DirectorySnapshotSpec defines how to take Volume Snapshots
@@ -82,8 +80,6 @@ type DirectorySnapshotSpec struct {
 	PeriodMinutes int32 `json:"periodMinutes,required"`
 	// +kubebuilder:default:=10
 	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
-	// +kubebuilder:default:=ds-snapshot-class
-	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,required"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.

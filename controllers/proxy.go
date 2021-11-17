@@ -265,7 +265,7 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 							Name: "ds-master-keypair", // master keypair for encryption
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Certificates.MasterSecretName,
+									SecretName: ds.Spec.PodTemplate.Certificates.MasterSecretName,
 								},
 							},
 						},
@@ -273,7 +273,7 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 							Name: "ds-ssl-keypair", // ssl between instances
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Certificates.SSLSecretName,
+									SecretName: ds.Spec.PodTemplate.Certificates.SSLSecretName,
 								},
 							},
 						},
@@ -281,7 +281,7 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 							Name: "truststore", // truststore
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: ds.Spec.Certificates.TruststoreSecretName,
+									SecretName: ds.Spec.PodTemplate.Certificates.TruststoreSecretName,
 								},
 							},
 						},

@@ -16,7 +16,7 @@ import (
 
 // Create a directory service job that can backup or restore data
 func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Scheme, dataPVC *v1.PersistentVolumeClaim, backupPVC string,
-	certificates *directoryv1alpha1.DirectoryCertificates, args []string, image string, owner metav1.Object, pullPolicy v1.PullPolicy, resources v1.ResourceRequirements) (*batch.Job, error) {
+	podTemplate *directoryv1alpha1.DirectoryPodTemplate, args []string, owner metav1.Object) (*batch.Job, error) {
 
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
@@ -30,6 +30,85 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 		// This for development of the operator minikube only.
 		log.V(8).Info("Debug container being configured, running as root.")
 		user = 0
+	}
+
+	var envVars = []v1.EnvVar{
+		{Name: "NAMESPACE", Value: owner.GetNamespace()},
+	}
+
+	if podTemplate.Env != nil {
+		envVars = append(envVars, podTemplate.Env...)
+	}
+
+	var volumes = []v1.Volume{
+		{
+			VolumeSource: v1.VolumeSource{
+				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: backupPVC},
+			},
+			Name: "backup",
+		},
+		{
+			VolumeSource: v1.VolumeSource{
+				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: dataPVC.GetName()},
+			},
+			Name: "data",
+		},
+		{
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: podTemplate.Certificates.MasterSecretName,
+				},
+			},
+			Name: "master-keypair", // pem based master key pair for crypting data
+		},
+		{
+			Name: "keys", // where DS expects to find the PEM keys
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{},
+			},
+		},
+	}
+
+	var volumeMounts = []v1.VolumeMount{
+		{
+			Name:      "backup",
+			MountPath: "/backup",
+		},
+		{
+			Name:      "data",
+			MountPath: DSDataPath,
+		},
+		{
+			Name:      "master-keypair",
+			MountPath: MasterKeyPath,
+		},
+		{
+			Name:      "keys",
+			MountPath: "/var/run/secrets/keys",
+		},
+	}
+
+	var mode int32 = 0755 // mode to mount scripts
+
+	// If the user supplies a script configmap, mount it to /opt/opendj/scripts
+	if podTemplate.ScriptConfigMapName != "" {
+
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "scripts",
+			MountPath: "/opt/opendj/scripts",
+		})
+
+		volumes = append(volumes, v1.Volume{
+			Name: "scripts",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: podTemplate.ScriptConfigMapName,
+					},
+					DefaultMode: &mode,
+				},
+			},
+		})
 	}
 
 	_, err := ctrl.CreateOrUpdate(ctx, client, &job, func() error {
@@ -50,34 +129,7 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 				// Suspend:                 new(bool),
 				Template: v1.PodTemplateSpec{
 					Spec: v1.PodSpec{
-						Volumes: []v1.Volume{
-							{
-								VolumeSource: v1.VolumeSource{
-									PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: backupPVC},
-								},
-								Name: "backup",
-							},
-							{
-								VolumeSource: v1.VolumeSource{
-									PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: dataPVC.GetName()},
-								},
-								Name: "data",
-							},
-							{
-								VolumeSource: v1.VolumeSource{
-									Secret: &v1.SecretVolumeSource{
-										SecretName: certificates.MasterSecretName,
-									},
-								},
-								Name: "master-keypair", // pem based master key pair for crypting data
-							},
-							{
-								Name: "keys", // where DS expects to find the PEM keys
-								VolumeSource: v1.VolumeSource{
-									EmptyDir: &v1.EmptyDirVolumeSource{},
-								},
-							},
-						},
+						Volumes:       volumes,
 						RestartPolicy: v1.RestartPolicyNever,
 						SecurityContext: &v1.PodSecurityContext{
 							SELinuxOptions: &v1.SELinuxOptions{},
@@ -89,37 +141,18 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 						Containers: []v1.Container{
 							{
 								Name:            "ds-job",
-								Image:           image,
+								Image:           podTemplate.Image,
 								Args:            args,
-								ImagePullPolicy: pullPolicy,
-								Env: []v1.EnvVar{
-									{Name: "NAMESPACE", Value: owner.GetNamespace()},
-									{Name: "BACKUP_TYPE", Value: "ldif"}, // this all we support right now
-								},
-								Resources: resources,
-								VolumeMounts: []v1.VolumeMount{
-									{
-										Name:      "backup",
-										MountPath: "/backup",
-									},
-									{
-										Name:      "data",
-										MountPath: DSDataPath,
-									},
-									{
-										Name:      "master-keypair",
-										MountPath: MasterKeyPath,
-									},
-									{
-										Name:      "keys",
-										MountPath: "/var/run/secrets/keys",
-									},
-								},
+								ImagePullPolicy: podTemplate.ImagePullPolicy,
+								Env:             envVars,
+								Resources:       podTemplate.Resources,
+								VolumeMounts:    volumeMounts,
 							},
 						},
 					},
 				},
 			}
+
 			// Set the data pvc to be owned by the Job
 			_ = controllerutil.SetOwnerReference(&job, dataPVC, scheme)
 			// Set the Job to be owned by the CR
