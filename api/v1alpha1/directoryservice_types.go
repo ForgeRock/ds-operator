@@ -41,11 +41,6 @@ type DirectoryServiceSpec struct {
 	Snapshots DirectorySnapshotSpec `json:"snapshots,omitempty"`
 	// Proxy configurations
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// The name of a configmap to mount on /opt/opendj/scripts
-	// Optional - if not provided no mount will be performed
-	ScriptConfigMapName string `json:"scriptConfigMapName,omitempty"`
 }
 
 // DirecotoryPodTemplate provides the common configuration for all three CRDs

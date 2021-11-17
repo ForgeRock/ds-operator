@@ -248,7 +248,6 @@ spec:
 ## Multi-cluster (Preview)
 
 DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
-DS pods need to be uniquely identifiable within the topology  across all clusters.  
 
 By overriding and passing the DS_BOOTSTRAP_SERVERS and DS_GROUP_ID environment variables, you can configure
 replication across multiple clusters. The requirements:
@@ -258,6 +257,29 @@ replication across multiple clusters. The requirements:
 
 Multi-cluster is an advanced use case. You must thoroughly understand how to configure cross cluster networking and DNS resolution
 before attempting to setup DS multi-cluster.
+
+We describe using [CloudDNS for GKE doc](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-cluster/clouddns/README.md) in the forgeops repo.
+
+To enable multi-cluster, configure the following environment variables in the custom resource
+
+* DS_GROUP_ID must contain the cluster identifier as described in the CloudDNS docs(e.g. "eu" for EU cluster). This variable
+ is appended to the pod hostname in each cluster to form a name that is unique across all ds instances in the topology. For example,
+the pod `ds-idrepo-0` has the same name in the both the `us` and `eu` clusters. Appending the group id (say `eu`) makes the DS server id unique. 
+Note that that group name is NOT used to form a DNS resolvable name. It exists for DS to disambiguate instances. 
+* DS_BOOTSTRAP_REPLICATION_SERVERS enumerates the servers to bootstrap the cluster. This should include at least one server in each cluster.
+These dns names must resolve in all clusters.
+
+
+Example env configuration for ds-idrepo on EU cluster:
+
+CloudDNS:
+```yaml
+  env:
+    - name: DS_GROUP_ID
+      value: "EU"
+    - name: DS_BOOTSTRAP_REPLICATION_SERVERS
+      value: "ds-idrepo-0.ds-idrepo.prod.svc.eu:8989,ds-idrepo-0.ds-idrepo.prod.svc.us:8989"
+```
 
 ## Backup and Restore (Preview)
 

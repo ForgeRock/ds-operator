@@ -426,10 +426,6 @@ spec:
                 format: int32
                 maximum: 8
                 type: integer
-              scriptConfigMapName:
-                description: The name of a configmap to mount on /opt/opendj/scripts
-                  Optional - if not provided no mount will be performed
-                type: string
               snapshots:
                 description: Snapshots
                 properties:

@@ -157,7 +157,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	var mode int32 = 0755 // mode to mount scripts
 
 	// If the user supplies a script configmap, mount it to /opt/opendj/scripts
-	if ds.Spec.ScriptConfigMapName != "" {
+	if ds.Spec.PodTemplate.ScriptConfigMapName != "" {
 
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "scripts",
@@ -169,7 +169,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			VolumeSource: v1.VolumeSource{
 				ConfigMap: &v1.ConfigMapVolumeSource{
 					LocalObjectReference: v1.LocalObjectReference{
-						Name: ds.Spec.ScriptConfigMapName,
+						Name: ds.Spec.PodTemplate.ScriptConfigMapName,
 					},
 					DefaultMode: &mode,
 				},
