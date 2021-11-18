@@ -1,0 +1,45 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: ldap-load
+spec:
+  template:
+    spec:
+      restartPolicy: Never  
+      securityContext:
+        runAsUser: 11111
+        fsGroup: 0
+      containers:
+      - name: ldap-load
+        image: ldap-load
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "2000m"
+            memory: "2000Mi"
+        volumeMounts:
+          - mountPath: /var/run/secrets/ds
+            name: ds-secret
+          - mountPath: /ldif
+            name: ldif-data
+      volumes:
+      - name: ds-secret
+        secret:
+          secretName: ds-passwords
+      - name: ldif-data
+        persistentVolumeClaim:
+          claimName: ldif-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ldif-data
+  annotations:
+    pv.beta.kubernetes.io/gid: "0"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast

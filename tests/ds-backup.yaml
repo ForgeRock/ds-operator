@@ -7,39 +7,38 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  # The directory server binary that contains commands to export ldif or run dsbackup
-  # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-  image:  gcr.io/forgeops-public/ds:7.2-dev
-  imagePullPolicy: IfNotPresent
+  podTemplate:
+    # The directory server binary that contains commands to export ldif or run dsbackup
+    # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
+    image:  gcr.io/forgeops-public/ds:7.2-dev
+    imagePullPolicy: IfNotPresent
 
-  # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
-  volumeClaimSpec:
-    storageClassName: fast
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 2Gi
+    # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)
+    volumeClaimSpec:
+      storageClassName: fast
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
+
+
+    # The snapshot class that will be used when snapshotting the above.
+    # volumeSnapshotClassName: ds-snapshot-class
+    volumeSnapshotClassName: ds-snapshot-class
+
+
+    certificates:
+      # the tls.key in this secret is the private key used for encrypting DS data.
+      # BACK THIS UP!! If you lose this secret your data will be lost forever.
+      masterSecretName: ds-master-keypair
+      # Used for SSL connections between ds instances - for replication, etc.
+      sslSecretName: ds-ssl-keypair
+      # The truststore is taken from the ca.crt in the secret. In most cases
+      # you can use the same ca trust pem in the ssl secret above.
+      truststoreSecretName: ds-ssl-keypair
+    
 
 
   # The directory pvc to backup. This can be a "live" ds instance,
   # assuming your snapshot provider can take "crash consistent" snapshots
   claimToBackup: data-ds-idrepo-0
-
-  # The snapshot class that will be used when snapshotting the above.
-  # volumeSnapshotClassName: ds-snapshot-class
-  volumeSnapshotClassName: ds-snapshot-class
-
-
-  # Optional
-  # imagePullPolicy: IfNotPresent
-
-
-  certificates:
-    # the tls.key in this secret is the private key used for encrypting DS data.
-    # BACK THIS UP!! If you lose this secret your data will be lost forever.
-    masterSecretName: ds-master-keypair
-    # Used for SSL connections between ds instances - for replication, etc.
-    sslSecretName: ds-ssl-keypair
-    # The truststore is taken from the ca.crt in the secret. In most cases
-    # you can use the same ca trust pem in the ssl secret above.
-    truststoreSecretName: ds-ssl-keypair

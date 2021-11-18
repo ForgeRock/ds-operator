@@ -11,27 +11,32 @@ spec:
   # This is usually the "metadata.name" of a DirectoryBackup CR.
   sourcePvcName: ds-backup
 
-  # The directory server binary that contains commands to import ldif or run dsbackup
-  image:  gcr.io/forgeops-public/ds:dev
+  podTemplate:
+    # The directory server binary that contains commands to import ldif or run dsbackup
+    image:  gcr.io/forgeops-public/ds:dev
 
-  # Opitional
-  imagePullPolicy: IfNotPresent
+    # Spec for the pvc that will hold the restored data in DS JE format.
+    # The PVC has the name metadata.name (ds-restore in this example).
+    volumeClaimSpec:
+      storageClassName: fast
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
+    certificates:
+      # the tls.key in this secret is the private key used for encrypting DS data.
+      # BACK THIS UP!! If you lose this secret your data will be lost forever.
+      masterSecretName: ds-master-keypair
+      # Used for SSL connections between ds instances - for replication, etc.
+      sslSecretName: ds-ssl-keypair
+      # The truststore is taken from the ca.crt in the secret. In most cases
+      # you can use the same ca trust pem in the ssl secret above.
+      truststoreSecretName: ds-ssl-keypair
 
-  # Spec for the pvc that will hold the restored data in DS JE format.
-  # The PVC has the name metadata.name (ds-restore in this example).
-  volumeClaimSpec:
-    storageClassName: fast
-    accessModes: [ "ReadWriteOnce" ]
-    resources:
-      requests:
-        storage: 2Gi
+      # The class to use when taking volume snapshots.
+      # A snapshot named metadata.name will be created (ds-restore in this example)
+      # This snapshot can be used to reinitialize a DS cluster.
+      volumeSnapshotClassName: ds-snapshot-class
 
-  # The class to use when taking volume snapshots.
-  # A snapshot named metadata.name will be created (ds-restore in this example)
-  # This snapshot can be used to reinitialize a DS cluster.
-  volumeSnapshotClassName: ds-snapshot-class
 
-  # Secret that contains the ds pem keystore. This is needed to import data into JE
-  # This keystore must match the keystore used to deploy the DirectoryService
-  keystore:
-    secretName: ds
+
