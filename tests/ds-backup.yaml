@@ -19,7 +19,11 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 2Gi
+          storage: 200Gi
+    resources:
+      requests:
+        cpu: "4000m"
+        memory: "5000Mi"
 
 
     # The snapshot class that will be used when snapshotting the above.

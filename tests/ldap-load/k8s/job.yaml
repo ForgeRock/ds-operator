@@ -15,8 +15,8 @@ spec:
         imagePullPolicy: IfNotPresent
         resources:
           requests:
-            cpu: "2000m"
-            memory: "2000Mi"
+            cpu: "1000m"
+            memory: "1000Mi"
         volumeMounts:
           - mountPath: /var/run/secrets/ds
             name: ds-secret
@@ -41,5 +41,6 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
+      # Need approx 2.5 GB per 1M users.
       storage: 10Gi
   storageClassName: fast

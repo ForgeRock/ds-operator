@@ -74,7 +74,7 @@ docker: test
 	docker build -t ${IMG} .
 
 # Test and Build container
-docker-build: test build
+docker-build: build
  	@echo "${IMG} built"
 
 # Build, push, and create GitHub release
@@ -117,5 +117,5 @@ endef
 
 
 # Integration tests assume and ldap server is running via a localhost:1389 proxy
-int:
+inttest:
 	cd pkg/ldap && go test --tags=integration

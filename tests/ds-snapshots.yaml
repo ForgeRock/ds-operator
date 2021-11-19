@@ -18,11 +18,11 @@ spec:
         memory: 5000Mi
         cpu: 6000m
     volumeClaimSpec:
-      storageClassName: standard-rwo
+      storageClassName: premium-rwo
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 20Gi
+          storage: 100Gi
       dataSource:
         name: "$(latest)"
         kind: VolumeSnapshot
