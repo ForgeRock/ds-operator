@@ -1,0 +1,74 @@
+
+# This is a sample Job template to copy the contents of a gcs bucket to the /backup pvc to GCS
+#
+# The DirectoryRestore Operator can then restore that to a PVC
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ds-cp-gcs-to-pvc
+spec:
+  # This will clean up the job after completion.
+  # This feature entered beta in 1.20 and may not be available on all releases.
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      restartPolicy: Never
+
+      initContainers:
+      - name: gsutil
+        image: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -x
+            gsutil -o "GSUtil:state_dir=/tmp/gsutil" -m rsync -r gs://forgeops/ds-backup/$NAMESPACE /backup/$NAMESPACE
+        volumeMounts:
+        - name: ds-backup
+          mountPath: /backup
+        - name: config
+          mountPath: /.config
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      containers:
+      # Example of a main container. This does nothing but sleep
+      # If you want to exec into the container set the sleep value below
+      - name: pause
+        image: busybox
+        command: ["/bin/sh"]
+        args: ["-c", "sleep 300"]
+        volumeMounts:
+        - mountPath: /backup/
+          name: ds-backup
+
+
+      securityContext:
+        fsGroup: 0
+        runAsUser: 11111
+      serviceAccount: ds-backup
+      volumes:
+      - name: ds-backup
+        persistentVolumeClaim:
+          claimName: ds-backup
+      - name: config
+        emptyDir:
+            {}
+---
+# If the ds-backup pvc does not exist - create it
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ds-backup
+  annotations:
+    pv.beta.kubernetes.io/gid: "0"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Need approx 2.5 GB per 1M users.
+      storage: 10Gi
+  storageClassName: fast
