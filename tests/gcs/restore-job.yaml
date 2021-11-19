@@ -56,3 +56,19 @@ spec:
       - name: config
         emptyDir:
             {}
+---
+# If the ds-backup pvc does not exist - create it
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ds-backup
+  annotations:
+    pv.beta.kubernetes.io/gid: "0"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Need approx 2.5 GB per 1M users.
+      storage: 10Gi
+  storageClassName: fast

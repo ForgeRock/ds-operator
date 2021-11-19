@@ -25,6 +25,7 @@ spec:
           storage: 100Gi
       dataSource:
         name: "$(latest)"
+        # name: ds-restore
         kind: VolumeSnapshot
         apiGroup: snapshot.storage.k8s.io
     volumeSnapshotClassName: ds-snapshot-class

@@ -7,13 +7,21 @@ metadata:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
-  # The source pvc that holds the ldif backup data to be restored.
+  # The source pvc that holds the backup data to be restored.
   # This is usually the "metadata.name" of a DirectoryBackup CR.
   sourcePvcName: ds-backup
 
   podTemplate:
     # The directory server binary that contains commands to import ldif or run dsbackup
     image:  gcr.io/forgeops-public/ds:dev
+    resources:
+      requests:
+        cpu: "4000m"
+        memory: "5000Mi"
+    volumeSnapshotClassName: ds-snapshot-class
+    env:
+    - name: BACKUP_TYPE
+      value: tar
 
     # Spec for the pvc that will hold the restored data in DS JE format.
     # The PVC has the name metadata.name (ds-restore in this example).
@@ -22,7 +30,7 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 2Gi
+          storage: 100Gi
     certificates:
       # the tls.key in this secret is the private key used for encrypting DS data.
       # BACK THIS UP!! If you lose this secret your data will be lost forever.
@@ -33,10 +41,7 @@ spec:
       # you can use the same ca trust pem in the ssl secret above.
       truststoreSecretName: ds-ssl-keypair
 
-      # The class to use when taking volume snapshots.
-      # A snapshot named metadata.name will be created (ds-restore in this example)
-      # This snapshot can be used to reinitialize a DS cluster.
-      volumeSnapshotClassName: ds-snapshot-class
+     
 
 
 
