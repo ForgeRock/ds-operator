@@ -78,22 +78,22 @@ spec:
     env:
     - name: "DS_TEST"
       value: "MY_TEST_VARIABLE"
-    # The env example below overrides the default bootstrap for a GCP MultiCluster deployment for a "ds-cts" instance
-    # This is an example of customizing the bootstrap behavior. This can be used for 
-    # Multi-cluster deployments on GCP MCS, AWS Kube-dns, cloud dns, etc. 
+    # The following is an example of where you might want to override the default
+    # behavior of the directory server. This is an example of customizing the bootstrap behavior for a
+    # Multi-cluster deployments on GCP.
     #
-    # See the README in forgeops/ds/ds. Understand what you are doing here before making changes!
+    # NOTE: See the README in forgeops/docker/ds/ds. Understand what you are doing here before making changes!
     # This is NOT required for single cluster deployments.
     # 
-    # The example below specifies one bootstrap server in this cluster (eu) and a second
+    # DS_BOOTSTRAP_REPLICATION_SERVERS specifies one bootstrap server in this cluster (eu) and a second
     # bootstrap server in the us cluster. The dns names below must be fully resolvable 
     # in all clusters. The namespaces must be identical in all clusters.
     #
     # - name: DS_BOOTSTRAP_REPLICATION_SERVERS
     #   value: "ds-cts-0.ds-cts.mynamespace.svc.eu,ds-cts-0.ds-cts.mynamespace.svc.us"
     #
-    # Group id says we are in the eu region. The group id is appended to the hostname to ensure 
-    # The server has a unique identity within the Directory Service topology.
+    # DS_GROUP_ID denotes we are in the "eu" region. The group id is appended to the hostname to ensure 
+    # the server has a unique identity within the Directory Service topology.
     # - name: DS_GROUP_ID
     #   value: "eu"
 
