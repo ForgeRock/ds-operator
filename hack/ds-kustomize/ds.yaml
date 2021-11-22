@@ -2,20 +2,21 @@
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
+  # Directory hostnames will be ds-idrepo-0, id-repo-1, id-repo-2, etc.
   name: ds-idrepo
   labels:
     app.kubernetes.io/name: ds
     app.kubernetes.io/part-of: forgerock
 spec:
   # The number of DS servers in the topology. 
-  # You change also this valuet at runtime using the command:
-  # kubectl scale directoryservice ds-idrepo --replicas=3
+  # Change this value at runtime using the command:
+  #    kubectl scale directoryservice ds-idrepo --replicas=3
   replicas: 1
 
   # The pod template for the Directory Service init and main containers.
   # The same pod template is also used for the DirectoryBackup and DirectoryRestore resources.
   podTemplate:
-    # The image must support the entrypoint hooks defined in the forgeops docker/ds/ds Dockerfile.
+    # The image must support the entry point hooks defined in the forgeops docker/ds/ds Dockerfile.
     # See https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds 
     image: gcr.io/forgeops-public/ds:7.2-dev
     imagePullPolicy: IfNotPresent
@@ -39,12 +40,13 @@ spec:
       # you can use the same CA trust pem in the ssl secret above. If you are using 
       # cert-manager, it includes the CA trust pem along with the private/public key pair.
       truststoreSecretName: ds-ssl-keypair
+    #
     # Optional configmap holding scripts to override the default scripts.
     # Scripts that can be overridden are: restore, backup, and post-init
     # These should NOT have the .sh extension, and should be executable scripts. 
-    # You can also put additional scripts in the configmap for adhoc commands that can be run
+    # You can add additional scripts in the configmap for adhoc commands that can be run
     # using kubectl exec.  
-    # Scripts are mounted at /opt/opendj/scripts
+    # Scripts are mounted on /opt/opendj/scripts
     scriptConfigMapName: ds-script-config
 
     # The volume spec for the directory data. This is the same as the Kubernetes PVC volume spec.
@@ -54,7 +56,7 @@ spec:
       resources:
         requests:
           storage: 512Mi
-    # Optional: If dataSource is provided *AND* the PVC does not yet exist, the directory PVCs will be
+    # Optional: If the volume dataSource is provided *AND* the PVC does not yet exist, the directory PVCs will be
     # initialized from the contents of the snapshot. They will NOT be initialized from the setup script.
     #
     # If the PVC already exists this setting has no effect.
@@ -72,26 +74,26 @@ spec:
     # Class to use for any snapshots.
     volumeSnapshotClassName: ds-snapshot-class
     
-    # Use this pass any additional env vars to the DS pods. 
+    # Use this to set any additional env vars on the DS pods. 
     env:
     - name: "DS_TEST"
       value: "MY_TEST_VARIABLE"
-    # The env example below overrides the default bootstrap for a GCP MultiCluster deployment for a "ds-cts" instance
-    # This is an example of customizing the bootstrap behavior. This can be used for 
-    # Multi-cluster deployments on GCP MCS, AWS Kube-dns, cloud dns, etc. 
+    # The following is an example of where you might want to override the default
+    # behavior of the directory server. This is an example of customizing the bootstrap behavior for a
+    # Multi-cluster deployments on GCP.
     #
-    # See the README in forgeops/ds/ds. Understand what you are doing here before making changes!
+    # NOTE: See the README in forgeops/docker/ds/ds. Understand what you are doing here before making changes!
     # This is NOT required for single cluster deployments.
     # 
-    # The example below specifies one bootstrap server in this cluster (eu) and a second
+    # DS_BOOTSTRAP_REPLICATION_SERVERS specifies one bootstrap server in this cluster (eu) and a second
     # bootstrap server in the us cluster. The dns names below must be fully resolvable 
     # in all clusters. The namespaces must be identical in all clusters.
     #
     # - name: DS_BOOTSTRAP_REPLICATION_SERVERS
     #   value: "ds-cts-0.ds-cts.mynamespace.svc.eu,ds-cts-0.ds-cts.mynamespace.svc.us"
     #
-    # Group id says we are in the eu region. The group id is appended to the hostname to ensure 
-    # The server has a unique identity within the Directory Service topology.
+    # DS_GROUP_ID denotes we are in the "eu" region. The group id is appended to the hostname to ensure 
+    # the server has a unique identity within the Directory Service topology.
     # - name: DS_GROUP_ID
     #   value: "eu"
 
@@ -104,8 +106,9 @@ spec:
   # For more information on CSI drivers, see: https://kubernetes.io/docs/concepts/storage/volumes/#csi
   snapshots:
     enabled: true
-    # Take a snapshot every N minutes. The number here is VERY low for testing.
-    # On a production cluster, you should set this to something higher (30 minutes).
+    # Take a snapshot every N minutes. The number here is low for testing.
+    # On a production cluster, you should set this to something higher (20-30 minutes).
+    # Note that GCP snapshots are quota limited to 6 per hour per disk.
     periodMinutes: 10
     # Keep this many snapshots. Older snapshots will be deleted
     snapshotsRetained: 3
@@ -117,8 +120,9 @@ spec:
   # has been set, the operator does not sync further changes if the secret changes.
   # 
   # The operator supports "bring your own secrets". For example, a secret may have been generated by another operator such as secret agent.
-  # A secret that does not set create: true is assumed to be supplied externally. External secrets will not be deleted by the operator
-  # If create is set to true. the operator will generate a random secret value and store it in the secret.
+  # A secret that does not set "create: true" is assumed to be supplied externally. External secrets will not be deleted by the operator
+  # If create is set to true. the operator will generate a 24 character random alphanumeric secret value. You can retrieve the secret with 
+  # kubectl get secret <secret-name> -o yaml.
   passwords:
     # uid=admin and uid=monitor are required account secrets.
     uid=admin:
