@@ -206,6 +206,10 @@ spec:
                     description: The name of a configmap to mount on /opt/opendj/scripts
                       Optional - if not provided no mount will be performed
                     type: string
+                  serviceAccountName:
+                    default: default
+                    description: The optional service account
+                    type: string
                   volumeClaimSpec:
                     description: PersistentVolumeClaimSpec describes the common attributes
                       of storage devices and allows a Source for provider-specific
@@ -339,7 +343,6 @@ spec:
                 - certificates
                 - image
                 - volumeClaimSpec
-                - volumeSnapshotClassName
                 type: object
               sourcePvcName:
                 type: string
