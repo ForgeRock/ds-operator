@@ -138,6 +138,7 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 							RunAsGroup:     &RootGroup,
 							FSGroup:        &RootGroup,
 						},
+						ServiceAccountName: podTemplate.ServiceAccountName,
 						Containers: []v1.Container{
 							{
 								Name:            "ds-job",

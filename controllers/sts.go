@@ -226,6 +226,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					Labels: createLabels(ds.Name, nil),
 				},
 				Spec: v1.PodSpec{
+					ServiceAccountName: ds.Spec.PodTemplate.ServiceAccountName,
 					// Spread the DS pods across hosts (nodes) and zones if possible. If not possible, schedule anyways
 					TopologySpreadConstraints: []v1.TopologySpreadConstraint{
 						{

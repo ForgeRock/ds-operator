@@ -68,7 +68,11 @@ type DirectoryPodTemplate struct {
 
 	// Name of the volumesnapshot class used in any snapshot operation
 	// +kubebuilder:validation:Required
-	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,ommitempty"`
+	VolumeSnapshotClassName string `json:"volumeSnapshotClassName,omitempty"`
+
+	// The optional service account
+	// +kubebuilder:default:=default
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // DirectorySnapshotSpec defines how to take Volume Snapshots
