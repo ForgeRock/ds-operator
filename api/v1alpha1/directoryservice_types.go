@@ -184,17 +184,6 @@ type DirectoryServiceList struct {
 	Items           []DirectoryService `json:"items"`
 }
 
-// MultiCluster enables MCS and configures identifiers for multiple multi-cluster solutions
-type MultiCluster struct {
-	// +kubebuilder:default:=false
-	McsEnabled bool `json:"mcsEnabled,omitempty"`
-	// ClusterTopology is a comma separate string of identifiers for each cluster e.g. "europe,us"
-	// +kubebuilder:validation:required
-	ClusterTopology string `json:"clusterTopology"`
-	// +kubebuilder:validation:required
-	ClusterIdentifier string `json:"clusterIdentifier"`
-}
-
 func init() {
 	SchemeBuilder.Register(&DirectoryService{}, &DirectoryServiceList{})
 }
