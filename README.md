@@ -133,7 +133,9 @@ Use cases that are enabled by snapshots include:
 * Snapshots require the `csi` volume driver. Consult your providers documentation. On GKE enable
   the `GcePersistentDiskCsiDriver` addon when creating or updating the cluster. The forgeops `cluster-up.sh` script
   for GKE has been updated to include this addon.
-* Create a `VolumeSnapshotClass`. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` script also creates
+* For production usage, snapshots must be atomic and "crash consistent". Consult your providers documentation. Note the csi hostpath
+driver does not meet this criteria and is only used for testing.
+* You must create a `VolumeSnapshotClass`. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` sample script creates
   this class using the following definition
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1beta1
@@ -145,8 +147,8 @@ deletionPolicy: Delete
 EOF
 ```
 
-* The StorageClass in the ds-operator deployment yaml must also use the CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
-  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). The example `hack/ds.yaml`  has been updated.
+* The VolumeSpec in the ds-operator deployment yaml should also use a CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
+  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk).
 
 ### Initializing the Directory Server from a Previous Volume Snapshot
 
@@ -247,7 +249,7 @@ spec:
 
 ## Multi-cluster (Preview)
 
-DS can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
+The DirectoryServer can be configured across multiple clusters located in the same or different geographical regions for high availability or DR purposes.
 
 By overriding and passing the DS_BOOTSTRAP_SERVERS and DS_GROUP_ID environment variables, you can configure
 replication across multiple clusters. The requirements:
@@ -260,7 +262,7 @@ before attempting to setup DS multi-cluster.
 
 We describe using [CloudDNS for GKE doc](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-cluster/clouddns/README.md) in the forgeops repo.
 
-To enable multi-cluster, configure the following environment variables in the custom resource
+To enable multi-cluster, configure the following environment variables in the custom resource:
 
 * DS_GROUP_ID must contain the cluster identifier as described in the CloudDNS docs(e.g. "eu" for EU cluster). This variable
  is appended to the pod hostname in each cluster to form a name that is unique across all ds instances in the topology. For example,
@@ -276,7 +278,7 @@ CloudDNS:
 ```yaml
   env:
     - name: DS_GROUP_ID
-      value: "EU"
+      value: "eu"
     - name: DS_BOOTSTRAP_REPLICATION_SERVERS
       value: "ds-idrepo-0.ds-idrepo.prod.svc.eu:8989,ds-idrepo-0.ds-idrepo.prod.svc.us:8989"
 ```
@@ -289,19 +291,23 @@ The operator supports two new Custom Resources:
 * [DirectoryRestore](hack/ds-restore.yaml)
 
 
-These CRs are used to create LDIF exports and restore them again.
+These resources are used to create backups (tar, LDIF or dsbackup) and restore them again. Backup
+data is stored on a persistent volume claim specified by the Backup Custom Resource.
 
 Taking a DirectoryBackup does the following:
 
-* Snapshots and then clones a PVC with the contents of the directory data.
+* Snapshots and then clones a PVC with the contents of the directory data. 
 * Runs a directory server binary pod, mounting that PVC
-* Exports the data in (tar, LDIF or dsbackup) format to another pvc
+* Exports the data in one or more formats (tar, LDIF or dsbackup). The data is exported to the backup pvc.
 
 When the process concludes, the pvc with the data can be further processed. For example
 you can mount that pvc on a pod that will export the data to GCS or S3. This design
-provides maximum flexibility to BYOJ (bring your own Job) for final archival.
+provides maximum flexibility to BYOJ (bring your own Job) for final archival. A sample Job
+that exports the data to GCS can be found in [tests/gcs](tests/gcs).
 
-Deleting the `DirectoryBackup` CR will the delete the volumesnapshot but it retains the backup pvc.
+You can backup a "live"  directory instance as the snapshots on most cloud providers is "crash consistent". However,  it is recommended to perform an LDIF backup in addition to other types to validate that the snapshot data is readable and consistent.
+
+Deleting a `DirectoryBackup` resource deletes the  associated volumesnapshot but it retains the backup pvc.
 
 Taking a DirectoryRestore does the following:
 
@@ -310,8 +316,43 @@ Taking a DirectoryRestore does the following:
  performs an data import into the directory data pvc.
 * Creates a volume snapshot of the directory data pvc
 
-On conclusion of a restore, the volume snapshot can be used to initialize a new directory instance (see above).
+On conclusion of a restore, the volume snapshot can be used to initialize or recover a new directory instance by using it
+as the Volume Source of a DirectoryService instance.
 
 For day to day backup of directory data, prefer to use tools such as [velero.io](https://velero.io). Ldif export and import
 is useful to validate the integrity of the database, and for long term archival storage where a text based
 format is preferred.
+
+## Putting it all together
+
+A sample workflow to deploy a diretory server, backup that server, destroy the PVC, then restore the backup, would
+look like this:
+
+```bash
+# Create a new directory instance (and associated certs)
+kubectl apply -k hack/ds-kustomize 
+# after deployment, wait for the pod to be ready... Make some changes using your favorite ldap tool. then take a backup
+kubectl apply -f hack/ds-backup.yaml
+# When the backup completes... lets tear it all down 
+kubectl delete -f hack/ds-backup.yaml
+kubectl delete -k hack/ds-kustomize
+# Oh no - the data is gone!!!
+kubectl delete pvc --all
+# Lets restore the backup
+kubectl apply -f hack/ds-restore.yaml
+# When the restore completes you should have a volume snapshot called ds-restore
+kubectl get volumesnapshot
+# Edit hack/ds-kustomize/ds.yaml. Set the pvc volume source to the ds-restore snapshot above
+# Now redeploy the directory server:
+kubectl apply -k hack/ds-kustomize
+# You should see the restored data appear in the directory server.
+# You can also scale the directory. The backup snapshot will be used as the source for new pods:
+kubctl scale directoryservice --all --replicas=2
+```
+
+## Changelog 
+
+* v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats. 
+ Migrate to cert-manager to issue PEM certificates for the directory server pods.
+ Introduce a new common podTemplateSpec the Directory, Bacup and Restore Custom Resources.
+* v0.1.0 - Initial release
