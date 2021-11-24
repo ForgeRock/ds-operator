@@ -19,7 +19,7 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 200Gi
+          storage: 100Gi
     resources:
       requests:
         cpu: "4000m"
@@ -29,6 +29,8 @@ spec:
     # The snapshot class that will be used when snapshotting the above.
     # volumeSnapshotClassName: ds-snapshot-class
     volumeSnapshotClassName: ds-snapshot-class
+
+
 
 
     certificates:
