@@ -13,15 +13,16 @@ spec:
 
   podTemplate:
     # The directory server binary that contains commands to import ldif or run dsbackup
-    image:  gcr.io/forgeops-public/ds:dev
+    image:  gcr.io/forgeops-public/ds:7.2-dev
     resources:
       requests:
         cpu: "4000m"
         memory: "5000Mi"
     volumeSnapshotClassName: ds-snapshot-class
+    # Example of restoring a backup from the tar file and then an ldif import.
     env:
     - name: BACKUP_TYPE
-      value: tar
+      value: "tar,ldif"
 
     # Spec for the pvc that will hold the restored data in DS JE format.
     # The PVC has the name metadata.name (ds-restore in this example).
