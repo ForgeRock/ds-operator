@@ -133,7 +133,9 @@ Use cases that are enabled by snapshots include:
 * Snapshots require the `csi` volume driver. Consult your providers documentation. On GKE enable
   the `GcePersistentDiskCsiDriver` addon when creating or updating the cluster. The forgeops `cluster-up.sh` script
   for GKE has been updated to include this addon.
-* Create a `VolumeSnapshotClass`. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` script also creates
+* For production usage, snapshots must be atomic and "crash consistent". Consult your providers documentation. Note the csi hostpath
+driver does not meet this criteria and is only used for testing.
+* You must create a `VolumeSnapshotClass`. The default expected by the ds-operator is `ds-snapshot-class`. The `cluster-up.sh` sample script creates
   this class using the following definition
 ```yaml
 apiVersion: snapshot.storage.k8s.io/v1beta1
@@ -145,8 +147,8 @@ deletionPolicy: Delete
 EOF
 ```
 
-* The StorageClass in the ds-operator deployment yaml must also use the CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
-  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk). The example `hack/ds.yaml`  has been updated.
+* The VolumeSpec in the ds-operator deployment yaml should also use a CSI driver. When enabling the `GcePersistentDiskCsiDriver` addon, GKE will automatically
+  create two new storage classes: `standard-rwo` (balanced PD Disk) and `premium-rwo` (SSD PD disk).
 
 ### Initializing the Directory Server from a Previous Volume Snapshot
 
