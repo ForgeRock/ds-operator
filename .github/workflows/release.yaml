@@ -1,3 +1,6 @@
+# Creates a release. The only files we release on GH are the
+# zip and the final kustomize yaml to install the operator.
+# The docker image is tagged and created using cloud build.
 name: Release
 on:
   push:
@@ -20,11 +23,9 @@ jobs:
       run: |
         cd config/manager
         # GITHUB_REF_NAME
-        # kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${TAG_NAME}
         kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${GITHUB_REF_NAME}
         cd ../../
         kustomize build config/default > ds-operator.yaml
-        # git checkout -- config/manager/kustomization.yaml
     - name: Upload  to release
       uses: svenstaro/upload-release-action@v2
       with:
@@ -33,5 +34,5 @@ jobs:
         asset_name: ds-operator.yaml
         tag: ${{ github.ref }}
         overwrite: true
-        body: "Upload ds-operator.yaml deployment"
+        body: "ds-operator.yaml. Deploy with kubectl"
   

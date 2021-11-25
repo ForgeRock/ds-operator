@@ -1,23 +1,9 @@
+# Note: We just use a vanilla docker build trigger in cloudbuild.yaml - so this file is 
+# not currently used.
+# This can be fleshed out later if we want to use a more complex trigger.
+# Cloudbuild just builds the docker image. The release yaml is produced by a github action
 steps:
-# Setup the workspace so we have a viable place to point GOPATH at.
-- name: gcr.io/cloud-builders/go
-  env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator']
-  args: ['env']
-
-# We currently do have unit tests - only PR functional tests.
-# - name: gcr.io/cloud-builders/go
-#   env: ['PROJECT_ROOT=github.com/ForgeRock/ds-operator']
-#   args: ['test', './...']
-
-- name: goreleaser/goreleaser
-  entrypoint: /bin/sh
-  dir: gopath/src/github.com
-  env: ['GOPATH=/workspace/gopath']
-  # we "create" the tag because cloud build doesn't pull the tags, just commit
-  args: ['-c', 'cd ForgeRock/ds-operator && git tag $TAG_NAME && IMG=gcr.io/forgeops-public/ds-operator:$TAG_NAME make release' ]
-  secretEnv: ['GITHUB_TOKEN']
-
-availableSecrets:
-  secretManager:
-    - versionName: projects/1067706085367/secrets/GH_API_CLOUDBUILD/versions/2
-      env: 'GITHUB_TOKEN'
+- name: gcr.io/cloud-builders/docker
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME', '.']
+images:
+- gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME

@@ -81,7 +81,6 @@ kubectl patch directoryservice/ds --type='json' \
    -p='[{"op": "replace", "path": "/spec/podTemplate/image", "value":"gcr.io/forgeops-public/ds:2021-12-01"}]'
 ```
 
-
 ## Future Directions / TODOs 
 
 * More status updates and events, especially for backup / restore CRDS
@@ -97,18 +96,18 @@ In 1.17, some sts settings can be updated: image, Resource req/limit, labels and
 
 ## Release Process
 
-* Uses goreleaser and cloudbuild
+To create a new release, create a tag. You can do this in GitHub or from the git cli. 
 
-To run a test build,  issue `/gcbrun` in the PR comment
-To cut a release, create a release in GitHub. This creates a tag, and starts the cloudbuild / goreleaser process.
+There are two independent processes that are triggered:
 
+- A Cloud Run docker trigger builds the ds-operator docker image and pushes it to `gcr.io/forgeops-public/ds-operator:$TAG`
+- A GitHub Action triggers and renders the kustomize manifests in `config/default`. The manifest is
+added to the release files on GitHub. The image name will be replaced in the manifest with the
+proper tag. 
 
 ## Implementation Notes
 
 (Scratch Notes to implementers...)
-
-Spec update: https://kubernetes.slack.com/archives/CAR30FCJZ/p1602800878040500?thread_ts=1602647971.012900&cid=CAR30FCJZ
-"One safe pattern is to mutate the spec, then update (i.e. commit) the spec, then mutate the status, then commit the status."
 
 cn=monitor - status we might want to use for the operator status:
 
