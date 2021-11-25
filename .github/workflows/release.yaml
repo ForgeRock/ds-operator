@@ -19,7 +19,9 @@ jobs:
     - name: Kustomize Build
       run: |
         cd config/manager
-        kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${TAG_NAME}
+        # GITHUB_REF_NAME
+        # kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${TAG_NAME}
+        kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${GITHUB_REF_NAME}
         cd ../../
         kustomize build config/default > ds-operator.yaml
         # git checkout -- config/manager/kustomization.yaml
