@@ -1,0 +1,35 @@
+name: Release
+on:
+  push:
+    tags: [ "*" ]
+
+jobs:
+  build:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Setup Kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: "4.2.0"
+    - name: Kustomize Build
+      run: |
+        cd config/manager
+        kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${TAG_NAME}
+        cd ../../
+        kustomize build config/default > ds-operator.yaml
+        # git checkout -- config/manager/kustomization.yaml
+    - name: Upload  to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ds-operator.yaml
+        asset_name: ds-operator.yaml
+        tag: ${{ github.ref }}
+        overwrite: true
+        body: "Upload ds-operator.yaml deployment"
+  

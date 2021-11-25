@@ -6,3 +6,6 @@ helm/
 tmp
 node_modules
 .virt
+build/
+dist/
+bin/
