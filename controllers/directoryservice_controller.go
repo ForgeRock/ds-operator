@@ -193,7 +193,7 @@ func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *DirectoryServiceReconciler) getAdminLDAPConnection(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svc *v1.Service) (*ldap.DSConnection, error) {
 	// Target the first pod (-0) because tasks are specfic to a pod
-	url := fmt.Sprintf("ldaps://%s-0.%s.%s.svc.cluster.local:1636", svc.Name, svc.Name, svc.Namespace)
+	url := fmt.Sprintf("ldaps://%s-0.%s.%s.svc:1636", svc.Name, svc.Name, svc.Namespace)
 	var log = k8slog.FromContext(ctx)
 
 	// For local testing we need to run kube port-forward and localhost...
