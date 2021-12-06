@@ -46,6 +46,14 @@ spec:
     # This is optional since cert-manager will default to this value however
     # if you are using an external issuer, change this to that issuer group.
     group: cert-manager.io
+  # Cert-manager includes support for Java Keystore generation. This is not used right now - just here for reference.
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+          name: ds-passwords
+          key: monitor.pw
+
 ---
 # The master keypair used by DS to encrypt data.
 # IF YOU LOSE THIS KEYPAIR YOU WILL LOSE YOUR DATA!!!!
@@ -57,15 +65,15 @@ metadata:
   # namespace: sandbox
 spec:
   secretName: ds-master-keypair
-  
+
   secretTemplate:
     labels:
       app: ds-operator
 
-  # Note: The master cert should not be rotated as the private key 
+  # Note: The master cert should not be rotated as the private key
   # must be kept to decrypt the data. You can delete the Certificate
-  # and cert-manager will leave the tls secret alone. 
-  duration: 1000000h # about 41 years... 
+  # and cert-manager will leave the tls secret alone.
+  duration: 1000000h # about 41 years...
   subject:
     organizations:
       - "ForgeRock.com"
