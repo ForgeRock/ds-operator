@@ -3,7 +3,7 @@
 # Note the csi hostpath driver is very unreliable. You often need to delete/recreate the cluster.
 
 minikube delete
-minikube start --memory 7gb --cpus 2
+minikube start --memory 4gb --cpus 2
 minikube addons enable  csi-hostpath-driver
 minikube addons enable volumesnapshots
 
