@@ -84,13 +84,13 @@ The entrypoint and behavior of the docker image is important. If you want to mak
 
 ## Secrets
 
-The operator supports creating (some) secrets, or a bring-your-own secrets model. 
+The operator supports creating (some) secrets, or a bring-your-own secrets model.
 
 The operator can generate random secrets for the `uid=admin` account, `cn=monitor` and application service accounts (for
 example - the AM CTS account). Refer to the annotated sample.
 
 Kubernetes cert-manager is the recommended way to generate PEM certificates for the directory deployment.
-The included sample in [hack/ds-kustomize/cert.yaml](hack/ds-kustomize/cert.yaml) creates certificates for the master and SSL keypairs. 
+The included sample in [hack/ds-kustomize/cert.yaml](hack/ds-kustomize/cert.yaml) creates certificates for the master and SSL keypairs.
 
 However, cert-manager is not a requirement. Any valid PEM certificates can be used for the directory deployment.
 For example, you could use `openssl` commands to generate the PEM key pairs. All certificates must be of secret type `kubernetes.io/tls`.
@@ -107,12 +107,12 @@ The operator provides the following control over scheduling:
  such nodes will help them "repel" non directory workloads, which can be helpful for performance.  If nodes are not tainted,
  this toleration has no effect. This should be thought of as an optional feature that most users will not require.
 * Topology Constraints: The DS nodes will _prefer_ to be scheduled on nodes and zones that do not have other directory pods on them. This is
-  "soft" anti-affinity.  DS pods will still be scheduled on the same node if the scheduler is not able to fulfill the request. 
+  "soft" anti-affinity.  DS pods will still be scheduled on the same node if the scheduler is not able to fulfill the request.
 
 ## Volume Snapshots
 
 Beginning in Kubernetes 1.20, [Volume Snapshots](https://kubernetes.io/docs/concepts/storage/volume-snapshots/) are generally
-available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image. 
+available. Snapshots enable the creation of a rapid point-in-time snapshot of a disk image.
 
 The ds-operator enables the following auto-snapshot features:
 
@@ -266,8 +266,8 @@ To enable multi-cluster, configure the following environment variables in the cu
 
 * DS_GROUP_ID must contain the cluster identifier as described in the CloudDNS docs(e.g. "eu" for EU cluster). This variable
  is appended to the pod hostname in each cluster to form a name that is unique across all ds instances in the topology. For example,
-the pod `ds-idrepo-0` has the same name in the both the `us` and `eu` clusters. Appending the group id (say `eu`) makes the DS server id unique. 
-Note that that group name is NOT used to form a DNS resolvable name. It exists for DS to disambiguate instances. 
+the pod `ds-idrepo-0` has the same name in the both the `us` and `eu` clusters. Appending the group id (say `eu`) makes the DS server id unique.
+Note that that group name is NOT used to form a DNS resolvable name. It exists for DS to disambiguate instances.
 * DS_BOOTSTRAP_REPLICATION_SERVERS enumerates the servers to bootstrap the cluster. This should include at least one server in each cluster.
 These dns names must resolve in all clusters.
 
@@ -290,15 +290,18 @@ The operator supports two new Custom Resources:
 * [DirectoryBackup])(hack/ds-backup.yaml)
 * [DirectoryRestore](hack/ds-restore.yaml)
 
-
 These resources are used to create backups (tar, LDIF or dsbackup) and restore them again. Backup
 data is stored on a persistent volume claim specified by the Backup Custom Resource.
 
 Taking a DirectoryBackup does the following:
 
-* Snapshots and then clones a PVC with the contents of the directory data. 
+* Snapshots and then clones a PVC with the contents of the directory data.
 * Runs a directory server binary pod, mounting that PVC
 * Exports the data in one or more formats (tar, LDIF or dsbackup). The data is exported to the backup pvc.
+
+The process flow is diagrammed below:
+
+![Backup process](backup-process.png "Backup process")
 
 When the process concludes, the pvc with the data can be further processed. For example
 you can mount that pvc on a pod that will export the data to GCS or S3. This design
@@ -330,10 +333,10 @@ look like this:
 
 ```bash
 # Create a new directory instance (and associated certs)
-kubectl apply -k hack/ds-kustomize 
+kubectl apply -k hack/ds-kustomize
 # after deployment, wait for the pod to be ready... Make some changes using your favorite ldap tool. then take a backup
 kubectl apply -f hack/ds-backup.yaml
-# When the backup completes... lets tear it all down 
+# When the backup completes... lets tear it all down
 kubectl delete -f hack/ds-backup.yaml
 kubectl delete -k hack/ds-kustomize
 # Oh no - the data is gone!!!
@@ -350,9 +353,9 @@ kubectl apply -k hack/ds-kustomize
 kubctl scale directoryservice --all --replicas=2
 ```
 
-## Changelog 
+## Changelog
 
-* v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats. 
+* v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats.
  Migrate to cert-manager to issue PEM certificates for the directory server pods.
  Introduce a new common podTemplateSpec the Directory, Bacup and Restore Custom Resources.
 * v0.1.0 - Initial release
