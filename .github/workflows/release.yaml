@@ -34,5 +34,4 @@ jobs:
         asset_name: ds-operator.yaml
         tag: ${{ github.ref }}
         overwrite: true
-        body: "deploy with: kubectl apply -f ds-operator.yaml.  Docker image is gcr.io/forgeops-public/ds-operator:${GITHUB_REF_NAME}"
-  
+        body: "deploy with: kubectl apply -f ds-operator.yaml"
