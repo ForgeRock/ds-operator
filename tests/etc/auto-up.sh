@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-gcloud beta container --project "engineering-devops" clusters create-auto "warren-ds-test" \
+# Sample script to create an autopilot test cluster on GKE. Adjust for your environment.
+
+project=$(gcloud config list --format 'value(core.project)') 2>/dev/null
+
+
+gcloud beta container --project $project clusters create-auto "ds-test" \
     --region "us-west4" --release-channel "regular" \
     --network "projects/engineering-devops/global/networks/forgeops" \
     --subnetwork "projects/engineering-devops/regions/us-west4/subnetworks/forgeops" \
