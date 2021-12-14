@@ -26,7 +26,7 @@ spec:
         name: ds-restore
         kind: VolumeSnapshot
         apiGroup: snapshot.storage.k8s.io
-    certificates:
+    secrets:
     # the tls.key in this secret is the private key used for encrypting DS data.
     # BACK THIS UP!! If you lose this secret your data will be lost forever.
     masterSecretName: ds-master-keypair
@@ -57,4 +57,3 @@ spec:
     uid=am-config,ou=admins,ou=am-config:
       secretName: ds-env-secrets
       key: AM_STORES_APPLICATION_PASSWORD
- 

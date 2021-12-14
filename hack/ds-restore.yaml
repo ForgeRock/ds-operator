@@ -31,7 +31,7 @@ spec:
     # This snapshot can be used to reinitialize a DS cluster.
     volumeSnapshotClassName: ds-snapshot-class
 
-    certificates:
+    secrets:
       masterSecretName: ds-master-keypair
       sslSecretName: ds-ssl-keypair
       truststoreSecretName: ds-ssl-keypair

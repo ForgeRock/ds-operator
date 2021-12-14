@@ -33,7 +33,7 @@ spec:
 
 
 
-    certificates:
+    secrets:
       # the tls.key in this secret is the private key used for encrypting DS data.
       # BACK THIS UP!! If you lose this secret your data will be lost forever.
       masterSecretName: ds-master-keypair
@@ -42,7 +42,7 @@ spec:
       # The truststore is taken from the ca.crt in the secret. In most cases
       # you can use the same ca trust pem in the ssl secret above.
       truststoreSecretName: ds-ssl-keypair
-    
+
 
 
   # The directory pvc to backup. This can be a "live" ds instance,
