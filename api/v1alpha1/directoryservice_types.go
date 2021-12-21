@@ -54,8 +54,8 @@ type DirectoryPodTemplate struct {
 
 	// Kubernetes resources assigned to the pod
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	// Certificates needed for direcotory operation.
-	Certificates DirectoryCertificates `json:"certificates"`
+	// Certificates needed for directory operation.
+	Certificates DirectorySecrets `json:"secrets"`
 	// +kubebuilder:validation:Required
 	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
 
@@ -97,8 +97,8 @@ type DirectoryPasswords struct {
 	Create bool `json:"create,omitempty"`
 }
 
-// DirectoryCertificates required for operation of the directory server
-type DirectoryCertificates struct {
+// DirectorySecrets required for operation of the directory server
+type DirectorySecrets struct {
 	// +kubebuilder:default:=ds-master-keypair
 	MasterSecretName string `json:"masterSecretName"`
 	// +kubebuilder:default:=ds-ssl-keypair

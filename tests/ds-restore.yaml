@@ -32,7 +32,7 @@ spec:
       resources:
         requests:
           storage: 100Gi
-    certificates:
+    secrets:
       # the tls.key in this secret is the private key used for encrypting DS data.
       # BACK THIS UP!! If you lose this secret your data will be lost forever.
       masterSecretName: ds-master-keypair
@@ -42,7 +42,7 @@ spec:
       # you can use the same ca trust pem in the ssl secret above.
       truststoreSecretName: ds-ssl-keypair
 
-     
+
 
 
 

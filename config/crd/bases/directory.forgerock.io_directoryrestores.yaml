@@ -40,23 +40,6 @@ spec:
                 description: DirecotoryPodTemplate provides the common configuration
                   for all three CRDs
                 properties:
-                  certificates:
-                    description: Certificates needed for direcotory operation.
-                    properties:
-                      masterSecretName:
-                        default: ds-master-keypair
-                        type: string
-                      sslSecretName:
-                        default: ds-ssl-keypair
-                        type: string
-                      truststoreSecretName:
-                        default: ds-ssl-keypair
-                        type: string
-                    required:
-                    - masterSecretName
-                    - sslSecretName
-                    - truststoreSecretName
-                    type: object
                   env:
                     items:
                       description: EnvVar represents an environment variable present
@@ -206,6 +189,23 @@ spec:
                     description: The name of a configmap to mount on /opt/opendj/scripts
                       Optional - if not provided no mount will be performed
                     type: string
+                  secrets:
+                    description: Certificates needed for directory operation.
+                    properties:
+                      masterSecretName:
+                        default: ds-master-keypair
+                        type: string
+                      sslSecretName:
+                        default: ds-ssl-keypair
+                        type: string
+                      truststoreSecretName:
+                        default: ds-ssl-keypair
+                        type: string
+                    required:
+                    - masterSecretName
+                    - sslSecretName
+                    - truststoreSecretName
+                    type: object
                   serviceAccountName:
                     default: default
                     description: The optional service account
@@ -340,8 +340,8 @@ spec:
                       operation
                     type: string
                 required:
-                - certificates
                 - image
+                - secrets
                 - volumeClaimSpec
                 type: object
               sourcePvcName:

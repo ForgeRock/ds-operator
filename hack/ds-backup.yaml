@@ -26,7 +26,7 @@ spec:
     volumeSnapshotClassName: ds-snapshot-class
 
     # Backup / Restore need the master keypair for encrypting/decrypting data.
-    certificates:
+    secrets:
       masterSecretName: ds-master-keypair
       sslSecretName: ds-ssl-keypair
       truststoreSecretName: ds-ssl-keypair

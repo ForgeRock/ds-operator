@@ -29,7 +29,7 @@ spec:
         kind: VolumeSnapshot
         apiGroup: snapshot.storage.k8s.io
     volumeSnapshotClassName: ds-snapshot-class
-    certificates:
+    secrets:
       # the tls.key in this secret is the private key used for encrypting DS data.
       # BACK THIS UP!! If you lose this secret your data will be lost forever.
       masterSecretName: ds-master-keypair
@@ -44,7 +44,7 @@ spec:
     enabled: true
     periodMinutes: 15
     snapshotsRetained: 3
-    
+
   passwords:
     uid=admin:
       secretName: ds-passwords
