@@ -54,7 +54,7 @@ type DirectoryPodTemplate struct {
 
 	// Kubernetes resources assigned to the pod
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	// Certificates needed for direcotory operation.
+	// Certificates needed for directory operation.
 	Certificates DirectorySecrets `json:"secrets"`
 	// +kubebuilder:validation:Required
 	VolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"volumeClaimSpec,required"`
