@@ -287,7 +287,7 @@ CloudDNS:
 
 The operator supports two new Custom Resources:
 
-* [DirectoryBackup])(hack/ds-backup.yaml)
+* [DirectoryBackup](hack/ds-backup.yaml)
 * [DirectoryRestore](hack/ds-restore.yaml)
 
 These resources are used to create backups (tar, LDIF or dsbackup) and restore them again. Backup
@@ -328,7 +328,7 @@ format is preferred.
 
 ## Putting it all together
 
-A sample workflow to deploy a diretory server, backup that server, destroy the PVC, then restore the backup, would
+A sample workflow to deploy a directory server, backup that server, destroy the PVC, then restore the backup, would
 look like this:
 
 ```bash
@@ -355,6 +355,7 @@ kubctl scale directoryservice --all --replicas=2
 
 ## Changelog
 
+* v0.2.next - `spec.podTemplate.certificates` renamed to `spec.PodTemplate.secrets` to better reflect the purpose.
 * v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats.
  Migrate to cert-manager to issue PEM certificates for the directory server pods.
  Introduce a new common podTemplateSpec the Directory, Bacup and Restore Custom Resources.
