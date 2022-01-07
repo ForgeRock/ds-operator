@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Install the operator from a released version. Use the hack/install-operator script for adhoc testing.
-# 
-DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-latest}
+#
+
+# As releases are tagged, update the operator version here. Avoid using "latest" to ensure consistent behavior.
+DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-v0.2.2}
 
 USAGE="Usage: $0 install|remove|upgrade"
+
 
 URL="https://github.com/ForgeRock/ds-operator/releases/download/${DS_OPERATOR_VERSION}/ds-operator.yaml"
 
@@ -21,6 +24,8 @@ install() {
     fi
 }
 
+
+
 # Upgrade - same as install, but omit check for exiting installation
 upgrade() {
     printf "Applying upgrade to ds-operator"
@@ -36,6 +41,7 @@ remove() {
 
 cmd=${1}
 
+echo "Version: $DS_OPERATOR_VERSION"
 
 case "${cmd}" in
     install) install;;
