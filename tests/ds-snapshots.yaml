@@ -38,7 +38,7 @@ spec:
       # The truststore is taken from the ca.crt in the secret. In most cases
       # you can use the same ca trust pem in the ssl secret above.
       truststoreSecretName: ds-ssl-keypair
-    serviceAccountName: ds-backup
+    # serviceAccountName: ds-backup
 
   snapshots:
     enabled: true
