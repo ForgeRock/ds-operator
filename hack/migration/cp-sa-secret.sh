@@ -7,10 +7,12 @@ D=/tmp/sa-secrets
 
 rm -fr $D
 mkdir -p $D
+SRC_NAMESPACE=default
 
 # Get the DS and platform ca secrets
-kubectl get secret ds -o json >$D/ds-secret.json
-kubectl get secret platform-ca -o json >$D/ca.json
+# Note we get secret from the default namespace to the current namespace
+kubectl -n $SRC_NAMESPACE get secret ds -o json >$D/ds-secret.json
+kubectl -n $SRC_NAMESPACE get secret platform-ca -o json >$D/ca.json
 
 # extract the base64 PEM certs
 jq <$D/ca.json -r  .data.'"ca.pem"' | base64 -d > $D/ca.pem
@@ -32,8 +34,7 @@ data:
 EOF
 
 echo "Generated tls.yaml in $D."
-echo "apply with kubectl -f $D/ssl-tls.yaml"
-cat $D/ssl-tls.yaml
+echo "apply with kubectl apply -f $D/ssl-tls.yaml"
 
 # Uncomment if you want to do this automatically
 # kubectl apply -f $D/ssl-tls.yaml
@@ -55,8 +56,7 @@ EOF
 
 echo ""
 echo "Generated $D/master-tls.yaml"
-echo "apply with kubectl -f $D/master-tls.yaml"
-cat $D/master-tls.yaml
+echo "apply with kubectl apply -f $D/master-tls.yaml"
 
 # Uncomment if you want to do this automatically
 # kubectl apply -f $D/master-tls.yaml

@@ -29,10 +29,10 @@ volumeBindingMode: Immediate
 EOF
 
 
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.6.1/cert-manager.yaml
+# cert manager is used to generate the SSL and master keypairs
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.0/cert-manager.yaml
 
-# kubectl apply -f hack/secrets.yaml
 
-
+# Installs the CRD into the cluster. `make run` to run the controller will fail if the CRD is missing.
+# If you change the API you must run make install again.
 make install
-
