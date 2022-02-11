@@ -353,6 +353,135 @@ kubectl apply -k hack/ds-kustomize
 kubctl scale directoryservice --all --replicas=2
 ```
 
+## Migration
+
+Migrating from a previous deployment of the directory server to the ds-operator is a two step process:
+
+* Migrate the required secrets. In particular, the ds master keypair must be migrated to
+ the Kubernetes `tls` secret type. Both the old and the new directory server instances must share
+ the same master keypair.
+* Migrate the data. This can be done using LDIF import/export, restoring from a backup, or via replication.
+This example demonstrates using replication. The new server will be connected to
+the existing server, and receive all the data via replication.
+
+Considerations:
+
+* The schema must be compatible with the two deployments.
+* Directory deployments prior to 7.1.1 did not replicate schema. The new ds-operator image replicates
+schema. However, as long as the schema is compatible migration can proceed.
+
+
+The scenario described below is supported by the sample files in the [hack/migration](hack/migration) directory.
+
+The sample assumes a 7.1.1 directory server instance `ds-idrepo` is running in the `default` namespace, and we are migrating
+the data to a directory server instance `ds-idrepo` deployed by the directory operator in the `ds` namespace.
+This procedure will also works across cluster instances if pod DNS resolution is configured correctly. See
+the multi-cluster documentation for more details.
+
+### Migration Steps
+
+Edit the `hack/cp-sa-secrets.sh` script to match your environment
+In this example the original deployment secrets are in the `default` namespace, and the new
+ds-operator deployment will be in the `ds` namespace
+
+```bash
+kubectl create ns ds
+kubectl ns ds
+# Edit and run this script
+cd hack/migration
+./cp-sa-secrets.sh
+# the script generates secrets in /tmp. Apply them:
+kubectl apply -f /tmp/sa-secrets/ssl-tls.yaml
+kubectl apply -f /tmp/sa-secrets/master-tls.yaml
+# You should backup these generated secrets in the `ds` namespace!!!
+# Remember - if you lose the master keypair, you will lose the data!
+#
+# Apply the password secrets - these are for the uid=admin and monitor users
+k apply ./secrets.yaml
+
+```
+
+The directory deployment sets two environment variables that will assist in migration. Edit
+ `ds.yaml` in the migration directory, and make sure the following variables are uncommented in the `spec.env` section:
+
+```yaml
+  - name: DS_BOOTSTRAP_REPLICATION_SERVERS
+      value: "ds-idrepo-0.ds-idrepo.default.svc.cluster.local:8989,ds-idrepo-0.ds-idrepo.ds.svc.cluster.local:8989"
+  - name: DS_GROUP_ID
+      value: "ds"
+```
+
+The `DS_BOOTSTRAP_REPLICATION_SERVERS` variable adds the original primary server in the `default` namespace to
+the replication topology. This will cause the new server to connect to the original primary server and
+replicate data.
+
+Setting `DS_GROUP_ID` is required so that this server has a  unique server id that is distinct from the original primary server.
+If we don't set this, both servers would be identified as the server id ds-idrepo-0-default.
+
+You can now deploy the new directory server instance:
+
+```bash
+kubectl apply -f ds.yaml
+
+```
+
+Once the server has started, you should see it connect to the primary server. You can verify this by execing into the pod
+and running:
+
+
+```bash
+default-scripts/rstatus
+
+```
+Note that you will see errors related to the generation id. You can ignore these errors for now, as we
+we are going to reinitialize the new server with all the data from the primary server.
+
+For each backend that you want to migrate, run the following command in the ds-idrepo-0 pod of the new server instance:
+
+```bash
+dsrepl initialize --baseDn $BACKEND_OU --fromServer ds-idrepo-0 --bindDN "uid=admin" --bindPasswordFile  /var/run/secrets/admin/dirmanager.pw  --hostname localhost --port 4444 --trustAll
+```
+
+
+For this scenario, the following commands were used:
+
+```bash
+dsrepl initialize --baseDn ou=am-config --fromServer ds-idrepo-0 --bindDN "uid=admin" --bindPasswordFile  /var/run/secrets/admin/dirmanager.pw  --hostname localhost --port 4444 --trustAll
+dsrepl initialize --baseDn ou=identities --fromServer ds-idrepo-0 --bindDN "uid=admin" --bindPasswordFile  /var/run/secrets/admin/dirmanager.pw  --hostname localhost --port 4444 --trustAll
+dsrepl initialize --baseDn dc=openidm,dc=forgerock,dc=io --fromServer ds-idrepo-0 --bindDN "uid=admin" --bindPasswordFile  /var/run/secrets/admin/dirmanager.pw  --hostname localhost --port 4444 --trustAll
+dsrepl initialize --baseDn  ou=tokens --fromServer ds-idrepo-0 --bindDN "uid=admin" --bindPasswordFile  /var/run/secrets/admin/dirmanager.pw  --hostname localhost --port 4444 --trustAll
+```
+
+Once complete, these commands will have replicated the data from the original server to the new server.
+
+## Disconnecting Replication
+
+When you are ready, the final step is to disconnect and sever replication between the two servers. This
+is done by resetting the `DS_BOOTSTRAP_REPLICATION_SERVERS` to its original value (or just let it default), and
+restarting *ALL* servers that might know about each other. If you only restart the new server, you
+will see the original server in the default namespace still trying to replicate data to the new server.
+
+Edit `ds.yaml` in the migration directory, comment out the following:
+
+```yaml
+  #- name: DS_BOOTSTRAP_REPLICATION_SERVERS
+  #  value: "ds-idrepo-0.ds-idrepo.default.svc.cluster.local:8989,ds-idrepo-0.ds-idrepo.ds.svc.cluster.local:8989"
+  # - name: DS_GROUP_ID
+  #   value: "ds"
+```
+
+Restart the instances:
+
+```bash
+# Scale down the primary server (or delete)
+kubectl -n default scale sts ds-idrepo --replicas=0
+# Delete the ds deployment, but retain the PVC!
+kubectl -n ds delete -f ds.yaml
+# Now restart the new server
+kubectl -n ds apply -f ds.yaml
+```
+
+
 ## Changelog
 
 * v0.2.next - `spec.podTemplate.certificates` renamed to `spec.PodTemplate.secrets` to better reflect the purpose.
