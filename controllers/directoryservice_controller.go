@@ -19,13 +19,18 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // DevMode is true if running outside of K8S. Port forward to localhost:1636 in development
@@ -171,14 +176,31 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return requeue, nil
 }
 
-// SetupWithManager stuff
+// SetupWithManager function defines which objects the operator owns or watches then sends
+// reconcile requests to the Reconcile method based on those objects.
 func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// add this line
 	r.recorder = mgr.GetEventRecorderFor("DirectoryService")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&directoryv1alpha1.DirectoryService{}).
 		Owns(&v1.Secret{}).        // Owns() triggers the Reconcile method for secrets we create
 		Owns(&apps.StatefulSet{}). // and statefulsets
+		Watches(				   // Watches ds-env-secrets for changes to service accounts passwords
+			&source.Kind{Type: &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name: "ds-env-secrets",
+			}}},
+			handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+				var ds directoryv1alpha1.DirectoryService
+				
+				// Returns a reconcile request for the directoryservice object
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{
+						Name: ds.GetName(),
+						Namespace: ds.GetNamespace(),
+					}},
+				}
+			}),
+            builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
 }
 
