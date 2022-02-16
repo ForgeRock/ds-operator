@@ -20,6 +20,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// "k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -74,6 +75,11 @@ type DirectoryServiceReconciler struct {
 	Scheme   *runtime.Scheme
 	recorder record.EventRecorder
 }
+
+const (
+    passwordField = ".spec.passwords"
+
+)
 
 var (
 	// requeue the request after xx seconds.
@@ -179,18 +185,33 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 // SetupWithManager function defines which objects the operator owns or watches then sends
 // reconcile requests to the Reconcile method based on those objects.
 func (r *DirectoryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// Index the spec.passwords field in the DirectoryService spec and return and list of password objects for the controller manager to watch.
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &directoryv1alpha1.DirectoryService{}, passwordField, func(rawObj client.Object) []string {
+        // Extract the Password name from the DirectoryService Spec, if one is provided
+        directoryService := rawObj.(*directoryv1alpha1.DirectoryService)
+        if directoryService.Spec.Passwords == nil {
+            return nil
+        }
+        return []string{
+			directoryService.Spec.Passwords["uid=openam_cts,ou=admins,ou=famrecords,ou=openam-session,ou=tokens"].SecretName,
+			directoryService.Spec.Passwords["uid=am-identity-bind-account,ou=admins,ou=identities"].SecretName,
+			directoryService.Spec.Passwords["uid=am-config,ou=admins,ou=am-config"].SecretName,
+		}
+    }); err != nil {
+        return err
+    }
+	
+	// Assign directory service object
+	var ds directoryv1alpha1.DirectoryService
 	r.recorder = mgr.GetEventRecorderFor("DirectoryService")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&directoryv1alpha1.DirectoryService{}).
 		Owns(&v1.Secret{}).        // Owns() triggers the Reconcile method for secrets we create
 		Owns(&apps.StatefulSet{}). // and statefulsets
 		Watches(				   // Watches ds-env-secrets for changes to service accounts passwords
-			&source.Kind{Type: &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name: "ds-env-secrets",
-			}}},
+			&source.Kind{Type: &v1.Secret{ObjectMeta: metav1.ObjectMeta{}}},
 			handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
-				var ds directoryv1alpha1.DirectoryService
-				
 				// Returns a reconcile request for the directoryservice object
 				return []reconcile.Request{
 					{NamespacedName: types.NamespacedName{
