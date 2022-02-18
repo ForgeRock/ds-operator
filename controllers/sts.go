@@ -303,6 +303,8 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							"pv.beta.kubernetes.io/gid": "0",
 						},
 					},
+					// Note that the PVC is pre-created before the template takes effect.
+					// This is to ensure the template is consistent with the PVC on initial creation.
 					Spec: r.setVolumeClaimTemplateFromSnapshot(ctx, ds),
 				},
 			},
@@ -314,25 +316,6 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	}
 
 	stemplate.DeepCopyInto(sts)
-}
-
-// If the user supplies a snapshot update the PVC volume claim to initialize from it
-func (r *DirectoryServiceReconciler) setVolumeClaimTemplateFromSnapshot(ctx context.Context, ds *directoryv1alpha1.DirectoryService) v1.PersistentVolumeClaimSpec {
-	spec := ds.Spec.PodTemplate.VolumeClaimSpec.DeepCopy()
-
-	// If the user wants to init from a snapshot, and they use the sentinel value "$(latest)" - Then try to calculate the latest snapshot name
-	if spec.DataSource != nil && spec.DataSource.Name == "$(latest)" {
-		snapList, err := r.getSnapshotList(ctx, ds)
-		if err != nil || len(snapList.Items) == 0 {
-			// nill the datasource
-			spec.DataSource = nil
-		} else {
-			// The snapList is sorted - the last entry is the most recent
-			// Set the datasource to the latest snapshot name
-			spec.DataSource.Name = snapList.Items[len(snapList.Items)-1].GetName()
-		}
-	}
-	return *spec
 }
 
 var rootUser int64 = 0 // todo: remove me

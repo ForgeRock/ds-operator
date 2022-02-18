@@ -56,19 +56,19 @@ spec:
       resources:
         requests:
           storage: 512Mi
-    # Optional: If the volume dataSource is provided *AND* the PVC does not yet exist, the directory PVCs will be
-    # initialized from the contents of the snapshot. They will NOT be initialized from the setup script.
-    #
-    # If the PVC already exists this setting has no effect.
-    #
-    # The name "$(latest)" is reserved. It signifies to the operator
-    # to find the name of the latest auto snapshot that was taken . If you
-    # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
-    # If no automatic $(latest) snapshot can be found, the operator will create a new empty volume.
-    # dataSource:
-    #   name: "$(latest)"
-    #   kind: VolumeSnapshot
-    #   apiGroup: snapshot.storage.k8s.io
+      # Optional: If the volume dataSource is provided *AND* the PVC does not yet exist, the directory PVCs will be
+      # initialized from the contents of the snapshot. They will NOT be initialized from the setup script.
+      #
+      # If the PVC already exists this setting has no effect.
+      #
+      # The name "$(latest)" is reserved. It signifies to the operator
+      # to find the name of the latest auto snapshot that was taken . If you
+      # have a custom volume snapshot (perhaps you manually created a snapshot), use that name instead.
+      # If no automatic $(latest) snapshot can be found, the operator will create a new empty volume.
+      # dataSource:
+      #   name: "$(latest)"
+      #   kind: VolumeSnapshot
+      #   apiGroup: snapshot.storage.k8s.io
 
     #
     # Class to use for any snapshots.

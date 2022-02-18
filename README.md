@@ -159,14 +159,6 @@ The snapshot name can be any valid DS snapshot in the same namespace. The name `
 be replaced by the latest auto-snapshot taken by the operator.
 
 
-PVC claims that are already provisioned are not overwritten by Kubernetes. This setting only applies to the
-initialization of *new* PVC claims.
-
-
-Changing this setting after deployment of a directory instance does not have any effect. This
-setting works by updating the volume claim template for the Kubernetes StatefulSet. Kubernetes
-does not allow the template to be updated after deployment.
-
 A "rollback" procedure is as follows:
 
 * Validate that you have a good snapshot to rollback to. `kubectl get volumesnapshots`.
@@ -177,6 +169,41 @@ A "rollback" procedure is as follows:
   ds-idrepo-0 and ds-idrepo-1 will both contain the same starting data and changelog.
 
 *WARNING*: This procedure destroys any updates made since the last snapshot. Use with caution.
+
+### How the Operator Manages Persistent Volume Claims
+
+The operator pre-creates Persistent Volume Claims (PVCs) before they are created by the statefulset volume claim template. Statefulsets are largely
+"immutable" and this restriction means that a PVC volume source can not be updated after the statefulset is deployed. This prohibits
+the ability to update the volume source of a new PVC to a more recent volume snapshot. The recent snapshot could be
+one created by the operator, or a snapshot that is manually created by an administrator.
+
+An example scenario: The administrator scales the directory service from one replica to two. They likely want to create the new PVC
+from a recent snapshot of the first replica to rapidly seed the second replica. By pre-creating the PVC before the statefulset is scaled, the
+PVC can use a volume source from the most recent snapshot.
+
+Note that PVC claims that are already provisioned are never overwritten by Kubernetes. If you manually create a PVC,
+the operator will not overwrite it.
+
+Because the operator pre-creates PVCs, the volume claim template of the Statefulset may differ from the actual PVC definition. For
+example, if the administrator did not initially create the PVC from snapshots, they could edit the DirectoryService resource and
+enable:
+
+```yaml
+spec:
+
+  replicas: 2 # Update from 1 to 2 replicas
+
+  ....
+  podTemplate:
+    volumeClaimSpec:
+      # Set the source of the new PVC to be a snapshot
+      dataSource:
+            name: "$(latest)"
+            kind: VolumeSnapshot
+            apiGroup: snapshot.storage.k8s.io
+```
+
+And then `kubectl apply` the updated resource. When the directory is scaled, the new PVC will be initialized from the most recent snapshot
 
 ### Enabling Automatic VolumeSnapshots
 
@@ -484,6 +511,7 @@ kubectl -n ds apply -f ds.yaml
 
 ## Changelog
 
+* v0.2.4 - Persistent Volume Claims are now pre-created. This allows updating the volume claim source at runtime.
 * v0.2.next - `spec.podTemplate.certificates` renamed to `spec.PodTemplate.secrets` to better reflect the purpose.
 * v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats.
  Migrate to cert-manager to issue PEM certificates for the directory server pods.
