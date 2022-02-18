@@ -113,6 +113,11 @@ func (r *DirectoryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// For simplicity, the service name is the same as the DS instance name
 	svcName := ds.Name
 
+	/// PVC. Note: *Must* be reconciled before the The StatefulSet template ///
+	if err := r.reconcilePVC(ctx, &ds, svcName); err != nil {
+		return requeue, err
+	}
+
 	//// SECRETS ////
 	if err := r.reconcileSecrets(ctx, &ds); err != nil {
 		return requeue, err
