@@ -51,7 +51,7 @@ func (r *DirectoryServiceReconciler) reconcilePVC(ctx context.Context, ds *direc
 				log.V(8).Info("TODO: Handle update of PVC service")
 			}
 
-			log.Info("pvc after update/create", "pvc", pvc)
+			log.V(8).Info("pvc after update/create", "pvc", pvc)
 			return err
 		})
 
