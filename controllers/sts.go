@@ -12,6 +12,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -177,6 +178,13 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		})
 	}
 
+	var containerPorts = []v1.ContainerPort{
+		{
+			Name: "http",
+			ContainerPort: 8080,
+		},
+	}
+
 	var envVars = []v1.EnvVar{
 		{
 			Name: "POD_NAME",
@@ -203,6 +211,21 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	// Append any env vars the user provides
 	if ds.Spec.PodTemplate.Env != nil {
 		envVars = append(envVars, ds.Spec.PodTemplate.Env...)
+	}
+
+	startupProbe := v1.Probe{
+		Handler: v1.Handler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path: "/healthy",
+				Port: intstr.IntOrString{
+					Type:   intstr.String,
+					StrVal: "http",
+				},
+			},
+		},
+		InitialDelaySeconds: 30,
+		PeriodSeconds:       10,
+		FailureThreshold:    720,
 	}
 
 	// Create a template
@@ -282,7 +305,9 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Args:            []string{"start-ds"},
 							VolumeMounts:    volumeMounts,
 							Resources:       ds.DeepCopy().Spec.PodTemplate.Resources,
+							Ports:           containerPorts,
 							Env:             envVars,
+							StartupProbe:    &startupProbe,
 						},
 					},
 					SecurityContext: &v1.PodSecurityContext{
