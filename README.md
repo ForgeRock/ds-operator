@@ -78,7 +78,7 @@ The directory service deployment creates a statefulset to run the directory serv
 The deployed spec.image must work in concert with the operator. There are sample Dockerfiles in the ForgeOps project. You must use the
 most recent "dynamic" ds image in https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds.
 
-Evaluation images have been built for you on gcr.io/forgeops-public/ds. The [ds.yaml](hack/ds-kustomize/ds.yaml) Custom Resource references this image.
+Evaluation images have been built for you on us-docker.pkg.dev/forgeops-public/images/ds. The [ds.yaml](hack/ds-kustomize/ds.yaml) Custom Resource references this image.
 
 The entrypoint and behavior of the docker image is important. If you want to make changes please consult the README for the ds image in forgeops.
 

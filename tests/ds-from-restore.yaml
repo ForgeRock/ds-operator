@@ -9,7 +9,7 @@ metadata:
 spec:
   replicas: 2
   podTemplate:
-    image: gcr.io/forgeops-public/ds:7.2-dev
+    image: us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
     resources:
       requests:
         memory: 900Mi

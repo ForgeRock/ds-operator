@@ -31,7 +31,7 @@ spec:
               secretKeyRef:
                 name: ds-passwords
                 key: dirmanager.pw
-        image: gcr.io/forgeops-public/ds-util:latest
+        image: us-docker.pkg.dev/forgeops-public/images/ds-util:latest
         imagePullPolicy: Always
         name: ds-util
         terminationMessagePath: /dev/termination-log

@@ -13,7 +13,7 @@ spec:
 
   podTemplate:
     # The directory server binary that contains commands to import ldif or run dsbackup
-    image:  gcr.io/forgeops-public/ds:7.2-dev
+    image:  us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
     resources:
       requests:
         cpu: "4000m"

@@ -23,7 +23,7 @@ jobs:
       run: |
         cd config/manager
         # GITHUB_REF_NAME
-        kustomize edit set image controller=gcr.io/forgeops-public/ds-operator:${GITHUB_REF_NAME}
+        kustomize edit set image controller=us-docker.pkg.dev/forgeops-public/images/ds-operator:${GITHUB_REF_NAME}
         cd ../../
         kustomize build config/default > ds-operator.yaml
     - name: Upload  to release

@@ -39,8 +39,8 @@ jobs:
       shell: bash
       run: |
           # eval $(minikube -p minikube docker-env)
-          docker build -f ./Dockerfile -t gcr.io/engineering-devops/ds-operator:latest .
-          minikube image load gcr.io/engineering-devops/ds-operator:latest
+          docker build -f ./Dockerfile -t us-docker.pkg.dev/engineering-devops/images/ds-operator:latest .
+          minikube image load us-docker.pkg.dev/engineering-devops/images/ds-operator:latest
 
 
     # kind does not have the csi driver, so we need to use the minikube one for now
@@ -48,7 +48,7 @@ jobs:
     #   shell: bash
     #   run: |
     #     kind create cluster
-    #     kind load docker-image gcr.io/engineering-devops/ds-operator:latest
+    #     kind load docker-image us-docker.pkg.dev/engineering-devops/images/ds-operator:latest
     #     kubectl version
 
     - name: deploy operator
@@ -57,7 +57,7 @@ jobs:
         make deploy-debug
         kubectl -n fr-system rollout status deployment/ds-operator-ds-operator --timeout 120s
 
-    ## Note: gcr.io/forgeops-public/ds-cdk:dev is assumed to be pullable
+    ## Note: us-docker.pkg.dev/forgeops-public/images/ds-cdk:dev is assumed to be pullable
     ## TODO: Move the build of this image to forgeops/
 
 

@@ -1,6 +1,6 @@
 .PHONY: build install run test uninstall deploy manifest fmt vet generate docker-build release
 # Image URL to use all building/pushing image targets
-DEFAULT_IMG = gcr.io/engineering-devops/ds-operator
+DEFAULT_IMG = us-docker.pkg.dev/engineering-devops/images/ds-operator
 # This will work on kube versions 1.16+. We want the CRD OpenAPI validation features in v1
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
