@@ -4,6 +4,7 @@
 # Cloudbuild just builds the docker image. The release yaml is produced by a github action
 steps:
 - name: gcr.io/cloud-builders/docker
-  args: ['build', '-t', 'gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME', '.']
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME', '-t', 'us-docker.pkg.dev/$PROJECT_ID/images/ds-operator:$TAG_NAME', '.']
 images:
 - gcr.io/$PROJECT_ID/ds-operator:$TAG_NAME
+- us-docker.pkg.dev/$PROJECT_ID/images/ds-operator:$TAG_NAME

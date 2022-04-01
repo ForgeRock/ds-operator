@@ -78,7 +78,7 @@ Updating the spec.podTemplate.image will update the statefulset and perform a ro
 
 ```bash
 kubectl patch directoryservice/ds --type='json' \
-   -p='[{"op": "replace", "path": "/spec/podTemplate/image", "value":"gcr.io/forgeops-public/ds:2021-12-01"}]'
+   -p='[{"op": "replace", "path": "/spec/podTemplate/image", "value":"us-docker.pkg.dev/forgeops-public/images/ds:2021-12-01"}]'
 ```
 
 ## Future Directions / TODOs 
@@ -100,7 +100,7 @@ To create a new release, create a tag. You can do this in GitHub or from the git
 
 There are two independent processes that are triggered:
 
-- A Cloud Run docker trigger builds the ds-operator docker image and pushes it to `gcr.io/forgeops-public/ds-operator:$TAG`
+- A Cloud Run docker trigger builds the ds-operator docker image and pushes it to `us-docker.pkg.dev/forgeops-public/images/ds-operator:$TAG`
 - A GitHub Action triggers and renders the kustomize manifests in `config/default`. The manifest is
 added to the release files on GitHub. The image name will be replaced in the manifest with the
 proper tag. 

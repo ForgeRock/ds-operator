@@ -10,7 +10,7 @@ spec:
   podTemplate:
     # The directory server binary that contains commands to export ldif or run dsbackup
     # image: gcr.io/forgeops-public/ds-idrepo/ds-idrepo:dev-temp
-    image:  gcr.io/forgeops-public/ds:7.2-dev
+    image:  us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
     imagePullPolicy: IfNotPresent
 
     # The spec for the volume that holds the backup. The volume name will be the same as our metadata.name (ds-backup in this case)

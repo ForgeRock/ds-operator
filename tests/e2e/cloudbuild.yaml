@@ -20,16 +20,16 @@ steps:
     - |-
       ls -la /workspace
       cd /workspace
-      make build IMG=gcr.io/engineering-devops/ds-operator:${SHORT_SHA}
+      make build IMG=us-docker.pkg.dev/engineering-devops/images/ds-operator:${SHORT_SHA}
 
 - id: 'push-operator-image'
   name: 'gcr.io/cloud-builders/docker'
   waitFor: ['build-images']
   args:
     - push
-    - gcr.io/engineering-devops/ds-operator:${SHORT_SHA}
+    - us-docker.pkg.dev/engineering-devops/images/ds-operator:${SHORT_SHA}
 - id: 'deploy-ds-operator'
-  name: 'gcr.io/engineering-devops/skaffold'
+  name: 'us-docker.pkg.dev/engineering-devops/images/skaffold'
   waitFor: ['push-operator-image', 'create-cluster']
   entrypoint: '/bin/bash'
   args:
@@ -39,10 +39,10 @@ steps:
     kustomize version
     loc=$(gcloud --project engineering-devops container clusters list --filter='name:ds-operator-test' --format='value(location)')
     gcloud container clusters get-credentials ds-operator-test --region=$$loc
-    export IMG=gcr.io/${PROJECT_ID}/ds-operator:${SHORT_SHA}
+    export IMG=us-docker.pkg.dev/${PROJECT_ID}/images/ds-operator:${SHORT_SHA}
     bash -x ./hack/install-operator
 - id: 'test-bootstrap'
-  name: 'gcr.io/engineering-devops/skaffold'
+  name: 'us-docker.pkg.dev/engineering-devops/images/skaffold'
   waitFor: ['deploy-ds-operator']
   entrypoint: '/bin/bash'
   args:
@@ -54,7 +54,7 @@ steps:
         ./tests/e2e/test-bootstrap test-ds-bootstrap;
     }
 - id: 'test-backup-restore'
-  name: 'gcr.io/engineering-devops/skaffold'
+  name: 'us-docker.pkg.dev/engineering-devops/images/skaffold'
   waitFor: ['deploy-ds-operator']
   entrypoint: '/bin/bash'
   args:
@@ -66,7 +66,7 @@ steps:
         ./tests/e2e/test-backup-restore test-ds-backup-restore;
     }
 - id: 'test-periodic-snaps'
-  name: 'gcr.io/engineering-devops/skaffold'
+  name: 'us-docker.pkg.dev/engineering-devops/images/skaffold'
   waitFor: ['deploy-ds-operator']
   entrypoint: '/bin/bash'
   args:

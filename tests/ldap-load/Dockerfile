@@ -1,4 +1,4 @@
-FROM gcr.io/forgeops-public/ds:7.2-dev
+FROM us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
 
 USER root 
 
