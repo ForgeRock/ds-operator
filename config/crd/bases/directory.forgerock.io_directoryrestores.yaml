@@ -37,7 +37,7 @@ spec:
             description: DirectoryRestoreSpec defines the desired state of DirectoryRestore
             properties:
               podTemplate:
-                description: DirecotoryPodTemplate provides the common configuration
+                description: DirectoryPodTemplate provides the common configuration
                   for all three CRDs
                 properties:
                   env:

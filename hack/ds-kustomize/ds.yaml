@@ -2,7 +2,7 @@
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
-  # Directory hostnames will be ds-idrepo-0, id-repo-1, id-repo-2, etc.
+  # Directory hostnames will be ds-idrepo-0, ds-idrepo-1, ds-idrepo-2, etc.
   name: ds-idrepo
   labels:
     app.kubernetes.io/name: ds
@@ -114,6 +114,8 @@ spec:
     periodMinutes: 10
     # Keep this many snapshots. Older snapshots will be deleted
     snapshotsRetained: 3
+    # DS instance to take snapshot of. Default is 0(ds-idrepo-0)
+    directoryInstance: 0
 
 
   ### Passwords ###

@@ -59,12 +59,11 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		return nil
 	}
 
-	// We always snapshot the first disk
-	pvcClaimToSnap := fmt.Sprintf("data-%s-0", ds.GetName())
+	// set disk to snapshot
+	pvcClaimToSnap := fmt.Sprintf("data-%s-%d", ds.GetName(), ds.Spec.Snapshots.DirectoryInstance)
 	// snaphsot name suffix is the current timestamp
 	snapName := fmt.Sprintf("%s-%d", ds.GetName(), now)
 
-	// TODO: add labels, etc..
 	var s = &snapshot.VolumeSnapshot{
 		ObjectMeta: v1.ObjectMeta{Name: snapName, Namespace: ds.GetNamespace(),
 			Labels:      createLabels(ds.GetName(), nil),
@@ -74,7 +73,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 			VolumeSnapshotClassName: &ds.Spec.PodTemplate.VolumeSnapshotClassName,
 			Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &pvcClaimToSnap}}}
 
-	log.Info("taking snapshot ", "snasphot", snapName, "pvc", pvcClaimToSnap)
+	log.Info("taking snapshot ", "snapshot", snapName, "pvc", pvcClaimToSnap)
 
 	var snap snapshot.VolumeSnapshot
 	snap.Name = s.GetName()
@@ -86,7 +85,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
 			s.DeepCopyInto(&snap)
-			// Note: We dont set the ownerref - we want to snapshot to persist even if the
+			// Note: We dont set the ownerref - we want the snapshot to persist even if the
 			// directory instance is deleted
 			// log.V(8).Info("Setting ownerref for snapshot", "name", snap.Name)
 			// _ = controllerutil.SetOwnerReference(ds, &snap, r.Scheme)

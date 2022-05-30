@@ -63,7 +63,7 @@ spec:
                   (example, uid=admin)
                 type: object
               podTemplate:
-                description: DirecotoryPodTemplate provides the common configuration
+                description: DirectoryPodTemplate provides the common configuration
                   for all three CRDs
                 properties:
                   env:
@@ -432,6 +432,10 @@ spec:
               snapshots:
                 description: Snapshots
                 properties:
+                  directoryInstance:
+                    default: 0
+                    format: int32
+                    type: integer
                   enabled:
                     default: false
                     type: boolean
@@ -444,6 +448,7 @@ spec:
                     format: int32
                     type: integer
                 required:
+                - directoryInstance
                 - enabled
                 - periodMinutes
                 - snapshotsRetained

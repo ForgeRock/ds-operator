@@ -2,7 +2,7 @@
 apiVersion: directory.forgerock.io/v1alpha1
 kind: DirectoryService
 metadata:
-  # Directory hostnames will be ds-idrepo-0, id-repo-1, id-repo-2, etc.
+  # Directory hostnames will be ds-idrepo-0, ds-idrepo-1, ds-idrepo-2, etc.
   name: ds-idrepo
   labels:
     app.kubernetes.io/name: ds
@@ -99,13 +99,15 @@ spec:
   # You must be using a CSI volume driver. CSI drivers are now the default on GCP clusters.
   # For more information on CSI drivers, see: https://kubernetes.io/docs/concepts/storage/volumes/#csi
   snapshots:
-    enabled: true
+    enabled: false
     # Take a snapshot every N minutes. The number here is low for testing.
     # On a production cluster, you should set this to something higher (20-30 minutes).
     # Note that GCP snapshots are quota limited to 6 per hour per disk.
     periodMinutes: 10
     # Keep this many snapshots. Older snapshots will be deleted
     snapshotsRetained: 3
+    # DS instance to take snapshot of. Default is 0(ds-idrepo-0)
+    directoryInstance: 0
 
   passwords:
       # uid=admin and uid=monitor are required account secrets.

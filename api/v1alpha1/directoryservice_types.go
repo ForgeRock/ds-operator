@@ -43,7 +43,7 @@ type DirectoryServiceSpec struct {
 	Proxy DirectoryProxy `json:"proxy,omitempty"`
 }
 
-// DirecotoryPodTemplate provides the common configuration for all three CRDs
+// DirectoryPodTemplate provides the common configuration for all three CRDs
 type DirectoryPodTemplate struct {
 	// Docker Image for the directory server.
 	Image string `json:"image,required"`
@@ -84,6 +84,8 @@ type DirectorySnapshotSpec struct {
 	PeriodMinutes int32 `json:"periodMinutes,required"`
 	// +kubebuilder:default:=10
 	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
+	// +kubebuilder:default:=0
+	DirectoryInstance int32 `json:"directoryInstance,required"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.

@@ -180,7 +180,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 
 	var containerPorts = []v1.ContainerPort{
 		{
-			Name: "http",
+			Name:          "http",
 			ContainerPort: 8080,
 		},
 	}
