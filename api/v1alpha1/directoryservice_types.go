@@ -85,7 +85,7 @@ type DirectorySnapshotSpec struct {
 	// +kubebuilder:default:=10
 	SnapshotsRetained int32 `json:"snapshotsRetained,required"`
 	// +kubebuilder:default:=0
-	DirectoryInstance int32 `json:"directoryInstance,required"`
+	DirectoryInstance int32 `json:"directoryInstance,omitempty"`
 }
 
 // DirectoryPasswords is a reference to account secrets that contain passwords for the directory.
