@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	k8slog "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -24,49 +23,27 @@ func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *d
 	log := k8slog.FromContext(ctx)
 
 	// Loop through the spec.passwords - creating secrets as required
-	for _, secret := range createSecretTemplates(ds) {
-		_, err := ctrl.CreateOrUpdate(ctx, r.Client, &secret, func() error {
-			if secret.CreationTimestamp.IsZero() {
-				log.V(8).Info("Created Secret", "secret", secret)
-				_ = controllerutil.SetControllerReference(ds, &secret, r.Scheme)
-			} else {
-				// The secret already exists... Do we want to update it?
-				log.V(8).Info("TODO: Update secret", "secret", secret)
-			}
-			return nil
-		})
-		if err != nil {
-			return errors.Wrap(err, "unable to CreateOrUpdate Secret")
-		}
-	}
-
-	return nil
-}
-
-// Create secret templates for secrets we need to create
-// This iterates through the list of secrets, seeing which ones we own
-// and need to create vs. those that we assume are already present
-func createSecretTemplates(ds *directoryv1alpha1.DirectoryService) []v1.Secret {
-	var secrets []v1.Secret
-
 	for dn, accountSecret := range ds.Spec.Passwords {
 		if accountSecret.Create {
-			// we own creating the secret
-			secretTemplate := v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      createLabels(ds.Name, nil),
-					Annotations: make(map[string]string),
-					Name:        ds.SecretNameForDN(dn),
-					Namespace:   ds.Namespace,
-				},
-				Data: map[string][]byte{
-					accountSecret.Key: []byte(randPassword(24)),
-				},
+			secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ds.SecretNameForDN(dn), Namespace: ds.Namespace}}
+
+			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+				if secret.CreationTimestamp.IsZero() {
+					log.V(8).Info("Created Secret", "secret", secret.ObjectMeta.Name)
+					secret.ObjectMeta.Labels = createLabels(ds.Name, nil)
+				}
+				if _, ok := secret.Data[accountSecret.Key]; ! ok {
+					log.V(8).Info("Updating Secret", "secret", secret.ObjectMeta.Name)
+					secret.Data[accountSecret.Key] = []byte(randPassword(24))
+				}
+				return nil
+			})
+			if err != nil {
+				return errors.Wrap(err, "unable to CreateOrUpdate Secret")
 			}
-			secrets = append(secrets, secretTemplate)
 		}
 	}
-	return secrets
+	return nil
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!$^#()-+<>")
