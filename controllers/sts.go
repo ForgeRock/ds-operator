@@ -231,7 +231,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 	// Create a template
 	stemplate := &apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:    createLabels(ds.Name, nil),
+			Labels:    createLabels(ds.Name, ds.Kind, nil),
 			Name:      ds.Name,
 			Namespace: ds.Namespace,
 		},
@@ -246,7 +246,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 			Replicas:    ds.Spec.Replicas,
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: createLabels(ds.Name, nil),
+					Labels: createLabels(ds.Name, ds.Kind, nil),
 				},
 				Spec: v1.PodSpec{
 					ServiceAccountName: ds.Spec.PodTemplate.ServiceAccountName,
@@ -323,7 +323,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "data",
 						Namespace: ds.Namespace,
-						Labels:    createLabels(ds.Name, nil),
+						Labels:    createLabels(ds.Name, ds.Kind, nil),
 						Annotations: map[string]string{
 							"pv.beta.kubernetes.io/gid": "0",
 						},

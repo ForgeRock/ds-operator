@@ -18,7 +18,7 @@ spec:
   podTemplate:
     # The image must support the entry point hooks defined in the forgeops docker/ds/ds Dockerfile.
     # See https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds
-    image: us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
+    image: us-docker.pkg.dev/forgeops-public/images/ds:dev
     imagePullPolicy: IfNotPresent
     # The resources assigned to each DS pod
     resources:
@@ -47,7 +47,7 @@ spec:
     # You can add additional scripts in the configmap for adhoc commands that can be run
     # using kubectl exec.
     # Scripts are mounted on /opt/opendj/scripts
-    scriptConfigMapName: ds-script-config
+    # scriptConfigMapName: ds-script-config
 
     # The volume spec for the directory data. This is the same as the Kubernetes PVC volume spec.
     volumeClaimSpec:
@@ -55,7 +55,7 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 512Mi
+          storage: 1Gi
       # Optional: If the volume dataSource is provided *AND* the PVC does not yet exist, the directory PVCs will be
       # initialized from the contents of the snapshot. They will NOT be initialized from the setup script.
       #
@@ -107,7 +107,7 @@ spec:
   # You must be using a CSI volume driver. CSI drivers are now the default on GCP clusters.
   # For more information on CSI drivers, see: https://kubernetes.io/docs/concepts/storage/volumes/#csi
   snapshots:
-    enabled: true
+    enabled: false
     # Take a snapshot every N minutes. The number here is low for testing.
     # On a production cluster, you should set this to something higher (20-30 minutes).
     # Note that GCP snapshots are quota limited to 6 per hour per disk.

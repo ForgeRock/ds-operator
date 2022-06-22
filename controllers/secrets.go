@@ -30,9 +30,9 @@ func (r *DirectoryServiceReconciler) reconcileSecrets(ctx context.Context, ds *d
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
 				if secret.CreationTimestamp.IsZero() {
 					log.V(8).Info("Created Secret", "secret", secret.ObjectMeta.Name)
-					secret.ObjectMeta.Labels = createLabels(ds.Name, nil)
+					secret.ObjectMeta.Labels = createLabels(ds.Name, ds.Kind, nil)
 				}
-				if _, ok := secret.Data[accountSecret.Key]; ! ok {
+				if _, ok := secret.Data[accountSecret.Key]; !ok {
 					log.V(8).Info("Updating Secret", "secret", secret.ObjectMeta.Name)
 					secret.Data[accountSecret.Key] = []byte(randPassword(24))
 				}

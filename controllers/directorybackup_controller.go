@@ -97,7 +97,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &pvc, func() error {
 		if pvc.CreationTimestamp.IsZero() {
 			log.Info("Creating backup pvc", "backupPvc", pvc.Name)
-			pvc.ObjectMeta.Labels = createLabels(pvc.Name, nil)
+			pvc.ObjectMeta.Labels = createLabels(pvc.Name, db.Kind, nil)
 			pvc.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
@@ -116,7 +116,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	//  Create a Snapshot of the target PVC to be backed up. For example, a snapshot of data-ds-idrepo-0 PVC
 	var snap snapshot.VolumeSnapshot
-	snap.Name = "snap-" + db.GetName()
+	snap.Name = "temp-" + db.GetName()
 	snap.Namespace = db.GetNamespace()
 
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
@@ -124,7 +124,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		// does the snap not exist yet?
 		if snap.CreationTimestamp.IsZero() {
-			snap.ObjectMeta.Labels = createLabels(snap.GetName(), nil)
+			snap.ObjectMeta.Labels = createLabels(snap.GetName(), db.Kind, nil)
 			snap.Spec = snapshot.VolumeSnapshotSpec{
 				VolumeSnapshotClassName: &db.Spec.PodTemplate.VolumeSnapshotClassName,
 				Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &db.Spec.ClaimToBackup}}
@@ -155,7 +155,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		// does the snap not exist yet?
 		if dataPVC.CreationTimestamp.IsZero() {
-			dataPVC.ObjectMeta.Labels = createLabels(snap.GetName(), nil)
+			dataPVC.ObjectMeta.Labels = createLabels(snap.GetName(), db.Kind, nil)
 			dataPVC.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
@@ -181,7 +181,7 @@ func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Create the Pod/Job that runs the backup
 	args := []string{"backup"}
 
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.PodTemplate, args, &db)
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &dataPVC, pvc.GetName(), &db.Spec.PodTemplate, args, &db, db.Kind)
 
 	if err != nil {
 		log.Error(err, "Backup Job creation failed", "job", job)

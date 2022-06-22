@@ -66,7 +66,7 @@ func (r *DirectoryServiceReconciler) reconcileSnapshots(ctx context.Context, ds 
 
 	var s = &snapshot.VolumeSnapshot{
 		ObjectMeta: v1.ObjectMeta{Name: snapName, Namespace: ds.GetNamespace(),
-			Labels:      createLabels(ds.GetName(), nil),
+			Labels:      createLabels(ds.GetName(), ds.Kind, nil),
 			Annotations: map[string]string{"directory.forgerock.io/lastSnapshotTime": strconv.Itoa(int(now))},
 		},
 		Spec: snapshot.VolumeSnapshotSpec{
@@ -137,7 +137,7 @@ func (r *DirectoryServiceReconciler) getSnapshotList(ctx context.Context, ds *di
 
 	log := k8slog.FromContext(ctx)
 	var snapshotList snapshot.VolumeSnapshotList
-	labels := createLabels(ds.GetName(), nil)
+	labels := createLabels(ds.GetName(), ds.Kind, nil)
 
 	// todo: Filter client.MatchingFields{jobOwnerKey: req.Name}
 	err := r.Client.List(ctx, &snapshotList, client.InNamespace(ds.GetNamespace()), client.MatchingLabels(labels))

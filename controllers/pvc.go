@@ -34,7 +34,7 @@ func (r *DirectoryServiceReconciler) reconcilePVC(ctx context.Context, ds *direc
 			var err error
 			// does the pvc not exist yet?
 			if pvc.CreationTimestamp.IsZero() {
-				pvc.ObjectMeta.Labels = createLabels(ds.GetObjectMeta().GetName(), nil)
+				pvc.ObjectMeta.Labels = createLabels(ds.GetObjectMeta().GetName(), ds.Kind, nil)
 				// enables the volume to be writen by the forgerock user in the root group.
 				pvc.ObjectMeta.Annotations = map[string]string{
 					"pv.beta.kubernetes.io/gid": "0",
