@@ -49,7 +49,7 @@ func (r *DirectoryServiceReconciler) reconcileService(ctx context.Context, ds *d
 func createService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
 	svcTemplate := v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels:      createLabels(ds.Name, nil),
+			Labels:      createLabels(ds.Name, ds.Kind, nil),
 			Annotations: make(map[string]string),
 			Name:        svc.Name,
 			Namespace:   ds.Namespace,

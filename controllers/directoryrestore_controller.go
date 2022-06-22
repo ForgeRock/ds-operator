@@ -54,10 +54,10 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	log.Info("Reconciling DirectoryRestore")
 
 	// fetch the DirectoryRestore object
-	var ds directoryv1alpha1.DirectoryRestore
+	var dr directoryv1alpha1.DirectoryRestore
 
 	// Load the DirectoryRestore object
-	if err := r.Get(ctx, req.NamespacedName, &ds); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &dr); err != nil {
 		log.Info("Unable to fetch DirectoryRestore - it is in the process of being deleted. This is OK")
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -79,7 +79,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// if the job has started, or possibly finished, update our status
 	if !restoreJob.ObjectMeta.CreationTimestamp.IsZero() {
 		// update CRD status
-		ds.Status.StartTimestamp = &restoreJob.ObjectMeta.CreationTimestamp
+		dr.Status.StartTimestamp = &restoreJob.ObjectMeta.CreationTimestamp
 
 		// Has the Restore Job completed?
 		if restoreJob.Status.CompletionTime != nil {
@@ -87,7 +87,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			requeueWhileJobRunning = false
 
 			log.Info("Job completed at", "completionTime", restoreJob.Status.CompletionTime)
-			ds.Status.CompletionTimestamp = restoreJob.Status.CompletionTime
+			dr.Status.CompletionTimestamp = restoreJob.Status.CompletionTime
 
 			// Did it fail?
 			if restoreJob.Status.Failed > 0 {
@@ -99,18 +99,18 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// If the restore job succeeded OK, we can now take the volume snapshot of the restore data volume
 			if restoreJob.Status.Succeeded > 0 {
 				var snap snapshot.VolumeSnapshot
-				snap.Name = ds.GetName()
-				snap.Namespace = ds.GetNamespace()
+				snap.Name = "temp-" + dr.GetName()
+				snap.Namespace = dr.GetNamespace()
 				ctrl.CreateOrUpdate(ctx, r.Client, &snap, func() error {
 					log.Info("CreateorUpdate snapshot", "name", snap.GetName())
 					// does the snap not exist yet?
 					if snap.CreationTimestamp.IsZero() {
-						snap.ObjectMeta.Labels = createLabels(ds.GetName(), nil)
+						snap.ObjectMeta.Labels = createLabels(dr.GetName(), dr.Kind, nil)
 						snap.Spec = snapshot.VolumeSnapshotSpec{
-							VolumeSnapshotClassName: &ds.Spec.PodTemplate.VolumeSnapshotClassName,
-							Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &ds.Name},
+							VolumeSnapshotClassName: &dr.Spec.PodTemplate.VolumeSnapshotClassName,
+							Source:                  snapshot.VolumeSnapshotSource{PersistentVolumeClaimName: &snap.Name},
 						}
-						return controllerutil.SetOwnerReference(&ds, &snap, r.Scheme)
+						return controllerutil.SetOwnerReference(&dr, &snap, r.Scheme)
 
 					} else {
 						log.V(8).Info("Snapshot exits")
@@ -125,7 +125,7 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// update status
-	if err := r.Status().Update(ctx, &ds); err != nil {
+	if err := r.Status().Update(ctx, &dr); err != nil {
 		log.Error(err, "unable to update DirectoryRestore status")
 		return ctrl.Result{}, err
 	}
@@ -133,24 +133,24 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Create/update the PVC to hold the restored data
 
 	var pvc v1.PersistentVolumeClaim
-	pvc.Name = ds.GetName()
-	pvc.Namespace = ds.GetNamespace()
+	pvc.Name = "temp-" + dr.GetName()
+	pvc.Namespace = dr.GetNamespace()
 
 	_, err := ctrl.CreateOrUpdate(ctx, r.Client, &pvc, func() error {
 		if pvc.CreationTimestamp.IsZero() {
 			log.Info("Creating restore pvc", "restorePvc", pvc.Name)
-			pvc.ObjectMeta.Labels = createLabels(pvc.Name, nil)
+			pvc.ObjectMeta.Labels = createLabels(pvc.Name, dr.Kind, nil)
 			pvc.Annotations = map[string]string{
 				"pv.beta.kubernetes.io/gid": "0",
 			}
-			pvc.Spec = ds.Spec.PodTemplate.VolumeClaimSpec
-			return controllerutil.SetControllerReference(&ds, &pvc, r.Scheme)
+			pvc.Spec = dr.Spec.PodTemplate.VolumeClaimSpec
+			return controllerutil.SetControllerReference(&dr, &pvc, r.Scheme)
 		}
 		return nil
 	})
 
 	if err != nil {
-		log.Error(err, "PVC claim creation failed", "pvcName", ds.Name)
+		log.Error(err, "PVC claim creation failed", "pvcName", dr.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -158,8 +158,8 @@ func (r *DirectoryRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Create the restore Job.
 	// The source of a the backup is specified by the SourcePVCName as part of the spec. This is a PVC that was previously created by a backup task.
 	// The target of the restore is the PVC we created above. Once the Job completes, we will snapshot this PVC. The snapshot will be used to initialize
-	// a new DS cluster.
-	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, ds.Spec.SourcePVCName, &ds.Spec.PodTemplate, args, &ds)
+	// a new dr cluster.
+	job, err := createDSJob(ctx, r.Client, r.Scheme, &pvc, dr.Spec.SourcePVCName, &dr.Spec.PodTemplate, args, &dr, dr.Kind)
 
 	if err != nil {
 		log.Error(err, "Job create failed", "jobName", job.Name)

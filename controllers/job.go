@@ -16,7 +16,7 @@ import (
 
 // Create a directory service job that can backup or restore data
 func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Scheme, dataPVC *v1.PersistentVolumeClaim, backupPVC string,
-	podTemplate *directoryv1alpha1.DirectoryPodTemplate, args []string, owner metav1.Object) (*batch.Job, error) {
+	podTemplate *directoryv1alpha1.DirectoryPodTemplate, args []string, owner metav1.Object, kind string) (*batch.Job, error) {
 
 	var job batch.Job
 	log := k8slog.FromContext(ctx)
@@ -113,10 +113,11 @@ func createDSJob(ctx context.Context, client client.Client, scheme *runtime.Sche
 
 	_, err := ctrl.CreateOrUpdate(ctx, client, &job, func() error {
 		var err error
+		//var controllerName string
 		if job.CreationTimestamp.IsZero() {
 			log.V(8).Info("Creating job", "jobName", job.GetName())
 
-			job.ObjectMeta.Labels = createLabels(job.GetName(), nil)
+			job.ObjectMeta.Labels = createLabels(job.GetName(), kind, nil)
 			job.Spec = batch.JobSpec{
 				// Parallelism:             new(int32),
 				// Completions:             new(int32),

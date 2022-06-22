@@ -19,11 +19,12 @@ func makeMeta(name, namespace string) metav1.ObjectMeta {
 // Add all the standard labels to the labels map, and return the new map
 // instanceName is the unique instance (ds-idrepo, ds-cts, etc.)
 // If the labels map is nil or empty, just return the standard labels
-func createLabels(instanceName string, labels map[string]string) map[string]string {
+func createLabels(instanceName string, controllerName string, labels map[string]string) map[string]string {
 	l := map[string]string{
 		"app.kubernetes.io/managed-by": "ds-operator",
 		"app.kubernetes.io/name":       LabelApplicationName,
 		"app.kubernetes.io/instance":   instanceName,
+		"app.kubernetes.io/controller": controllerName,
 		"app.kubernetes.io/part-of":    "forgerock",
 	}
 	if labels != nil {

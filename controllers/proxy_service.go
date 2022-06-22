@@ -70,7 +70,7 @@ func (r *DirectoryServiceReconciler) reconcileProxyService(ctx context.Context, 
 // Create the service for ds
 func createProxyService(ds *directoryv1alpha1.DirectoryService, svc *v1.Service) error {
 	proxyName := ds.Name + "-proxy"
-	labels := createLabels(proxyName, map[string]string{
+	labels := createLabels(proxyName, ds.Kind, map[string]string{
 		"app.kubernetes.io/component": "ds-proxy",
 	})
 	svcTemplate := v1.Service{

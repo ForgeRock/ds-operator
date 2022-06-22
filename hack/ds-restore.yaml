@@ -13,7 +13,7 @@ spec:
   podTemplate:
     # The directory server binary that contains commands to import ldif or run dsbackup
     # The "restore" entrypoint is called in the Job
-    image:  us-docker.pkg.dev/forgeops-public/images/ds:7.2-dev
+    image:  us-docker.pkg.dev/forgeops-public/images/ds:dev
     imagePullPolicy: IfNotPresent
 
     # Spec for the pvc that will hold the restored data in DS JE format.
@@ -24,7 +24,7 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 512Mi
+          storage: 1Gi
 
     # The class to use when taking volume snapshots.
     # A snapshot named metadata.name will be created (ds-restore in this example)

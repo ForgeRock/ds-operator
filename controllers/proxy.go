@@ -100,7 +100,7 @@ func createDSProxyDeployment(ds *directoryv1alpha1.DirectoryService, deployment 
 	var forgerockUser int64 = 11111
 
 	proxyName := ds.Name + "-proxy"
-	labels := createLabels(proxyName, map[string]string{
+	labels := createLabels(proxyName, ds.Kind, map[string]string{
 		"app.kubernetes.io/component": "ds-proxy",
 	})
 
