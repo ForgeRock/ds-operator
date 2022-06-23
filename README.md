@@ -222,7 +222,7 @@ Snapshot settings can be dynamically changed while the directory is running.
 
 Notes:
 
-* Only the first pvc (data-ds-idrepo-0 for example) is used for the automatic snapshot. When initializing from a snapshot,
+* Only the first PVC (data-ds-idrepo-0 for example) is used for the automatic snapshot. When initializing from a snapshot,
   all directory replicas start with the same data (see above)
 * Snapshots can be expensive. Do not snapshot overly frequently, and retain only the number of
   snapshots that you need for availability. Many providers rate limit the number of snapshots that can be created. GCP
@@ -310,7 +310,7 @@ CloudDNS:
       value: "ds-idrepo-0.ds-idrepo.prod.svc.eu:8989,ds-idrepo-0.ds-idrepo.prod.svc.us:8989"
 ```
 
-## Backup and Restore (Preview)
+## Backup and Restore
 
 The operator supports two new Custom Resources:
 
@@ -318,33 +318,33 @@ The operator supports two new Custom Resources:
 * [DirectoryRestore](hack/ds-restore.yaml)
 
 These resources are used to create backups (tar, LDIF or dsbackup) and restore them again. Backup
-data is stored on a persistent volume claim specified by the Backup Custom Resource.
+data is stored on a persistent volume claim specified by the DirectoryBackup Custom Resource.
 
 Taking a DirectoryBackup does the following:
 
 * Snapshots and then clones a PVC with the contents of the directory data.
 * Runs a directory server binary pod, mounting that PVC
-* Exports the data in one or more formats (tar, LDIF or dsbackup). The data is exported to the backup pvc.
+* Exports the data in one or more formats (tar, LDIF or dsbackup). The data is exported to the backup PVC.
 
 The process flow is diagrammed below:
 
 ![Backup process](backup-process.png "Backup process")
 
-When the process concludes, the pvc with the data can be further processed. For example
-you can mount that pvc on a pod that will export the data to GCS or S3. This design
+When the process concludes, the PVC with the data can be further processed. For example
+you can mount that PVC on a pod that will export the data to GCS or S3. This design
 provides maximum flexibility to BYOJ (bring your own Job) for final archival. A sample Job
 that exports the data to GCS can be found in [tests/gcs](tests/gcs).
 
-You can backup a "live"  directory instance as the snapshots on most cloud providers is "crash consistent". However,  it is recommended to perform an LDIF backup in addition to other types to validate that the snapshot data is readable and consistent.
+You can backup a "live"  directory instance as the snapshots on most cloud providers are "crash consistent". However,  it is recommended to perform an LDIF backup in addition to other types to validate that the snapshot data is readable and consistent.
 
-Deleting a `DirectoryBackup` resource deletes the  associated volumesnapshot but it retains the backup pvc.
+Deleting a `DirectoryBackup` resource deletes the  associated volume snapshot and PVC clone but it retains the backup PVC.
 
 Taking a DirectoryRestore does the following:
 
-* Creates a new 'data' pvc to hold the restored directory data
+* Creates a new 'data' PVC to hold the restored directory data
 * Runs a job that mounts an existing backup PVC (likely the one created by a DirectoryBackup above) and
- performs an data import into the directory data pvc.
-* Creates a volume snapshot of the directory data pvc
+ performs an data import into the directory data PVC.
+* Creates a volume snapshot of the directory data PVC
 
 On conclusion of a restore, the volume snapshot can be used to initialize or recover a new directory instance by using it
 as the Volume Source of a DirectoryService instance.
@@ -361,18 +361,19 @@ look like this:
 ```bash
 # Create a new directory instance (and associated certs)
 kubectl apply -k hack/ds-kustomize
-# after deployment, wait for the pod to be ready... Make some changes using your favorite ldap tool. then take a backup
+# after deployment, wait for the pod to be ready... Make some changes using your favorite ldap tool. Then take a backup
 kubectl apply -f hack/ds-backup.yaml
 # When the backup completes... lets tear it all down
 kubectl delete -f hack/ds-backup.yaml
 kubectl delete -k hack/ds-kustomize
-# Oh no - the data is gone!!!
-kubectl delete pvc --all
+# Oh no - the data is gone!!! 
+kubectl delete pvc data-ds-idrepo-0
 # Lets restore the backup
 kubectl apply -f hack/ds-restore.yaml
 # When the restore completes you should have a volume snapshot called ds-restore
+# volume snapshots are ready when the READYTOUSE column shows "true"
 kubectl get volumesnapshot
-# Edit hack/ds-kustomize/ds.yaml. Set the pvc volume source to the ds-restore snapshot above
+# Edit hack/ds-kustomize/ds.yaml. Set the PVC volume source to the ds-restore snapshot above
 # Now redeploy the directory server:
 kubectl apply -k hack/ds-kustomize
 # You should see the restored data appear in the directory server.
