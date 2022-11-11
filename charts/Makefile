@@ -7,7 +7,7 @@ ifndef CHART_NAME
 CHART_NAME=ds-operator
 endif
 ifndef CHART_VERSION
-CHART_VERSION=v0.2.5
+CHART_VERSION=$(shell grep ^version: $(CHART_NAME)/Chart.yaml | awk '{print $$2}')
 endif
 CHART_PACKAGE=$(CHART_NAME)-$(CHART_VERSION).tgz
 
