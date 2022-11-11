@@ -1,0 +1,567 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: directoryservices.directory.forgerock.io
+spec:
+  group: directory.forgerock.io
+  names:
+    kind: DirectoryService
+    listKind: DirectoryServiceList
+    plural: directoryservices
+    shortNames:
+    - ds
+    singular: directoryservice
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DirectoryService is the Schema for the directoryservices API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DirectoryServiceSpec defines the desired state of DirectoryService
+            properties:
+              passwords:
+                additionalProperties:
+                  description: DirectoryPasswords is a reference to account secrets
+                    that contain passwords for the directory. The operator can set
+                    the passwords for accounts such as the uid=admin, uid=monitor
+                    and service accounts such as uid=idm-admin,ou=admins
+                  properties:
+                    create:
+                      description: Create a random secret if true. Otherwise assumes
+                        the secret already exists
+                      type: boolean
+                    key:
+                      description: The key within the secret
+                      type: string
+                    secretName:
+                      description: The name of a secret
+                      type: string
+                  required:
+                  - key
+                  - secretName
+                  type: object
+                description: The account secrets. The key is the DN of the secret
+                  (example, uid=admin)
+                type: object
+              podTemplate:
+                description: DirectoryPodTemplate provides the common configuration
+                  for all three CRDs
+                properties:
+                  env:
+                    items:
+                      description: EnvVar represents an environment variable present
+                        in a Container.
+                      properties:
+                        name:
+                          description: Name of the environment variable. Must be a
+                            C_IDENTIFIER.
+                          type: string
+                        value:
+                          description: 'Variable references $(VAR_NAME) are expanded
+                            using the previous defined environment variables in the
+                            container and any service environment variables. If a
+                            variable cannot be resolved, the reference in the input
+                            string will be unchanged. The $(VAR_NAME) syntax can be
+                            escaped with a double $$, ie: $$(VAR_NAME). Escaped references
+                            will never be expanded, regardless of whether the variable
+                            exists or not. Defaults to "".'
+                          type: string
+                        valueFrom:
+                          description: Source for the environment variable's value.
+                            Cannot be used if value is not empty.
+                          properties:
+                            configMapKeyRef:
+                              description: Selects a key of a ConfigMap.
+                              properties:
+                                key:
+                                  description: The key to select.
+                                  type: string
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                                optional:
+                                  description: Specify whether the ConfigMap or its
+                                    key must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                            fieldRef:
+                              description: 'Selects a field of the pod: supports metadata.name,
+                                metadata.namespace, `metadata.labels[''<KEY>'']`,
+                                `metadata.annotations[''<KEY>'']`, spec.nodeName,
+                                spec.serviceAccountName, status.hostIP, status.podIP,
+                                status.podIPs.'
+                              properties:
+                                apiVersion:
+                                  description: Version of the schema the FieldPath
+                                    is written in terms of, defaults to "v1".
+                                  type: string
+                                fieldPath:
+                                  description: Path of the field to select in the
+                                    specified API version.
+                                  type: string
+                              required:
+                              - fieldPath
+                              type: object
+                            resourceFieldRef:
+                              description: 'Selects a resource of the container: only
+                                resources limits and requests (limits.cpu, limits.memory,
+                                limits.ephemeral-storage, requests.cpu, requests.memory
+                                and requests.ephemeral-storage) are currently supported.'
+                              properties:
+                                containerName:
+                                  description: 'Container name: required for volumes,
+                                    optional for env vars'
+                                  type: string
+                                divisor:
+                                  anyOf:
+                                  - type: integer
+                                  - type: string
+                                  description: Specifies the output format of the
+                                    exposed resources, defaults to "1"
+                                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                  x-kubernetes-int-or-string: true
+                                resource:
+                                  description: 'Required: resource to select'
+                                  type: string
+                              required:
+                              - resource
+                              type: object
+                            secretKeyRef:
+                              description: Selects a key of a secret in the pod's
+                                namespace
+                              properties:
+                                key:
+                                  description: The key of the secret to select from.  Must
+                                    be a valid secret key.
+                                  type: string
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                                optional:
+                                  description: Specify whether the Secret or its key
+                                    must be defined
+                                  type: boolean
+                              required:
+                              - key
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  image:
+                    description: Docker Image for the directory server.
+                    type: string
+                  imagePullPolicy:
+                    description: PullPolicy describes a policy for if/when to pull
+                      a container image
+                    enum:
+                    - Never
+                    - IfNotPresent
+                    - Always
+                    type: string
+                  resources:
+                    description: Kubernetes resources assigned to the pod
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  scriptConfigMapName:
+                    description: The name of a configmap to mount on /opt/opendj/scripts
+                      Optional - if not provided no mount will be performed
+                    type: string
+                  secrets:
+                    description: Certificates needed for directory operation.
+                    properties:
+                      masterSecretName:
+                        default: ds-master-keypair
+                        type: string
+                      sslSecretName:
+                        default: ds-ssl-keypair
+                        type: string
+                      truststoreSecretName:
+                        default: ds-ssl-keypair
+                        type: string
+                    required:
+                    - masterSecretName
+                    - sslSecretName
+                    - truststoreSecretName
+                    type: object
+                  serviceAccountName:
+                    default: default
+                    description: The optional service account
+                    type: string
+                  volumeClaimSpec:
+                    description: PersistentVolumeClaimSpec describes the common attributes
+                      of storage devices and allows a Source for provider-specific
+                      attributes
+                    properties:
+                      accessModes:
+                        description: 'AccessModes contains the desired access modes
+                          the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                        items:
+                          type: string
+                        type: array
+                      dataSource:
+                        description: 'This field can be used to specify either: *
+                          An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+                          * An existing PVC (PersistentVolumeClaim) * An existing
+                          custom resource that implements data population (Alpha)
+                          In order to use custom resource types that implement data
+                          population, the AnyVolumeDataSource feature gate must be
+                          enabled. If the provisioner or an external controller can
+                          support the specified data source, it will create a new
+                          volume based on the contents of the specified data source.'
+                        properties:
+                          apiGroup:
+                            description: APIGroup is the group for the resource being
+                              referenced. If APIGroup is not specified, the specified
+                              Kind must be in the core API group. For any other third-party
+                              types, APIGroup is required.
+                            type: string
+                          kind:
+                            description: Kind is the type of resource being referenced
+                            type: string
+                          name:
+                            description: Name is the name of resource being referenced
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      resources:
+                        description: 'Resources represents the minimum resources the
+                          volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Limits describes the maximum amount of compute
+                              resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: 'Requests describes the minimum amount of
+                              compute resources required. If Requests is omitted for
+                              a container, it defaults to Limits if that is explicitly
+                              specified, otherwise to an implementation-defined value.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            type: object
+                        type: object
+                      selector:
+                        description: A label query over volumes to consider for binding.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: A label selector requirement is a selector
+                                that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: operator represents a key's relationship
+                                    to a set of values. Valid operators are In, NotIn,
+                                    Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: values is an array of string values.
+                                    If the operator is In or NotIn, the values array
+                                    must be non-empty. If the operator is Exists or
+                                    DoesNotExist, the values array must be empty.
+                                    This array is replaced during a strategic merge
+                                    patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: matchLabels is a map of {key,value} pairs.
+                              A single {key,value} in the matchLabels map is equivalent
+                              to an element of matchExpressions, whose key field is
+                              "key", the operator is "In", and the values array contains
+                              only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                      storageClassName:
+                        description: 'Name of the StorageClass required by the claim.
+                          More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                        type: string
+                      volumeMode:
+                        description: volumeMode defines what type of volume is required
+                          by the claim. Value of Filesystem is implied when not included
+                          in claim spec.
+                        type: string
+                      volumeName:
+                        description: VolumeName is the binding reference to the PersistentVolume
+                          backing this claim.
+                        type: string
+                    type: object
+                  volumeSnapshotClassName:
+                    description: Name of the volumesnapshot class used in any snapshot
+                      operation
+                    type: string
+                required:
+                - image
+                - secrets
+                - volumeClaimSpec
+                type: object
+              proxy:
+                description: Proxy configurations
+                properties:
+                  enabled:
+                    type: boolean
+                  image:
+                    description: Docker Image for the directory server.
+                    type: string
+                  primaryGroupId:
+                    description: PrimaryGroupID specifies the group of servers the
+                      ds proxy should recognize as primary If no value is provided,
+                      all available directory servers will be considered to be primary
+                    type: string
+                  replicas:
+                    description: Replicas is the number of directory server proxy
+                      instances to create
+                    format: int32
+                    maximum: 8
+                    minimum: 0
+                    type: integer
+                  resources:
+                    description: ResourceRequirements describes the compute resource
+                      requirements.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                required:
+                - enabled
+                - image
+                - replicas
+                type: object
+              replicas:
+                default: 1
+                description: Replicas is the number of directory server instances
+                  to create
+                format: int32
+                maximum: 8
+                type: integer
+              snapshots:
+                description: Snapshots
+                properties:
+                  directoryInstance:
+                    default: 0
+                    format: int32
+                    type: integer
+                  enabled:
+                    default: false
+                    type: boolean
+                  periodMinutes:
+                    default: 30
+                    format: int32
+                    type: integer
+                  snapshotsRetained:
+                    default: 10
+                    format: int32
+                    type: integer
+                required:
+                - enabled
+                - periodMinutes
+                - snapshotsRetained
+                type: object
+            required:
+            - passwords
+            - podTemplate
+            - replicas
+            type: object
+          status:
+            description: DirectoryServiceStatus defines the observed state of DirectoryService
+            properties:
+              active:
+                items:
+                  description: 'ObjectReference contains enough information to let
+                    you inspect or modify the referred object. --- New uses of this
+                    type are discouraged because of difficulty describing its usage
+                    when embedded in APIs.  1. Ignored fields.  It includes many fields
+                    which are not generally honored.  For instance, ResourceVersion
+                    and FieldPath are both very rarely valid in actual usage.  2.
+                    Invalid usage help.  It is impossible to add specific help for
+                    individual usage.  In most embedded usages, there are particular     restrictions
+                    like, "must refer only to types A and B" or "UID not honored"
+                    or "name must be restricted".     Those cannot be well described
+                    when embedded.  3. Inconsistent validation.  Because the usages
+                    are different, the validation rules are different by usage, which
+                    makes it hard for users to predict what will happen.  4. The fields
+                    are both imprecise and overly precise.  Kind is not a precise
+                    mapping to a URL. This can produce ambiguity     during interpretation
+                    and require a REST mapping.  In most cases, the dependency is
+                    on the group,resource tuple     and the version of the actual
+                    struct is irrelevant.  5. We cannot easily change it.  Because
+                    this type is embedded in many locations, updates to this type     will
+                    affect numerous schemas.  Don''t make new APIs embed an underspecified
+                    API type they do not control. Instead of using this type, create
+                    a locally provided and used type that is well-focused on your
+                    reference. For example, ServiceReferences for admission registration:
+                    https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533
+                    .'
+                  properties:
+                    apiVersion:
+                      description: API version of the referent.
+                      type: string
+                    fieldPath:
+                      description: 'If referring to a piece of an object instead of
+                        an entire object, this string should contain a valid JSON/Go
+                        field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within
+                        a pod, this would take on a value like: "spec.containers{name}"
+                        (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]"
+                        (container with index 2 in this pod). This syntax is chosen
+                        only to have some well-defined way of referencing a part of
+                        an object. TODO: this design is not final and this field is
+                        subject to change in the future.'
+                      type: string
+                    kind:
+                      description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                      type: string
+                    name:
+                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                      type: string
+                    namespace:
+                      description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                      type: string
+                    resourceVersion:
+                      description: 'Specific resourceVersion to which this reference
+                        is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                      type: string
+                    uid:
+                      description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                      type: string
+                  type: object
+                type: array
+              currentReplicas:
+                format: int32
+                type: integer
+              proxyStatus:
+                description: DirectoryProxyStatus defines the observed state of DirectoryService
+                  Proxy
+                properties:
+                  readyReplicas:
+                    format: int32
+                    type: integer
+                  replicas:
+                    format: int32
+                    type: integer
+                  serverMessage:
+                    type: string
+                type: object
+              serverMessage:
+                type: string
+              serviceAccountPasswordsUpdatedTime:
+                format: int64
+                type: integer
+              snapshotStatus:
+                properties:
+                  lastSnapshotTimeStamp:
+                    format: int64
+                    type: integer
+                required:
+                - lastSnapshotTimeStamp
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.currentReplicas
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+
