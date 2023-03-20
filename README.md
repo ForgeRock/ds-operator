@@ -287,7 +287,7 @@ replication across multiple clusters. The requirements:
 Multi-cluster is an advanced use case. You must thoroughly understand how to configure cross cluster networking and DNS resolution
 before attempting to setup DS multi-cluster.
 
-We describe using [CloudDNS for GKE doc](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-cluster/clouddns/README.md) in the forgeops repo.
+We describe using [CloudDNS for GKE doc](https://github.com/ForgeRock/forgeops/blob/master/etc/multi-cluster/google-cloud/clouddns/README.md) in the forgeops repo.
 
 To enable multi-cluster, configure the following environment variables in the custom resource:
 
