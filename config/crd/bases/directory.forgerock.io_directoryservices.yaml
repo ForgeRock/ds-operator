@@ -185,6 +185,9 @@ spec:
                     - IfNotPresent
                     - Always
                     type: string
+                  imagePullSecret:
+                    description: Secret containing credentials to pull from a private repository
+                    type: string
                   resources:
                     description: Kubernetes resources assigned to the pod
                     properties:
