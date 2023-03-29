@@ -45,7 +45,6 @@ type DirectoryBackupReconciler struct {
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=directory.forgerock.io,resources=directorybackups/finalizers,verbs=*
 
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *DirectoryBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

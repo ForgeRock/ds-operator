@@ -1,5 +1,5 @@
 /*
-	Copyright 2022, ForgeRock AS.
+Copyright 2022, ForgeRock AS.
 */
 package controllers
 
@@ -16,8 +16,8 @@ import (
 // Reconcile peristent volume claims. We pre-create the PVCs here before the template in the statefulset takes effect.
 // This is in case we want to scale up a new DS node
 // and we want the pvc to be created from the most recent snapshot, or if the user wants to edit the DS CR and change the volume source.
-//  The StatefulSet volume claim template is immutable. By pre-creating the pvc, If Kubernetes sees the PVC exists already, it will not create a new one.
 //
+//	The StatefulSet volume claim template is immutable. By pre-creating the pvc, If Kubernetes sees the PVC exists already, it will not create a new one.
 func (r *DirectoryServiceReconciler) reconcilePVC(ctx context.Context, ds *directoryv1alpha1.DirectoryService, svcName string) error {
 	log := k8slog.FromContext(ctx)
 

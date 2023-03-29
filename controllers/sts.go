@@ -258,9 +258,9 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 						},
 					},
 					// Required for kubedns multi-cluster deployments
-					Subdomain: svcName,
+					Subdomain:        svcName,
+					ImagePullSecrets: ds.DeepCopy().Spec.PodTemplate.ImagePullSecrets,
 					InitContainers: []v1.Container{
-
 						{
 							Name:            "init",
 							Image:           ds.Spec.PodTemplate.Image,
