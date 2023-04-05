@@ -52,6 +52,9 @@ type DirectoryPodTemplate struct {
 	// +kubebuilder:validation:Enum=Never;IfNotPresent;Always
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
 	// Kubernetes resources assigned to the pod
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// Certificates needed for directory operation.
