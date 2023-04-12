@@ -80,6 +80,10 @@ spec:
     env:
     - name: "DS_TEST"
       value: "MY_TEST_VARIABLE"
+    initEnvFrom:
+    - secretRef:
+        name: ds-passwords
+
     # Examples of setting environment variables:
     #
     # 1. Set DS_BOOTSTRAP_REPLICATION_SERVERS to override the default bootstrap
