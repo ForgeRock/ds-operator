@@ -27,7 +27,7 @@ ForgeRock developers: This is already installed on the `eng-shared` cluster.
 The [install.sh](install.sh) script will install the latest release of the operator. You can also curl this script:
 
 ```bash
-curl  -L  "https://github.com/ForgeRock/ds-operator/releases/latest/download/install.sh" -o /tmp/install.sh
+curl  -L  "https://github.com/ForgeRock/ds-operator/blob/master/install.sh" -o /tmp/install.sh
 chmod +x /tmp/install.sh
 /tmp/install.sh install
 ```
