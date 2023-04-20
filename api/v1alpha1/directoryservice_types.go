@@ -67,7 +67,9 @@ type DirectoryPodTemplate struct {
 	// Optional - if not provided no mount will be performed
 	ScriptConfigMapName string `json:"scriptConfigMapName,omitempty"`
 
-	Env []corev1.EnvVar `json:"env,omitempty"`
+	InitEnvFrom []corev1.EnvFromSource `json:"initEnvFrom,omitempty"`
+	Env         []corev1.EnvVar        `json:"env,omitempty"`
+	EnvFrom     []corev1.EnvFromSource `json:"envFrom,omitempty"`
 
 	// Name of the volumesnapshot class used in any snapshot operation
 	// +kubebuilder:validation:Required

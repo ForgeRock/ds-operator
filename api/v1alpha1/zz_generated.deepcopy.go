@@ -166,9 +166,23 @@ func (in *DirectoryPodTemplate) DeepCopyInto(out *DirectoryPodTemplate) {
 	in.Resources.DeepCopyInto(&out.Resources)
 	out.Certificates = in.Certificates
 	in.VolumeClaimSpec.DeepCopyInto(&out.VolumeClaimSpec)
+	if in.InitEnvFrom != nil {
+		in, out := &in.InitEnvFrom, &out.InitEnvFrom
+		*out = make([]v1.EnvFromSource, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.Env != nil {
 		in, out := &in.Env, &out.Env
 		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.EnvFrom != nil {
+		in, out := &in.EnvFrom, &out.EnvFrom
+		*out = make([]v1.EnvFromSource, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

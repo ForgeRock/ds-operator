@@ -187,6 +187,16 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 		envVars = append(envVars, ds.Spec.PodTemplate.Env...)
 	}
 
+	var initEnvFromSources []v1.EnvFromSource
+	if ds.Spec.PodTemplate.InitEnvFrom != nil {
+		initEnvFromSources = append(initEnvFromSources, ds.Spec.PodTemplate.InitEnvFrom...)
+	}
+
+	var envFromSources []v1.EnvFromSource
+	if ds.Spec.PodTemplate.EnvFrom != nil {
+		envFromSources = append(envFromSources, ds.Spec.PodTemplate.EnvFrom...)
+	}
+
 	startupProbe := v1.Probe{
 		Handler: v1.Handler{
 			HTTPGet: &v1.HTTPGetAction{
@@ -269,6 +279,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							VolumeMounts:    volumeMounts,
 							Resources:       ds.DeepCopy().Spec.PodTemplate.Resources,
 							Env:             envVars,
+							EnvFrom:         initEnvFromSources,
 						},
 					},
 					Containers: []v1.Container{
@@ -281,6 +292,7 @@ func (r *DirectoryServiceReconciler) createDSStatefulSet(ctx context.Context, ds
 							Resources:       ds.DeepCopy().Spec.PodTemplate.Resources,
 							Ports:           containerPorts,
 							Env:             envVars,
+							EnvFrom:         envFromSources,
 							StartupProbe:    &startupProbe,
 						},
 					},
