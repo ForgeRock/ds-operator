@@ -7,11 +7,10 @@ DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-v0.2.6}
 
 USAGE="Usage: $0 install|remove|upgrade"
 
-
 URL="https://github.com/ForgeRock/ds-operator/releases/download/${DS_OPERATOR_VERSION}/ds-operator.yaml"
 
 if [ "$DS_OPERATOR_VERSION" == "latest" ]; then
-    URL="https://github.com/ForgeRock/ds-operator/releases/latest/download/ds-operator.yaml"
+    URL="https://raw.githubusercontent.com/ForgeRock/ds-operator/master/ds-operator.yaml"
 fi
 
 install() {
