@@ -7,9 +7,6 @@ is an implementation of the [Kubernetes Operator](https://kubernetes.io/docs/con
 
 Basic features of the operator include:
 
-* Creation of StatefulSets, Services and Persistent volume claims for the directory
-* Configures replication by adding new directory pods to the replication topology
-* Change service account passwords in the directory using a Kubernetes secret.
 * Take Volume Snapshots of the directory disk, and restore a directory based on a snapshot
 * Backup and Restore directory data to LDIF format.
 
@@ -27,7 +24,7 @@ ForgeRock developers: This is already installed on the `eng-shared` cluster.
 The [install.sh](install.sh) script will install the latest release of the operator. You can also curl this script:
 
 ```bash
-curl  -L  "https://github.com/ForgeRock/ds-operator/blob/master/install.sh" -o /tmp/install.sh
+curl  -L  "https://raw.githubusercontent.com/ForgeRock/ds-operator/master/install.sh" -o /tmp/install.sh
 chmod +x /tmp/install.sh
 /tmp/install.sh install
 ```
@@ -366,7 +363,7 @@ kubectl apply -f hack/ds-backup.yaml
 # When the backup completes... lets tear it all down
 kubectl delete -f hack/ds-backup.yaml
 kubectl delete -k hack/ds-kustomize
-# Oh no - the data is gone!!! 
+# Oh no - the data is gone!!!
 kubectl delete pvc data-ds-idrepo-0
 # Lets restore the backup
 kubectl apply -f hack/ds-restore.yaml
