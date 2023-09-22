@@ -1,14 +1,22 @@
 .PHONY: build install run test uninstall deploy manifest fmt vet generate docker-build release
+ifndef DEFAULT_BUILDX_BUILDER
+DEFAULT_BUILDX_BUILDER=default
+endif
 # Image URL to use all building/pushing image targets
-DEFAULT_IMG = us-docker.pkg.dev/engineering-devops/images/ds-operator
+DEFAULT_IMG_REGISTRY = us-docker.pkg.dev
+DEFAULT_IMG_REPOSITORY = forgeops-public/images
+DEFAULT_IMG = ${DEFAULT_IMG_REGISTRY}/${DEFAULT_IMG_REPOSITORY}/ds-operator
 # This will work on kube versions 1.16+. We want the CRD OpenAPI validation features in v1
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
-# If IMG not set and PR not set, set it to latest
+ifndef DEFAULT_IMG_TAG
 ifdef PR_NUMBER
-IMG ?= "${DEFAULT_IMG}:pr-${PR_NUMBER}"
+DEFAULT_IMG_TAG=pr-${PR_NUMBER}
+else
+DEFAULT_IMG_TAG=latest
 endif
-IMG ?= "${DEFAULT_IMG}:latest"
+endif
+IMG ?= "${DEFAULT_IMG}:${DEFAULT_IMG_TAG}"
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -74,6 +82,9 @@ docker: test
 # Test and Build container
 docker-build: build
  	@echo "${IMG} built"
+
+docker-buildx-bake:
+	REGISTRY=${DEFAULT_IMG_REGISTRY} REPOSITORY=${DEFAULT_IMG_REPOSITORY} BUILD_TAG=${DEFAULT_IMG_TAG} docker buildx bake --file=docker-bake.hcl --builder=${DEFAULT_BUILDX_BUILDER}
 
 # Build, push, and create GitHub release
 release: install-tools
