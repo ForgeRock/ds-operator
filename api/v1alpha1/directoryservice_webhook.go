@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -61,7 +62,7 @@ func (r *DirectoryService) Default() {
 var _ webhook.Validator = &DirectoryService{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *DirectoryService) ValidateCreate() error {
+func (r *DirectoryService) ValidateCreate() (admission.Warnings, error) {
 	directoryservicelog.Info("validate create", "name", r.Name)
 	var allErrs field.ErrorList
 
@@ -71,26 +72,26 @@ func (r *DirectoryService) ValidateCreate() error {
 	}
 
 	if len(allErrs) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return apierrors.NewInvalid(
+	return nil, apierrors.NewInvalid(
 		schema.GroupKind{Group: "directory.forgerock.io", Kind: "DirectoryService"},
 		r.Name, allErrs)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *DirectoryService) ValidateUpdate(old runtime.Object) error {
+func (r *DirectoryService) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	directoryservicelog.Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *DirectoryService) ValidateDelete() error {
+func (r *DirectoryService) ValidateDelete() (admission.Warnings, error) {
 	directoryservicelog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }
