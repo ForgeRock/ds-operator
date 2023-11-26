@@ -35,10 +35,10 @@ export DEBUG_CONTAINERS=true
 make install
 make run
 # In another window...
-kubectl apply -f hack/migration/cert.yaml
-kubectl apply -f hack/migration/ds.yaml
+kubectl apply -f hack/ds-kustomize/cert.yaml
+kubectl apply -f hack/ds-kustomize/ds.yaml
 kubectl scale directoryservice/ds --replicas=2
-kubectl delete -f hack/migration/ds.yaml
+kubectl delete -f hack/ds-kustomize/ds.yaml
 ```
 
 ### Development and Debug modes

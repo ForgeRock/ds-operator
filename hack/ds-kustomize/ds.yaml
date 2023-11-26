@@ -4,15 +4,27 @@ kind: DirectoryService
 metadata:
   # Directory hostnames will be ds-idrepo-0, ds-idrepo-1, ds-idrepo-2, etc.
   name: ds-idrepo
-  labels:
-    app.kubernetes.io/name: ds
-    app.kubernetes.io/part-of: forgerock
+  # Replace example label below with your own
+  # Default labels are already included 
+  # labels:
+  #   app.kubernetes.io/env: ds
+
+  # Replace example annotation below with your own
+  # annotations:
+  #   "cluster-autoscaler.kubernetes.io/safe-to-evict": "true"
 spec:
   # The number of DS servers in the topology.
   # Change this value at runtime using the command:
   #    kubectl scale directoryservice ds-idrepo --replicas=3
   replicas: 1
+  # Replace example label below with your own
+  # Default labels are already included 
+  # labels:
+  #   app.kubernetes.io/env: ds
 
+    # Directory hostnames will be ds-idrepo-0, ds-idrepo-1, ds-idrepo-2, etc.
+    # labels:
+    #   app.kubernetes.io/pod: ds
   # The pod template for the Directory Service init and main containers.
   # The same pod template is also used for the DirectoryBackup and DirectoryRestore resources.
   podTemplate:
@@ -20,6 +32,10 @@ spec:
     # See https://github.com/ForgeRock/forgeops/tree/master/docker/ds/ds
     image: us-docker.pkg.dev/forgeops-public/images/ds:dev
     imagePullPolicy: IfNotPresent
+    # Uncomment below to configure imagePullSecrets for access to a container registry
+    # imagePullSecrets:
+    # - name: ""
+
     # The resources assigned to each DS pod
     resources:
       requests:

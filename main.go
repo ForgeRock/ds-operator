@@ -64,10 +64,10 @@ func main() {
 	ctrl.SetLogger(logger)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		Metrics:            server.Options{BindAddress: metricsAddr},
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "5bca1d4b.forgerock.io",
+		Scheme:           scheme,
+		Metrics:          server.Options{BindAddress: metricsAddr},
+		LeaderElection:   enableLeaderElection,
+		LeaderElectionID: "5bca1d4b.forgerock.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

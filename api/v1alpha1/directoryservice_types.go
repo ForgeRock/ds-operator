@@ -27,6 +27,9 @@ import (
 type DirectoryServiceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// +kubebuilder:validation:Optional
+	Labels map[string]string `json:"labels,optional"`
+
 	PodTemplate DirectoryPodTemplate `json:"podTemplate"`
 
 	// Replicas is the number of directory server instances to create

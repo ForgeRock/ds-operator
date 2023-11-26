@@ -34,3 +34,15 @@ func createLabels(instanceName string, controllerName string, labels map[string]
 	}
 	return l
 }
+
+// Add all the standard annotations to the annotations map, and return the new map
+// If the Annotations map is nil or empty, just return and empty map
+func createAnnotations(annotations map[string]string) map[string]string {
+	l := map[string]string{}
+	if annotations != nil {
+		for k, v := range annotations {
+			l[k] = v
+		}
+	}
+	return l
+}
