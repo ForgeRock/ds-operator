@@ -139,7 +139,6 @@ type DirectoryServiceStatus struct {
 	// +optional
 	Active                             []corev1.ObjectReference `json:"active,omitempty"`
 	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
-	ServiceAccountPasswordsUpdatedTime int64                    `json:"serviceAccountPasswordsUpdatedTime,omitempty"`
 	ServerMessage                      string                   `json:"serverMessage,omitempty"`
 	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
 	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`

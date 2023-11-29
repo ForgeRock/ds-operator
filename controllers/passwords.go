@@ -22,6 +22,7 @@ const PasswordCheckTimeSeconds = 300
 
 // annotation we add to the CR to record when we last checked the passwords to see if they are correct in the diretory
 const LastPasswordCheckAnnotation = "directory.forgerock.io/last-password-check"
+const PasswordUpdatedStatus = "password-updated-status"
 
 // / Manages ldap service account passwords in Spec.Passwords
 func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *directoryv1alpha1.DirectoryService, ldap *ldap.DSConnection) error {
@@ -75,7 +76,7 @@ func (r *DirectoryServiceReconciler) updatePasswords(ctx context.Context, ds *di
 		log.Info("Updated password", "dn", key)
 	}
 	// if we get to here we have updated all passwords OK
-	ds.Status.ServiceAccountPasswordsUpdatedTime = now
+	annotations[PasswordUpdatedStatus] = "updated"
 	annotations[LastPasswordCheckAnnotation] = strconv.FormatInt(now, 10)
 	ds.ObjectMeta.SetAnnotations(annotations)
 

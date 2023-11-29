@@ -761,9 +761,6 @@ spec:
                 type: object
               serverMessage:
                 type: string
-              serviceAccountPasswordsUpdatedTime:
-                format: int64
-                type: integer
               snapshotStatus:
                 properties:
                   lastSnapshotTimeStamp:
