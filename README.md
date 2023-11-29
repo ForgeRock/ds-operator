@@ -508,10 +508,4 @@ kubectl -n ds apply -f ds.yaml
 
 
 ## Changelog
-
-* v0.2.4 - Persistent Volume Claims are now pre-created. This allows updating the volume claim source at runtime.
-* v0.2.next - `spec.podTemplate.certificates` renamed to `spec.PodTemplate.secrets` to better reflect the purpose.
-* v0.2.0 - Add Support for Backup and Restore in LDIF, Tar and DSBackup formats.
- Migrate to cert-manager to issue PEM certificates for the directory server pods.
- Introduce a new common podTemplateSpec the Directory, Bacup and Restore Custom Resources.
-* v0.1.0 - Initial release
+All releases include a changelog. See [here](https://github.com/ForgeRock/ds-operator/releases)
