@@ -32,8 +32,17 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 		log.V(8).Info("CreateorUpdate statefulset", "sts", sts)
 
 		var err error
-		r.createDSStatefulSet(ctx, ds, &sts, svcName)
-		_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
+		// does the sts not exist yet?
+		if sts.CreationTimestamp.IsZero() {
+			// create the STS
+			r.createDSStatefulSet(ctx, ds, &sts, svcName)
+			_ = controllerutil.SetControllerReference(ds, &sts, r.Scheme)
+			//
+		} else {
+			// If the sts exists already - we want to update any fields to bring its state into
+			// alignment with the Custom Resource
+			err = updateDSStatefulSet(ds, &sts)
+		}
 
 		log.V(8).Info("sts after update/create", "sts", sts)
 		return err
@@ -42,6 +51,28 @@ func (r *DirectoryServiceReconciler) reconcileSTS(ctx context.Context, ds *direc
 	if err != nil {
 		return errors.Wrap(err, "unable to CreateOrUpdate StatefulSet")
 	}
+	return nil
+}
+
+// This function updates an existing statefulset to match settings in the custom resource
+// StatefulSets allow only a limited number of changes
+func updateDSStatefulSet(ds *directoryv1alpha1.DirectoryService, sts *apps.StatefulSet) error {
+
+	// Copy our expected replicas to the statefulset
+	sts.Spec.Replicas = ds.Spec.Replicas
+
+	// copy the current sts replicas up the ds status
+	ds.Status.CurrentReplicas = &sts.Status.CurrentReplicas
+
+	// Copy our scriptConfigMapName if it exists
+	//if ds.Spec.PodTemplate.ScriptConfigMapName != "" {
+	//    sts.Spec.Template.Spec.ScriptConfigMapName = ds.Spec.PodTemplate.ScriptConfigMapName
+	//}
+
+	// Update the image
+	sts.Spec.Template.Spec.Containers[0].Image = ds.Spec.PodTemplate.Image
+	sts.Spec.Template.Spec.InitContainers[0].Image = ds.Spec.PodTemplate.Image
+
 	return nil
 }
 
