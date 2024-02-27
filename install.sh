@@ -3,7 +3,7 @@
 #
 
 # As releases are tagged, update the operator version here. Avoid using "latest" to ensure consistent behavior.
-DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-v0.2.8}
+DS_OPERATOR_VERSION=${DS_OPERATOR_VERSION:-v0.2.9}
 
 USAGE="Usage: $0 install|remove|upgrade"
 
