@@ -268,7 +268,13 @@ rules:
   resources:
   - directorybackups/finalizers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - directory.forgerock.io
   resources:
@@ -294,7 +300,13 @@ rules:
   resources:
   - directoryrestores/finalizers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - directory.forgerock.io
   resources:
@@ -308,7 +320,13 @@ rules:
   resources:
   - directoryservices/finalizers
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - snapshot.storage.k8s.io
   resources:

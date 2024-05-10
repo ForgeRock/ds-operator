@@ -137,11 +137,11 @@ type TrustStore struct {
 // DirectoryServiceStatus defines the observed state of DirectoryService
 type DirectoryServiceStatus struct {
 	// +optional
-	Active                             []corev1.ObjectReference `json:"active,omitempty"`
-	CurrentReplicas                    *int32                   `json:"currentReplicas,omitempty"`
-	ServerMessage                      string                   `json:"serverMessage,omitempty"`
-	ProxyStatus                        DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
-	SnapshotStatus                     SnapshotStatus           `json:"snapshotStatus,omitempty"`
+	Active          []corev1.ObjectReference `json:"active,omitempty"`
+	CurrentReplicas *int32                   `json:"currentReplicas,omitempty"`
+	ServerMessage   string                   `json:"serverMessage,omitempty"`
+	ProxyStatus     DirectoryProxyStatus     `json:"proxyStatus,omitempty"`
+	SnapshotStatus  SnapshotStatus           `json:"snapshotStatus,omitempty"`
 }
 
 type SnapshotStatus struct {
